@@ -1,0 +1,769 @@
+﻿using System;
+using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media.Animation;
+using Microsoft.Win32;
+using TaskFlow.Models;
+using TaskFlow.Models.TaskCards;
+using TaskFlow.ViewModels;
+using TaskFlow.Views.Dialogs;
+using TaskFlow.Resources;
+
+namespace TaskFlow
+{
+    // 滚动节流 + TaskCard 拖拽事件
+    public partial class MainWindow
+    {
+        #region 滚动节流
+
+        /// <summary>
+        /// ListBox 加载完成后，获取内部 ScrollViewer 和垂直 ScrollBar，
+        /// 用于监听 Thumb 拖拽事件以实现自适应延迟滚动
+        /// </summary>
+        private void TaskCanvas_Loaded(object sender, RoutedEventArgs e)
+        {
+            _taskCanvasScrollViewer = FindVisualChild<ScrollViewer>(TaskCanvas);
+            if (_taskCanvasScrollViewer != null)
+            {
+                // 查找垂直滚动条并监听 Scroll 事件
+                var verticalScrollBar = FindVisualChild<System.Windows.Controls.Primitives.ScrollBar>(
+                    _taskCanvasScrollViewer, "PART_VerticalScrollBar");
+                if (verticalScrollBar == null)
+                {
+                    // 如果找不到命名的，尝试找任意垂直 ScrollBar
+                    verticalScrollBar = FindVisualChild<System.Windows.Controls.Primitives.ScrollBar>(_taskCanvasScrollViewer);
+                }
+                if (verticalScrollBar != null)
+                {
+                    verticalScrollBar.Scroll += TaskCanvas_ScrollBarScroll;
+                }
+            }
+        }
+
+        /// <summary>
+        /// ScrollBar 的 Scroll 事件：
+        /// 拖拽 Thumb 时启用延迟滚动（内容不实时刷新，避免卡顿），
+        /// 释放 Thumb 时关闭延迟滚动（一次性跳转到目标位置）。
+        /// 滚轮滚动和点击轨道不受影响。
+        /// </summary>
+        private void TaskCanvas_ScrollBarScroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
+        {
+            if (_taskCanvasScrollViewer == null) return;
+
+            switch (e.ScrollEventType)
+            {
+                case System.Windows.Controls.Primitives.ScrollEventType.ThumbTrack:
+                    // Thumb 正在拖动，启用延迟滚动以避免卡顿
+                    _taskCanvasScrollViewer.SetValue(
+                        ScrollViewer.IsDeferredScrollingEnabledProperty, true);
+                    break;
+
+                case System.Windows.Controls.Primitives.ScrollEventType.EndScroll:
+                    // Thumb 已释放，关闭延迟滚动，内容会一次性跳转到目标位置
+                    _taskCanvasScrollViewer.SetValue(
+                        ScrollViewer.IsDeferredScrollingEnabledProperty, false);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 从父元素中查找指定类型的第一个子元素（无名称版本）
+        /// </summary>
+        private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is T result)
+                    return result;
+                var found = FindVisualChild<T>(child);
+                if (found != null)
+                    return found;
+            }
+            return null;
+        }
+
+        #endregion
+
+        #region Task Card Events
+
+        private void LongPressTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_currentDragBorder == null)
+            {
+                StopLongPressTimer();
+                return;
+            }
+
+            var elapsed = (DateTime.Now - _dragStartTime).TotalMilliseconds;
+            // 通过 Opacity 渐变提示长按进度（1.0 → 0.6）
+            _currentDragBorder.Opacity = 1.0 - (Math.Min(elapsed, 300) / 300.0) * 0.4;
+        }
+
+        private void StopLongPressTimer()
+        {
+            _longPressTimer?.Stop();
+            if (_currentDragBorder != null)
+            {
+                _currentDragBorder.Opacity = 1.0;
+                _currentDragBorder = null;
+            }
+        }
+
+        private void TaskCard_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Border border && border.DataContext is TaskCardBase task)
+            {
+                // 检查是否双击（用于折叠/展开，运行中也允许）
+                if (e.ClickCount == 2)
+                {
+                    ViewModel.ToggleBranchCollapseCommand.Execute(task);
+                    StopLongPressTimer();
+                    return;
+                }
+
+                // 运行中只允许选中，禁止长按和拖拽
+                if (ViewModel.IsRunning)
+                {
+                    ViewModel.SelectTaskCommand.Execute(task);
+                    return;
+                }
+
+                // 单击选中
+                ViewModel.SelectTaskCommand.Execute(task);
+
+                // 记录拖拽开始位置和时间
+                _dragStartPoint = e.GetPosition(this);
+                _dragStartTime = DateTime.Now;
+
+                // 只有可拖拽的卡片才启用长按反馈
+                if (CanDrag(task))
+                {
+                    _currentDragBorder = border;
+                    _longPressTimer?.Start();
+                }
+            }
+        }
+
+        private void TaskCard_MouseMove(object sender, MouseEventArgs e)
+        {
+            // 运行中禁止拖拽
+            if (ViewModel.IsRunning) return;
+
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                StopLongPressTimer();
+                return;
+            }
+
+            if (sender is Border border && border.DataContext is TaskCardBase task)
+            {
+                var elapsed = (DateTime.Now - _dragStartTime).TotalMilliseconds;
+                var currentPoint = e.GetPosition(this);
+                var diff = _dragStartPoint - currentPoint;
+                bool isMoveThresholdReached = Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                                              Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance;
+
+                // 如果移动了但时间未到300ms，说明用户只是普通点击或误操作，取消进度条显示
+                if (isMoveThresholdReached && elapsed < 300)
+                {
+                    StopLongPressTimer();
+                    return;
+                }
+
+                // 长按时间足够且发生了移动 -> 触发拖拽
+                if (elapsed >= 300 && isMoveThresholdReached)
+                {
+                    StopLongPressTimer(); // 拖拽开始前隐藏进度条
+
+                    // 检查是否可拖拽 (双重检查)
+                    if (!CanDrag(task))
+                        return;
+
+                    _draggedTask = task;
+
+                    // 开始拖拽
+                    var data = new DataObject("TaskCard", task);
+                    DragDrop.DoDragDrop(border, data, DragDropEffects.Move);
+
+                    _draggedTask = null;
+                }
+            }
+        }
+
+        private void TaskCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            StopLongPressTimer();
+        }
+
+        private T? FindVisualChild<T>(DependencyObject parent, string childName) where T : FrameworkElement
+        {
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is T element && element.Name == childName)
+                {
+                    return element;
+                }
+
+                var result = FindVisualChild<T>(child, childName);
+                if (result != null)
+                    return result;
+            }
+            return null;
+        }
+
+        private bool CanDrag(TaskCardBase task)
+        {
+            // 非分支卡片始终可拖拽
+            if (task.BranchRole == BranchRole.None)
+                return true;
+
+            // IfStart或ForLoopStart在折叠状态下可拖拽
+            if ((task.BranchRole == BranchRole.IfStart || task.BranchRole == BranchRole.ForLoopStart)
+                && task.IsCollapsed)
+                return true;
+
+            return false;
+        }
+
+        private void TaskCard_DragOver(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent("TaskCard"))
+            {
+                e.Effects = DragDropEffects.None;
+                return;
+            }
+
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+        }
+
+        private void TaskCard_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent("TaskCard"))
+                return;
+
+            // 无论后续逻辑如何，只要是 TaskCard 拖拽，就阻止冒泡
+            // 防止Canvas_Drop被触发导致卡片飞到底部
+            e.Handled = true;
+
+            if (sender is Border border && border.DataContext is TaskCardBase targetTask)
+            {
+                var sourceTask = e.Data.GetData("TaskCard") as TaskCardBase;
+                if (sourceTask == null || sourceTask == targetTask)
+                    return;
+
+                var sourceIndex = ViewModel.TaskCards.IndexOf(sourceTask);
+                var targetIndex = ViewModel.TaskCards.IndexOf(targetTask);
+
+                if (sourceIndex >= 0 && targetIndex >= 0)
+                {
+                    // 如果目标卡片是折叠的分支/循环头，将目标索引调整到整个分组末尾之后
+                    if (targetTask.IsCollapsed && targetTask.BranchGroupId.HasValue &&
+                        (targetTask.BranchRole == BranchRole.IfStart || targetTask.BranchRole == BranchRole.ForLoopStart))
+                    {
+                        // 找到分组结束卡片的索引
+                        var branchCards = ViewModel.TaskCards
+                            .Where(t => t.BranchGroupId == targetTask.BranchGroupId && t != targetTask).ToList();
+
+                        int endIdx = targetIndex;
+                        if (targetTask.BranchRole == BranchRole.IfStart)
+                        {
+                            var elseEnd = branchCards.FirstOrDefault(t => t.BranchRole == BranchRole.ElseEnd);
+                            if (elseEnd != null) endIdx = ViewModel.TaskCards.IndexOf(elseEnd);
+                        }
+                        else if (targetTask.BranchRole == BranchRole.ForLoopStart)
+                        {
+                            var loopEnd = branchCards.FirstOrDefault(t => t.BranchRole == BranchRole.ForLoopEnd);
+                            if (loopEnd != null) endIdx = ViewModel.TaskCards.IndexOf(loopEnd);
+                        }
+
+                        // 目标位置为分组末尾之后
+                        targetIndex = endIdx;
+
+                        // 源在目标上方时，不需要+1（Move语义已自动处理）
+                        if (sourceIndex > targetIndex)
+                        {
+                            targetIndex = endIdx + 1;
+                        }
+                    }
+                    else
+                    {
+                        // 普通卡片：保持原有逻辑，放在目标卡片下方
+                        if (sourceIndex > targetIndex)
+                        {
+                            targetIndex = targetIndex + 1;
+                        }
+                    }
+
+                    ViewModel.MoveTaskCommand.Execute(Tuple.Create(sourceIndex, targetIndex));
+                }
+            }
+        }
+
+        private void Canvas_DragOver(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent("TaskCard"))
+            {
+                e.Effects = DragDropEffects.None;
+                return;
+            }
+
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+        }
+
+        private void Canvas_Drop(object sender, DragEventArgs e)
+        {
+            // 拖放到画布末尾
+            if (!e.Data.GetDataPresent("TaskCard"))
+                return;
+
+            var sourceTask = e.Data.GetData("TaskCard") as TaskCardBase;
+            if (sourceTask == null)
+                return;
+
+            var sourceIndex = ViewModel.TaskCards.IndexOf(sourceTask);
+            if (sourceIndex >= 0)
+            {
+                ViewModel.MoveTaskCommand.Execute(Tuple.Create(sourceIndex, ViewModel.TaskCards.Count - 1));
+            }
+        }
+
+        private void LogScrollToEnd(object? sender, EventArgs e)
+        {
+            LogScrollViewer.ScrollToEnd();
+        }
+
+        /// <summary>
+        /// 分页标签点击事件，切换选中分页
+        /// </summary>
+        private void TabItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button btn && btn.Tag is WorkflowTab tab)
+            {
+                ViewModel.SelectedTab = tab;
+
+                // 触发流程标签滑动指示条动画
+                if (FlowTabIndicator != null && FlowTabItemsControl != null)
+                {
+                    btn.UpdateLayout();
+                    AnimateIndicator(FlowTabIndicator, FlowTabIndicatorTransform, btn, FlowTabItemsControl);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 分页标签栏向左滚动
+        /// </summary>
+        private void TabScrollLeft_Click(object sender, RoutedEventArgs e)
+        {
+            TabScrollViewer.ScrollToHorizontalOffset(TabScrollViewer.HorizontalOffset - 80);
+        }
+
+        /// <summary>
+        /// 分页标签栏向右滚动
+        /// </summary>
+        private void TabScrollRight_Click(object sender, RoutedEventArgs e)
+        {
+            TabScrollViewer.ScrollToHorizontalOffset(TabScrollViewer.HorizontalOffset + 80);
+        }
+
+        private void OpenVariableManager_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new VariableManagerDialog(ViewModel.VariableStore);
+            dialog.Owner = this;
+            dialog.ShowDialog();
+        }
+
+        private void OpenFlowManager_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new FlowManagerDialog(
+                ViewModel.Tabs,
+                tab => ViewModel.SelectedTab = tab,
+                ViewModel.NextTabIndex);
+            dialog.Owner = this;
+            dialog.ShowDialog();
+            ViewModel.NextTabIndex = dialog.NextTabIndex;
+        }
+
+        private void OpenSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var settings = AppSettings.Load();
+            var dialog = new SettingsDialog(settings) { Owner = this };
+            if (dialog.ShowDialog() == true)
+            {
+                // 设置已保存，通知 ViewModel 更新
+                ViewModel.ApplySettings(settings);
+            }
+        }
+
+        private void OpenModelManager_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ModelManagerDialog(this);
+            dialog.ShowDialog();
+        }
+
+        /// <summary>
+        /// 工具栏帮助按钮 —— 打开帮助文档首页
+        /// </summary>
+        private void OpenHelp_Click(object sender, RoutedEventArgs e)
+        {
+            OpenHelpDocument(null);
+        }
+
+        /// <summary>
+        /// 卡片右键菜单帮助 —— 跳转到对应任务类型的文档锚点
+        /// </summary>
+        private void OpenTaskHelp_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem mi)
+            {
+                var task = FindTaskFromMenuItem(mi);
+                if (task != null)
+                {
+                    // 将 TaskType 映射到帮助文档锚点 ID
+                    var anchor = task.TaskType switch
+                    {
+                        // 控制流结构块 → 映射到对应的文档分页
+                        TaskType.IfStart or TaskType.IfEnd or TaskType.ElifStart
+                            or TaskType.ElseStart or TaskType.ElseEnd => "IfElse",
+                        TaskType.ForLoopStart or TaskType.ForLoopEnd => "ForLoop",
+
+                        // 其余 TaskType 名称与帮助文档 id 一致
+                        _ => task.TaskType.ToString()
+                    };
+                    OpenHelpDocument(anchor);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 打开帮助文档（可选锚点跳转）
+        /// </summary>
+        private static void OpenHelpDocument(string? anchor)
+        {
+            try
+            {
+                var helpPath = System.IO.Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory, "docs",
+                    System.Threading.Thread.CurrentThread.CurrentUICulture.Name.StartsWith("zh") ? "help_zh.html" : "help_en.html");
+
+                if (!System.IO.File.Exists(helpPath))
+                {
+                    MessageBox.Show(Strings.UI_HelpNotFound, Strings.Common_Help,
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // 无锚点时直接打开文档；有锚点时通过临时跳转页面解决 Shell 丢弃 #fragment 问题
+                string openPath;
+                if (string.IsNullOrEmpty(anchor))
+                {
+                    openPath = helpPath;
+                }
+                else
+                {
+                    var targetUrl = new Uri(helpPath).AbsoluteUri + "#" + anchor;
+                    var redirectHtml = $"<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><script>window.location.replace(\"{targetUrl}\");</script></head><body></body></html>";
+                    var tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "taskflow_help_redirect.html");
+                    System.IO.File.WriteAllText(tempPath, redirectHtml);
+                    openPath = tempPath;
+                }
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(openPath)
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"无法打开帮助文档：{ex.Message}", "帮助",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 将 TaskType 映射到帮助文档锚点 ID
+        /// 控制流分支卡片统一映射到父级文档节（如 IfStart/IfEnd → IfElse）
+        /// </summary>
+        private static string GetHelpAnchor(TaskType type)
+        {
+            return type switch
+            {
+                TaskType.IfStart or TaskType.IfEnd or
+                TaskType.ElifStart or TaskType.ElseStart or TaskType.ElseEnd
+                    => "IfElse",
+                TaskType.ForLoopStart or TaskType.ForLoopEnd
+                    => "ForLoop",
+                _ => type.ToString()
+            };
+        }
+
+
+        private void Canvas_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // 检查点击目标是否在任务卡片上
+            if (e.OriginalSource is DependencyObject source)
+            {
+                // 向上查找是否在某个TaskCard的Border内
+                var parent = source;
+                while (parent != null)
+                {
+                    if (parent is Border border && border.DataContext is TaskCardBase)
+                    {
+                        // 点击在任务卡片上，不处理
+                        return;
+                    }
+                    if (parent is System.Windows.Media.Visual visual)
+                    {
+                        parent = System.Windows.Media.VisualTreeHelper.GetParent(visual);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+
+            // 点击在空白处，取消选中并取消高亮
+            ViewModel.DeselectAllCommand.Execute(null);
+        }
+
+        private void TaskCard_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            // 运行中禁止弹出右键菜单
+            if (ViewModel.IsRunning) return;
+
+            if (sender is Border border && border.DataContext is TaskCardBase task)
+            {
+                // 懒初始化共享 ContextMenu
+                if (_sharedTaskCardContextMenu == null)
+                {
+                    _sharedTaskCardContextMenu = CreateTaskCardContextMenu();
+                }
+
+                // 判断是否为非起始分支卡片（包括ElifStart可编辑）
+                bool isNonEditableBranch = task.BranchRole != BranchRole.None &&
+                                           task.BranchRole != BranchRole.IfStart &&
+                                           task.BranchRole != BranchRole.ElifStart &&
+                                           task.BranchRole != BranchRole.ForLoopStart;
+
+                bool isIfStart = task.BranchRole == BranchRole.IfStart;
+
+                // 动态显示/隐藏菜单项
+                foreach (var item in _sharedTaskCardContextMenu.Items)
+                {
+                    if (item is MenuItem menuItem)
+                    {
+                        string? tag = menuItem.Tag as string;
+                        if (tag == "EditProperty" || tag == "Rename" || tag == "Delete")
+                        {
+                            menuItem.Visibility = isNonEditableBranch ? Visibility.Collapsed : Visibility.Visible;
+                        }
+                        else if (tag == "AddElif")
+                        {
+                            // 仅对IfStart卡片显示"增加Elif分支"
+                            menuItem.Visibility = isIfStart ? Visibility.Visible : Visibility.Collapsed;
+                        }
+                        else if (tag == "ToggleElse")
+                        {
+                            // 仅对IfStart卡片显示，并动态切换文本
+                            menuItem.Visibility = isIfStart ? Visibility.Visible : Visibility.Collapsed;
+                            if (isIfStart && task is IfElseBranchTaskCard ifCard)
+                            {
+                                menuItem.Header = ifCard.IsElseHidden ? "显示Else" : "隐藏Else";
+                            }
+                        }
+                        else if (menuItem.Header is string header && header == "帮助")
+                        {
+                            // 动态设置帮助锚点为当前任务类型
+                            menuItem.Tag = GetHelpAnchor(task.TaskType);
+                        }
+                    }
+                    else if (item is Separator separator)
+                    {
+                        string? tag = separator.Tag as string;
+                        if (tag == "DeleteSeparator")
+                        {
+                            separator.Visibility = isNonEditableBranch ? Visibility.Collapsed : Visibility.Visible;
+                        }
+                        else if (tag == "ElifSeparator")
+                        {
+                            separator.Visibility = isIfStart ? Visibility.Visible : Visibility.Collapsed;
+                        }
+                    }
+                }
+
+                // 设置 PlacementTarget 并弹出菜单
+                _sharedTaskCardContextMenu.PlacementTarget = border;
+                _sharedTaskCardContextMenu.IsOpen = true;
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// 动态创建任务卡片的右键菜单（延迟加载，避免虚拟化回收时的开销）
+        /// </summary>
+        private ContextMenu CreateTaskCardContextMenu()
+        {
+            var menu = new ContextMenu();
+
+            menu.Items.Add(new MenuItem { Header = TaskFlow.Resources.Strings.Main_SearchTask, Tag = "Search" });
+            ((MenuItem)menu.Items[menu.Items.Count - 1]).Click += SearchTask_Click;
+            menu.Items.Add(new Separator());
+
+            var editProp = new MenuItem { Header = TaskFlow.Resources.Strings.TaskProp_EditTitle, Tag = "EditProperty" };
+            editProp.Click += EditTaskProperty_Click;
+            menu.Items.Add(editProp);
+
+            var copy = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_Copy, Tag = "Copy" };
+            copy.Click += CopyTask_Click;
+            menu.Items.Add(copy);
+
+            var paste = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_Paste, Tag = "Paste" };
+            paste.Click += PasteTask_Click;
+            menu.Items.Add(paste);
+
+            // 在下方添加任务
+            var addBelow = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_AddTaskBelow };
+
+            // 通用任务
+            var general = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_General };
+            foreach (var (type, tag) in new[] {
+                (TaskType.PauseTask, "PauseTask"), (TaskType.GetTimestamp, "GetTimestamp"),
+                (TaskType.EndTask, "EndTask"), (TaskType.EndAllFlows, "EndAllFlows") })
+            {
+                var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
+                mi.Click += AddTaskBelow_Click;
+                general.Items.Add(mi);
+            }
+            addBelow.Items.Add(general);
+
+            // Windows 操作
+            var windows = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_WinOps };
+            foreach (var (type, tag) in new[] {
+                (TaskType.WinLaunchApp, "WinLaunchApp"), (TaskType.WinScreenshot, "WinScreenshot"),
+                (TaskType.WinClick, "WinClick"), (TaskType.WinCloseApp, "WinCloseApp"),
+                (TaskType.WinUiAutomation, "WinUiAutomation"), (TaskType.WinSimulateInput, "WinSimulateInput"),
+                (TaskType.WinSubtitle, "WinSubtitle") })
+            {
+                var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
+                mi.Click += AddTaskBelow_Click;
+                windows.Items.Add(mi);
+            }
+            addBelow.Items.Add(windows);
+
+            // ADB 操作
+            var adb = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_AdbOps };
+            foreach (var (type, tag) in new[] {
+                (TaskType.AdbConnect, "AdbConnect"), (TaskType.AdbLaunchApp, "AdbLaunchApp"),
+                (TaskType.AdbScreenshot, "AdbScreenshot"), (TaskType.AdbClick, "AdbClick"),
+                (TaskType.AdbCloseApp, "AdbCloseApp"), (TaskType.AdbDisconnect, "AdbDisconnect") })
+            {
+                var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
+                mi.Click += AddTaskBelow_Click;
+                adb.Items.Add(mi);
+            }
+            addBelow.Items.Add(adb);
+
+            // 图像处理
+            var imgProc = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_ImgProc };
+            foreach (var (type, tag) in new[] {
+                (TaskType.ImgCrop, "ImgCrop"), (TaskType.ImgTemplateMatch, "ImgTemplateMatch"),
+                (TaskType.ImgOcr, "ImgOcr"), (TaskType.ImgColorDetect, "ImgColorDetect"),
+                (TaskType.ImgColorSegment, "ImgColorSegment"),
+                (TaskType.ImgPreprocess, "ImgPreprocess"), (TaskType.ImgBlobAnalysis, "ImgBlobAnalysis"),
+                (TaskType.ImgResize, "ImgResize") })
+            {
+                var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
+                mi.Click += AddTaskBelow_Click;
+                imgProc.Items.Add(mi);
+            }
+            addBelow.Items.Add(imgProc);
+
+            // 数据处理
+            var dataProc = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_DataProc };
+            foreach (var (type, tag) in new[] {
+                (TaskType.ExpressionEval, "ExpressionEval"), (TaskType.StringSubstring, "StringSubstring"),
+                (TaskType.TypeConvert, "TypeConvert"), (TaskType.ArrayParse, "ArrayParse") })
+            {
+                var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
+                mi.Click += AddTaskBelow_Click;
+                dataProc.Items.Add(mi);
+            }
+            addBelow.Items.Add(dataProc);
+
+            // AI 操作
+            var aiOps = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_AiOps };
+            foreach (var (type, tag) in new[] {
+                (TaskType.LlmTranslate, "LlmTranslate"), (TaskType.LlmVision, "LlmVision") })
+            {
+                var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
+                mi.Click += AddTaskBelow_Click;
+                aiOps.Items.Add(mi);
+            }
+            addBelow.Items.Add(aiOps);
+
+            // 控制流
+            var controlFlow = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_ControlFlow };
+            var breakLoop = new MenuItem { Header = TaskFlow.Resources.Strings.TaskType_BreakLoop, Tag = "BreakLoop" };
+            breakLoop.Click += AddTaskBelow_Click;
+            controlFlow.Items.Add(breakLoop);
+            var ifElse = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_IfElseBranch, Tag = "IfElse" };
+            ifElse.Click += AddBranchBelow_Click;
+            controlFlow.Items.Add(ifElse);
+            var forLoop = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_ForLoop, Tag = "ForLoop" };
+            forLoop.Click += AddBranchBelow_Click;
+            controlFlow.Items.Add(forLoop);
+            addBelow.Items.Add(controlFlow);
+
+            menu.Items.Add(addBelow);
+
+            var rename = new MenuItem { Header = TaskFlow.Resources.Strings.Common_Rename, Tag = "Rename" };
+            rename.Click += RenameTask_Click;
+            menu.Items.Add(rename);
+
+            menu.Items.Add(new Separator { Tag = "DeleteSeparator" });
+
+            var delete = new MenuItem { Header = TaskFlow.Resources.Strings.Common_Delete, Tag = "Delete", Foreground = ErrorBrush };
+            delete.Click += DeleteTask_Click;
+            menu.Items.Add(delete);
+
+            menu.Items.Add(new Separator { Tag = "ElifSeparator" });
+
+            var addElif = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_AddElifBranch, Tag = "AddElif" };
+            addElif.Click += AddElifBranch_Click;
+            menu.Items.Add(addElif);
+
+            var toggleElse = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_ShowElse, Tag = "ToggleElse" };
+            toggleElse.Click += ToggleElseVisibility_Click;
+            menu.Items.Add(toggleElse);
+
+            menu.Items.Add(new Separator());
+
+            var help = new MenuItem { Header = TaskFlow.Resources.Strings.Common_Help, Tag = "Help" };
+            help.Click += OpenTaskHelp_Click;
+            menu.Items.Add(help);
+
+            return menu;
+        }
+
+        private void TaskList_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            // 运行中禁止弹出任务列表右键菜单
+            if (ViewModel.IsRunning)
+            {
+                e.Handled = true;
+            }
+        }
+
+        #endregion
+    }
+}
+

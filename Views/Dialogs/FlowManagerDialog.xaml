@@ -1,0 +1,116 @@
+<Window x:Class="TaskFlow.Views.Dialogs.FlowManagerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="流程管理" 
+        Height="500" Width="500"
+        WindowStartupLocation="CenterOwner"
+        Background="#faf9f5"
+        FontFamily="{StaticResource FontBody}"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+
+    <Window.Resources>
+        <Style x:Key="FlowButton" TargetType="Button">
+            <Setter Property="Background" Value="#f0efe8"/>
+            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#e8e6dc"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="FlowButtonRed" TargetType="Button" BasedOn="{StaticResource FlowButton}">
+            <Setter Property="Background" Value="#c45b4a"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#d06b5a"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="FlowButtonDark" TargetType="Button" BasedOn="{StaticResource FlowButton}">
+            <Setter Property="Background" Value="#141413"/>
+            <Setter Property="Foreground" Value="#faf9f5"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2a2a28"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock x:Name="TxtFlowTitle" Text="流程管理" 
+                   Foreground="#d97757" 
+                   FontSize="16" 
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,12"/>
+
+        <!-- 流程列表 -->
+        <ListBox x:Name="FlowListBox" 
+                 Grid.Row="1"
+                 Background="White"
+                 Foreground="#141413"
+                 BorderBrush="#e8e6dc"
+                 BorderThickness="1"
+                 FontSize="13"
+                 Padding="4"
+                 SelectionMode="Single">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Foreground" Value="#141413"/>
+                    <Setter Property="Padding" Value="8,6"/>
+                    <Setter Property="Cursor" Value="Hand"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#f5e6de"/>
+                            <Setter Property="Foreground" Value="#d97757"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#f0efe8"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+
+        <!-- 底部按钮 -->
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Left" 
+                    Margin="0,12,0,0">
+            <Button x:Name="BtnAdd" Content="添加流程" Click="AddFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
+            <Button x:Name="BtnRename" Content="重命名" Click="RenameFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
+            <Button x:Name="BtnDelete" Content="删除流程" Click="DeleteFlow_Click" Style="{StaticResource FlowButtonRed}" Margin="0,0,8,0"/>
+        </StackPanel>
+
+        <Button Grid.Row="2" 
+                x:Name="BtnClose" Content="关闭" 
+                Click="Close_Click" 
+                HorizontalAlignment="Right"
+                Margin="0,12,0,0"
+                Style="{StaticResource FlowButtonDark}"/>
+    </Grid>
+</Window>

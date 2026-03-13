@@ -1,0 +1,34 @@
+// 解决 WPF + WinForms 命名空间冲突
+// 当 UseWindowsForms=true 时，System.Windows.Forms 的类型与 WPF 类型冲突
+// 以下全局别名统一优先使用 WPF 类型
+global using Point = System.Windows.Point;
+global using Size = System.Windows.Size;
+global using Control = System.Windows.Controls.Control;
+global using ProgressBar = System.Windows.Controls.ProgressBar;
+global using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+global using DragEventArgs = System.Windows.DragEventArgs;
+global using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+global using Clipboard = System.Windows.Clipboard;
+global using MessageBox = System.Windows.MessageBox;
+global using Application = System.Windows.Application;
+global using TextBox = System.Windows.Controls.TextBox;
+global using ListBox = System.Windows.Controls.ListBox;
+global using Color = System.Windows.Media.Color;
+global using Brushes = System.Windows.Media.Brushes;
+global using ComboBox = System.Windows.Controls.ComboBox;
+global using CheckBox = System.Windows.Controls.CheckBox;
+global using Button = System.Windows.Controls.Button;
+global using Label = System.Windows.Controls.Label;
+global using Panel = System.Windows.Controls.Panel;
+global using HorizontalAlignment = System.Windows.HorizontalAlignment;
+global using VerticalAlignment = System.Windows.VerticalAlignment;
+global using Orientation = System.Windows.Controls.Orientation;
+global using Cursor = System.Windows.Input.Cursor;
+global using Cursors = System.Windows.Input.Cursors;
+global using Rectangle = System.Windows.Shapes.Rectangle;
+global using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+global using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+global using RadioButton = System.Windows.Controls.RadioButton;
+global using DragDropEffects = System.Windows.DragDropEffects;
+global using Image = System.Windows.Controls.Image;
+global using DataObject = System.Windows.DataObject;

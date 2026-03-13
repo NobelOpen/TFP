@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow Help</title>
+<style>
+  :root {
+    --bg: #faf9f5;
+    --card-bg: #fff;
+    --border: #e8e6dc;
+    --text: #141413;
+    --text-secondary: #6b6a65;
+    --hint: #b0aea5;
+    --accent: #d97757;
+    --green: #788c5d;
+    --blue: #6a9bcc;
+    --code-bg: #f0efe8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 0;
+  }
+
+  /* Top bar */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .topbar h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+  .topbar .version { font-size: 12px; color: var(--hint); }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 32px 80px; }
+
+  /* Table of Contents */
+  .toc {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+  }
+  .toc h2 { font-size: 16px; margin-bottom: 12px; color: var(--text); }
+  .toc ul { list-style: none; padding: 0; columns: 2; column-gap: 24px; }
+  .toc li { padding: 2px 0; }
+  .toc a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    transition: color .15s;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc .toc-category {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    margin-top: 8px;
+    break-after: avoid;
+  }
+
+  /* Section */
+  .section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .section h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+  }
+  .section h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 20px 0 8px;
+  }
+
+  /* Card documentation */
+  .card-doc {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+    scroll-margin-top: 64px;
+  }
+  .card-doc h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-doc h3 .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .badge-win  { background: #e8f0fe; color: #1967d2; }
+  .badge-adb  { background: #e6f4ea; color: #188038; }
+  .badge-img  { background: #fce8e6; color: #c5221f; }
+  .badge-data { background: #fef7e0; color: #e37400; }
+  .badge-ai   { background: #f3e8fd; color: #8430ce; }
+  .badge-flow { background: #e8e6dc; color: #6b6a65; }
+  .badge-general { background: #f0efe8; color: #45443f; }
+
+  .card-doc p { font-size: 13px; color: var(--text-secondary); margin: 4px 0; }
+  .card-doc .props { margin-top: 12px; }
+  .card-doc .props dt {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 6px;
+  }
+  .card-doc .props dd {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0 0 0 16px;
+  }
+  code {
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: Consolas, monospace;
+  }
+
+  .category-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 32px 0 12px;
+    padding-left: 4px;
+  }
+
+  /* Output section */
+  .output-section {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: var(--code-bg);
+    border-radius: 6px;
+    border-left: 3px solid var(--green);
+  }
+  .output-section .output-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 4px;
+  }
+  .output-section .output-item {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 2px 0;
+  }
+  .output-section .output-item code {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Example section */
+  .example-section {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #fef9ee;
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+  }
+  .example-section .example-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .example-section .example-item {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 3px 0;
+  }
+  .example-section .example-item code {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Back to top */
+  .back-top {
+    position: fixed; bottom: 24px; right: 24px;
+    width: 40px; height: 40px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 50%;
+    font-size: 18px; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    transition: opacity .2s;
+  }
+  .back-top:hover { opacity: .85; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>TaskFlow Help</h1>
+  <span class="version">v1.0</span>
+</div>
+
+<div class="container">
+
+<!-- Overview -->
+<div class="section">
+  <h2>Overview</h2>
+  <p>TaskFlow is a visual task automation tool that lets you build automation workflows by dragging and configuring task cards. Each task card represents a single operation step, executed in sequence from top to bottom.</p>
+  <h3>Core Concepts</h3>
+  <p><strong>Flow</strong>: An ordered sequence of task cards executed from top to bottom. You can create multiple flows and switch between them using the tab bar on the left.</p>
+  <p><strong>Task Card</strong>: Represents a specific operation. Right-click on the canvas to add a task card; double-click or right-click to edit its properties.</p>
+  <p><strong>Variable</strong>: Data is passed between tasks via variables. To reference another card's output in a property field, use the <code>#{card number}</code> syntax.</p>
+  <p><strong>Expression</strong>: Some properties support expressions using the <code>{{expression}}</code> syntax, e.g. <code>{{#1.x + 10}}</code>.</p>
+  <h3>Output Reference Syntax</h3>
+  <p>Subsequent cards can reference the outputs of preceding cards using the following syntax (N is the card number):</p>
+  <p><code>#N.image</code> Image · <code>#N.text</code> Text · <code>#N.x</code> / <code>#N.y</code> Coordinates · <code>#N.result</code> Boolean result · <code>#N.loopIndex</code> Loop index</p>
+</div>
+
+<!-- Table of Contents -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ul>
+    <li class="toc-category">General</li>
+    <li><a href="#PauseTask">Pause All Tasks</a></li>
+    <li><a href="#GetTimestamp">Get Timestamp</a></li>
+    <li><a href="#EndTask">End Current Flow</a></li>
+    <li><a href="#EndAllFlows">End All Flows</a></li>
+
+    <li class="toc-category">Windows Operations</li>
+    <li><a href="#WinLaunchApp">Win Launch App</a></li>
+    <li><a href="#WinScreenshot">Win Screenshot</a></li>
+    <li><a href="#WinClick">Win Simulate Click</a></li>
+    <li><a href="#WinCloseApp">Win Close App</a></li>
+    <li><a href="#WinUiAutomation">Win UI Automation</a></li>
+    <li><a href="#WinSimulateInput">Win Simulate Input</a></li>
+    <li><a href="#WinSubtitle">Win Subtitle Overlay</a></li>
+
+    <li class="toc-category">ADB Operations</li>
+    <li><a href="#AdbConnect">ADB Connect Device</a></li>
+    <li><a href="#AdbLaunchApp">ADB Launch App</a></li>
+    <li><a href="#AdbScreenshot">ADB Screenshot</a></li>
+    <li><a href="#AdbClick">ADB Simulate Click</a></li>
+    <li><a href="#AdbCloseApp">ADB Close App</a></li>
+    <li><a href="#AdbDisconnect">ADB Disconnect</a></li>
+
+    <li class="toc-category">Image Processing</li>
+    <li><a href="#ImgCrop">Image Crop</a></li>
+    <li><a href="#ImgTemplateMatch">Template Match</a></li>
+    <li><a href="#ImgOcr">OCR Recognition</a></li>
+    <li><a href="#ImgColorDetect">Color Detection</a></li>
+    <li><a href="#ImgColorSegment">Color Segmentation</a></li>
+    <li><a href="#ImgPreprocess">Image Preprocess</a></li>
+    <li><a href="#ImgBlobAnalysis">Blob Analysis</a></li>
+    <li><a href="#ImgResize">Image Resize</a></li>
+
+    <li class="toc-category">Data Processing</li>
+    <li><a href="#ExpressionEval">Expression Eval</a></li>
+    <li><a href="#StringSubstring">String Substring</a></li>
+    <li><a href="#TypeConvert">Type Convert</a></li>
+    <li><a href="#ArrayParse">Array Parse</a></li>
+
+    <li class="toc-category">AI Operations</li>
+    <li><a href="#LlmTranslate">LLM Translate</a></li>
+    <li><a href="#LlmVision">Multimodal Vision</a></li>
+
+    <li class="toc-category">Control Flow</li>
+    <li><a href="#IfElse">If-Else Branch</a></li>
+    <li><a href="#ForLoop">For Loop</a></li>
+    <li><a href="#BreakLoop">Break Loop</a></li>
+  </ul>
+</div>
+
+<!-- ==================== General ==================== -->
+<div class="category-title">General</div>
+
+<div class="card-doc" id="PauseTask">
+  <h3>Pause All Tasks <span class="badge badge-general">General</span></h3>
+  <p>Pauses flow execution for the specified number of milliseconds. Commonly used to wait for page loads, animations, etc.</p>
+  <dl class="props">
+    <dt>Delay (ms)</dt>
+    <dd>Number of milliseconds to pause. Supports expressions. For example, <code>1000</code> pauses for 1 second.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (controls flow pause only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="GetTimestamp">
+  <h3>Get Timestamp <span class="badge badge-general">General</span></h3>
+  <p>Gets the current system time and outputs a formatted string.</p>
+  <dl class="props">
+    <dt>Format String</dt>
+    <dd>C# date format, e.g. <code>yyyy-MM-dd HH:mm:ss</code>, <code>yyyyMMdd</code>.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Current time (formatted string based on the output format)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="EndTask">
+  <h3>End Current Flow <span class="badge badge-general">General</span></h3>
+  <p>Immediately terminates execution of the current flow without affecting other flows.</p>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (controls flow termination only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="EndAllFlows">
+  <h3>End All Flows <span class="badge badge-general">General</span></h3>
+  <p>Immediately terminates execution of all flows.</p>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (controls flow termination only)</div>
+  </div>
+</div>
+
+<!-- ==================== Windows Operations ==================== -->
+<div class="category-title">Windows Operations</div>
+
+<div class="card-doc" id="WinLaunchApp">
+  <h3>Win Launch App <span class="badge badge-win">Windows</span></h3>
+  <p>Launches a specified Windows application. You can specify launch arguments and working directory.</p>
+  <dl class="props">
+    <dt>Application Path</dt>
+    <dd>Full path to the executable, e.g. <code>C:\Windows\notepad.exe</code>.</dd>
+    <dt>Launch Arguments</dt>
+    <dd>Optional command-line arguments passed to the application.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">App path <code>C:\Program Files\Google\Chrome\Application\chrome.exe</code></div>
+    <div class="example-item">Arguments <code>https://www.google.com</code> → Launches Chrome and opens the URL</div>
+    <div class="example-item">Arguments <code>--incognito https://www.google.com</code> → Opens in incognito mode</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (launches the application only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="WinScreenshot">
+  <h3>Win Screenshot <span class="badge badge-win">Windows</span></h3>
+  <p>Captures a screenshot of a specified process window. Supports automatic grayscale conversion.</p>
+  <dl class="props">
+    <dt>Process Name</dt>
+    <dd>Target window's process name without the <code>.exe</code> suffix. E.g. <code>notepad</code>, <code>chrome</code>.</dd>
+    <dt>Include Title Bar</dt>
+    <dd>Whether to include the window title bar area. Enabled by default. Uncheck to exclude the title bar region.</dd>
+    <dt>Top Crop Height</dt>
+    <dd>Custom pixel height to crop from the top of the window, useful for removing custom title bars. Default 0.</dd>
+    <dt>Convert to Grayscale</dt>
+    <dd>When checked, the screenshot is automatically converted to grayscale. Grayscale images reduce data size and improve processing speed and accuracy for template matching and OCR, while reducing color interference.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Captured window image (color or grayscale)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="WinClick">
+  <h3>Win Simulate Click <span class="badge badge-win">Windows</span></h3>
+  <p>Simulates a mouse click at specified coordinates within a process window (uses Windows message mechanism, does not move the actual mouse cursor).</p>
+  <dl class="props">
+    <dt>X Coordinate Expression / Y Coordinate Expression</dt>
+    <dd>Coordinates within the window. Supports numbers, <code>@variables</code>, <code>#task references</code>, and expressions.</dd>
+    <dt>Click Type</dt>
+    <dd><strong>Single Click</strong>: sends one click; <strong>Double Click</strong>: enables multiple clicks with customizable count and interval; <strong>Swipe</strong>: swipes from start to end coordinates with configurable duration.</dd>
+    <dt>Swipe Duration</dt>
+    <dd>Duration of the swipe operation (milliseconds), default 300ms. Only visible when click type is Swipe.</dd>
+    <dt>Background Click</dt>
+    <dd>When checked, sends background messages via PostMessage to the target process without requiring the window to be in the foreground. Requires specifying the target process name. Works when the window is occluded or minimized.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Fixed coordinate click: X = <code>100</code>, Y = <code>200</code></div>
+    <div class="example-item">Reference template match output: X = <code>{{#3.x}}</code>, Y = <code>{{#3.y}}</code> (#3 is the template match card number)</div>
+    <div class="example-item">Offset click: X = <code>{{#3.x + 50}}</code>, Y = <code>{{#3.y - 10}}</code></div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.x</code> — Actual click X coordinate</div>
+    <div class="output-item"><code>#N.y</code> — Actual click Y coordinate</div>
+  </div>
+</div>
+
+<div class="card-doc" id="WinCloseApp">
+  <h3>Win Close App <span class="badge badge-win">Windows</span></h3>
+  <p>Closes the application window with the specified process name.</p>
+  <dl class="props">
+    <dt>Process Name</dt>
+    <dd>Name of the process to close.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (closes the application only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="WinUiAutomation">
+  <h3>Win UI Automation <span class="badge badge-win">Windows</span></h3>
+  <p>Uses the Windows UI Automation framework to operate UI elements. Can find controls by name or AutomationId and perform click, input, and other actions.</p>
+  <dl class="props">
+    <dt>Process Name</dt>
+    <dd>Target window's process name.</dd>
+    <dt>Search By</dt>
+    <dd>By control Name or by AutomationId.</dd>
+    <dt>Match Mode</dt>
+    <dd>Exact match / Contains / Regular expression.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Find button by name: Search By = <code>Name</code>, Match Mode = <code>Contains</code>, Search Text = <code>OK</code></div>
+    <div class="example-item">Find by AutomationId: Search By = <code>AutomationId</code>, Match Mode = <code>Exact</code>, Search Text = <code>btnSubmit</code></div>
+    <div class="example-item">Regex match: Match Mode = <code>Regex</code>, Search Text = <code>^(OK|Save)$</code> (matches controls named "OK" or "Save")</div>
+    <div class="example-item">Regex wildcards: <code>btn.*Submit</code> (matches names starting with btn and ending with Submit), <code>\d+</code> (matches names containing digits)</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Text content of the element (if applicable)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="WinSimulateInput">
+  <h3>Win Simulate Input <span class="badge badge-win">Windows</span></h3>
+  <p>Simulates keyboard key presses or mouse wheel operations with modifier key combinations. Useful for automating shortcuts, scrolling pages, etc.</p>
+  <dl class="props">
+    <dt>Modifier Keys</dt>
+    <dd>Optional modifier key combinations: <code>None</code>, <code>Ctrl</code>, <code>Shift</code>, <code>Alt</code>, <code>Ctrl+Shift</code>, <code>Ctrl+Alt</code>.</dd>
+    <dt>Input Action</dt>
+    <dd><strong>Mouse Wheel Down</strong>: simulates scrolling down; <strong>Mouse Wheel Up</strong>: simulates scrolling up; <strong>Keyboard Key</strong>: simulates a specific key press.</dd>
+    <dt>Key Name</dt>
+    <dd>Only shown when input action is "Keyboard Key". Enter the key name, e.g. <code>A</code>, <code>ENTER</code>, <code>TAB</code>, <code>ESCAPE</code>, <code>F5</code>.</dd>
+    <dt>Scroll Amount</dt>
+    <dd>Only shown for mouse wheel actions. Default <code>120</code> (one standard scroll step).</dd>
+    <dt>Repeat Count</dt>
+    <dd>Total number of times to perform this action, default <code>1</code>.</dd>
+    <dt>Repeat Interval (ms)</dt>
+    <dd>Wait time between each repetition, default <code>50</code>ms.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Ctrl+S Save: Modifier = <code>Ctrl</code>, Action = <code>Keyboard Key</code>, Key = <code>S</code></div>
+    <div class="example-item">Scroll down 5 times: Action = <code>Mouse Wheel Down</code>, Repeat = <code>5</code>, Interval = <code>200</code></div>
+    <div class="example-item">Press Enter: Modifier = <code>None</code>, Key = <code>ENTER</code></div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Description of the action performed</div>
+  </div>
+</div>
+
+<div class="card-doc" id="WinSubtitle">
+  <h3>Win Subtitle Overlay <span class="badge badge-win">Windows</span></h3>
+  <p>Overlays subtitles on a specified process window. Useful for displaying translation results. Supports custom font, color, and background styles.</p>
+  <dl class="props">
+    <dt>Display Text Expression</dt>
+    <dd>Text to display. Supports expressions. Can reference translation results like <code>{{#5.text}}</code>.</dd>
+    <dt>Target Window</dt>
+    <dd>When checked, subtitles are displayed on the specified process window; when unchecked, absolute screen coordinates are used.</dd>
+    <dt>Process Name</dt>
+    <dd>Target window for subtitle overlay (shown when "Target Window" is checked).</dd>
+    <dt>Select Display Region</dt>
+    <dd>Click to automatically capture the target process window, then select a rectangular region on the screenshot as the subtitle display area. Automatically fills in X/Y offset and width/height. Avoids manual coordinate calculation.</dd>
+    <dt>X / Y Offset</dt>
+    <dd>Offset relative to the target window's top-left corner. Can be automatically filled by region selection.</dd>
+    <dt>Subtitle Width / Height</dt>
+    <dd>Subtitle area dimensions. 0 = auto-fit to text.</dd>
+    <dt>Font Size / Font Color</dt>
+    <dd>Subtitle text size and color (hex, e.g. <code>#000000</code>). Color picker available for quick selection.</dd>
+    <dt>Background Style</dt>
+    <dd><strong>Frosted Glass</strong>: semi-transparent acrylic effect; <strong>Solid Color</strong>: solid color fill; <strong>Transparent</strong>: no background; <strong>Auto Color Sample</strong>: automatically samples the average background color of the target area for a blended look.</dd>
+    <dt>Background Color</dt>
+    <dd>Color value with transparency, e.g. <code>#80FFFFFF</code>. Only shown in Frosted Glass/Solid Color modes. Color picker available.</dd>
+    <dt>Display Duration</dt>
+    <dd>Duration to show subtitles (milliseconds). 0 = persistent until next update.</dd>
+    <dt>Wait for subtitle to close before continuing</dt>
+    <dd>When checked, the flow waits until the subtitle display duration ends before executing the next task.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Display static text: Subtitle content = <code>Processing...</code></div>
+    <div class="example-item">Display translation result: Subtitle content = <code>{{#5.text}}</code> (#5 is the LLM translation card)</div>
+    <div class="example-item">Concatenate multiple variables: Subtitle content = <code>Original: {{#3.text}} → Translation: {{#5.text}}</code></div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (displays subtitle overlay only)</div>
+  </div>
+</div>
+
+<!-- ==================== ADB Operations ==================== -->
+<div class="category-title">ADB Operations</div>
+
+<div class="card-doc" id="AdbConnect">
+  <h3>ADB Connect Device <span class="badge badge-adb">ADB</span></h3>
+  <p>Connects to an Android device via ADB. Supports USB or network connections (IP:port).</p>
+  <dl class="props">
+    <dt>IP Address</dt>
+    <dd>Device IP address, default <code>127.0.0.1</code>. Usually localhost when using emulators.</dd>
+    <dt>Port</dt>
+    <dd>Device ADB port, default <code>5555</code>.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (establishes connection only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="AdbLaunchApp">
+  <h3>ADB Launch App <span class="badge badge-adb">ADB</span></h3>
+  <p>Launches a specified app on an Android device via ADB.</p>
+  <dl class="props">
+    <dt>Device Serial</dt>
+    <dd>Serial number of the connected device.</dd>
+    <dt>Package Name</dt>
+    <dd>App package name, e.g. <code>com.tencent.mm</code>.</dd>
+    <dt>Activity Name</dt>
+    <dd>Optional. Specify the Activity to launch. Leave empty for the default Activity.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (launches the app only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="AdbScreenshot">
+  <h3>ADB Screenshot <span class="badge badge-adb">ADB</span></h3>
+  <p>Captures the Android device screen via ADB.</p>
+  <dl class="props">
+    <dt>Device Serial</dt>
+    <dd>Serial number of the connected device. Used to distinguish among multiple devices.</dd>
+    <dt>Convert to Grayscale</dt>
+    <dd>When checked, the screenshot is automatically converted to grayscale for faster processing.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Device screen screenshot</div>
+  </div>
+</div>
+
+<div class="card-doc" id="AdbClick">
+  <h3>ADB Simulate Click <span class="badge badge-adb">ADB</span></h3>
+  <p>Simulates a tap at specified coordinates on the Android device screen via ADB.</p>
+  <dl class="props">
+    <dt>X Coordinate Expression / Y Coordinate Expression</dt>
+    <dd>Device screen coordinates. Supports numbers, <code>@variables</code>, <code>#task references</code>, and expressions.</dd>
+    <dt>Click Type</dt>
+    <dd><strong>Single Click</strong>: single tap; <strong>Double Click</strong>: multiple taps with customizable count and interval; <strong>Swipe</strong>: swipe from start to end with configurable duration.</dd>
+    <dt>Swipe Duration</dt>
+    <dd>Duration of the swipe operation (milliseconds), default 300ms.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.x</code> — Actual click X coordinate</div>
+    <div class="output-item"><code>#N.y</code> — Actual click Y coordinate</div>
+  </div>
+</div>
+
+<div class="card-doc" id="AdbCloseApp">
+  <h3>ADB Close App <span class="badge badge-adb">ADB</span></h3>
+  <p>Force-stops a specified app on the Android device via ADB.</p>
+  <dl class="props">
+    <dt>Package Name</dt>
+    <dd>Package name of the app to close.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (stops the app only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="AdbDisconnect">
+  <h3>ADB Disconnect <span class="badge badge-adb">ADB</span></h3>
+  <p>Disconnects the ADB connection to the Android device.</p>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (disconnects only)</div>
+  </div>
+</div>
+
+<!-- ==================== Image Processing ==================== -->
+<div class="category-title">Image Processing</div>
+
+<div class="card-doc" id="ImgCrop">
+  <h3>Image Crop <span class="badge badge-img">Image</span></h3>
+  <p>Crops a specified region from the source image.</p>
+  <dl class="props">
+    <dt>Source Image</dt>
+    <dd>Reference the output image from a preceding screenshot card, e.g. <code>#1</code> (card number).</dd>
+    <dt>Crop Region X / Y / Width / Height</dt>
+    <dd>Top-left corner coordinates and dimensions of the crop rectangle. Supports expressions.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Cropped image</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgTemplateMatch">
+  <h3>Template Match <span class="badge badge-img">Image</span></h3>
+  <p>Searches for a template image within the source image. Supports single and multi-target matching.</p>
+  <dl class="props">
+    <dt>Source Image</dt>
+    <dd>The target image to search in. Reference a preceding screenshot card.</dd>
+    <dt>Template Image</dt>
+    <dd>The small image to find. Loaded from file.</dd>
+    <dt>Match Threshold</dt>
+    <dd>Value between 0–1. Higher values require stricter matches. Typically set to 0.8–0.95.</dd>
+    <dt>Max Match Count</dt>
+    <dd>1 = single target match; &gt;1 = multi-target match.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Find button position: Threshold = <code>0.85</code>, use If to check <code>#N.result</code>, then click at <code>#N.x</code>, <code>#N.y</code></div>
+    <div class="example-item">Multi-target match: Max count = <code>5</code>, results accessible via <code>OutputMatchResults</code> array</div>
+    <div class="example-item">Threshold guidelines: Identical icons <code>0.9–0.95</code>, similar elements <code>0.75–0.85</code>, fuzzy match <code>0.6–0.75</code></div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Result image with match positions annotated</div>
+    <div class="output-item"><code>#N.result</code> — Whether a match was found (true/false)</div>
+    <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Center coordinates of the best match (single target)</div>
+    <div class="output-item"><code>OutputMatchScore</code> — Best match score (0–1)</div>
+    <div class="output-item"><code>OutputMatchCount</code> — Number of matches found</div>
+    <div class="output-item"><code>OutputMatchResults</code> — Multi-target match result list (with X, Y, Score)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgOcr">
+  <h3>OCR Recognition <span class="badge badge-img">Image</span></h3>
+  <p>Performs optical character recognition (OCR) on an image. Supports PaddleOCR and WeChat OCR engines.</p>
+  <dl class="props">
+    <dt>Source Image</dt>
+    <dd>Reference the output image from a preceding screenshot or crop card.</dd>
+    <dt>OCR Engine</dt>
+    <dd>PaddleOCR (built-in) or WeChatOCR (requires WeChat installation, configure path in Settings).</dd>
+    <dt>Check Contains Text</dt>
+    <dd>Optional. When checked, detects whether the recognition result contains the specified string.</dd>
+    <dt>Target Text</dt>
+    <dd>Text to check for (shown when "Check Contains Text" is checked).</dd>
+    <dt>Mask Image</dt>
+    <dd>Optional. Black-and-white binary image: white regions are kept, black regions are masked out. Used to exclude unwanted areas.</dd>
+    <dt>ROI Region (X/Y/Width/Height)</dt>
+    <dd>Optional. Limits the recognition area. The image is cropped before OCR.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Basic OCR: Screenshot → Crop ROI → OCR → Get <code>#N.text</code></div>
+    <div class="example-item">With check: Enable "Check Contains Text", Target = <code>Success</code>, If branch on <code>#N.result</code></div>
+    <div class="example-item">Improve accuracy: Preprocess image (grayscale + binarize) before OCR</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Full OCR recognized text</div>
+    <div class="output-item"><code>#N.result</code> — Whether the specified text was found (when check is enabled)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgColorDetect">
+  <h3>Color Detection <span class="badge badge-img">Image</span></h3>
+  <p>Detects the proportion of pixels within a specified HSV color range in the image to determine if the target color exists.</p>
+  <dl class="props">
+    <dt>Source Image</dt>
+    <dd>Reference the output from a preceding screenshot or image processing card.</dd>
+    <dt>HSV Lower / Upper Bound</dt>
+    <dd>HSV color space range (H: 0–180, S: 0–255, V: 0–255).</dd>
+    <dt>ROI Region (X/Y/Width/Height)</dt>
+    <dd>Optional. Limits the detection area.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Detect red area: H lower = <code>0</code> upper = <code>10</code>, S lower = <code>100</code> upper = <code>255</code>, V lower = <code>100</code> upper = <code>255</code></div>
+    <div class="example-item">Detect green area: H lower = <code>35</code> upper = <code>85</code></div>
+    <div class="example-item">HSV hue reference: Red <code>0–10/170–180</code>, Orange <code>10–25</code>, Yellow <code>25–35</code>, Green <code>35–85</code>, Blue <code>85–125</code>, Purple <code>125–170</code></div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Color detection visualization image</div>
+    <div class="output-item"><code>#N.result</code> — Whether color match meets threshold (true/false)</div>
+    <div class="output-item"><code>OutputMeanH/S/V</code> — Average HSV values in the region</div>
+    <div class="output-item"><code>OutputMatchRatio</code> — Matching pixel ratio (0–1)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgColorSegment">
+  <h3>Color Segmentation <span class="badge badge-img">Image</span></h3>
+  <p>Segments the image by HSV color range, keeping matching pixels and setting the rest to black. Commonly used to extract specific color regions for subsequent OCR.</p>
+  <dl class="props">
+    <dt>HSV Lower / Upper Bound</dt>
+    <dd>HSV color range for pixels to keep.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Color-segmented image (only matching regions retained)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgPreprocess">
+  <h3>Image Preprocess <span class="badge badge-img">Image</span></h3>
+  <p>Applies grayscale conversion, binarization, dilation, erosion, and other preprocessing operations to improve accuracy of subsequent OCR or template matching.</p>
+  <dl class="props">
+    <dt>Source Image</dt>
+    <dd>Reference the output from a preceding screenshot or image processing card.</dd>
+    <dt>Grayscale Conversion</dt>
+    <dd>Whether to convert the color image to grayscale. Enabled by default.</dd>
+    <dt>Binarization Method</dt>
+    <dd><strong>Binary</strong>: fixed threshold binarization; <strong>BinaryInv</strong>: inverse binarization; <strong>Otsu</strong>: automatic threshold (Otsu's method); <strong>Triangle</strong>: triangle method auto threshold; <strong>Disabled</strong>: skip binarization.</dd>
+    <dt>Binarization Threshold</dt>
+    <dd>Only used with Binary/BinaryInv, default 128. Pixels brighter than the threshold become white, others become black.</dd>
+    <dt>Morphological Operation</dt>
+    <dd><strong>Opening</strong>: erode then dilate, removes noise; <strong>Closing</strong>: dilate then erode, fills holes; <strong>Dilation</strong>: expands white regions; <strong>Erosion</strong>: shrinks white regions; <strong>Disabled</strong>: skip.</dd>
+    <dt>Morphological Kernel Size</dt>
+    <dd>Kernel size for morphological operations, default 3. Larger kernels produce more pronounced effects.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Preprocessed image</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgBlobAnalysis">
+  <h3>Blob Analysis <span class="badge badge-img">Image</span></h3>
+  <p>Performs connected component analysis on binary images to find all independent blobs.</p>
+  <dl class="props">
+    <dt>Source Image</dt>
+    <dd>Reference the output from a preceding binarization or color segmentation card.</dd>
+    <dt>Area Range</dt>
+    <dd>Min and max blob area filter, default 100–999999.</dd>
+    <dt>Sort Method</dt>
+    <dd>By area descending / ascending / left to right / top to bottom.</dd>
+    <dt>Max Return Count</dt>
+    <dd>Maximum number of blobs to return, default 10.</dd>
+    <dt>Polarity Invert</dt>
+    <dd>true = detect dark blobs, false = detect bright blobs.</dd>
+    <dt>Mask Image</dt>
+    <dd>Optional. Black-and-white binary image: white regions are kept, black regions are masked out.</dd>
+    <dt>ROI Region (X/Y/Width/Height)</dt>
+    <dd>Optional. Limits the analysis area. The image is cropped before analysis.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Typical pipeline: Screenshot → Color segmentation/binarization → Blob analysis → Get target position</div>
+    <div class="example-item">Filter small noise: Min area = <code>500</code>, ignore blobs that are too small</div>
+    <div class="example-item">Find largest target: Sort = <code>Area descending</code>, Max count = <code>1</code></div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Result image with blob positions annotated</div>
+    <div class="output-item"><code>#N.result</code> — Whether blobs were detected (true/false)</div>
+    <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Center coordinates of the first blob</div>
+    <div class="output-item"><code>OutputBlobCount</code> — Number of blobs detected</div>
+    <div class="output-item"><code>OutputBlobResults</code> — Blob list (with X, Y, Width, Height, Area)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgResize">
+  <h3>Image Resize <span class="badge badge-img">Image</span></h3>
+  <p>Resizes the image to specified target dimensions.</p>
+  <dl class="props">
+    <dt>Target Width / Height</dt>
+    <dd>Image dimensions after resizing (pixels).</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.image</code> — Resized image</div>
+    <div class="output-item"><code>OutputScaleRatio</code> — Actual scale ratio</div>
+  </div>
+</div>
+
+<!-- ==================== Data Processing ==================== -->
+<div class="category-title">Data Processing</div>
+
+<div class="card-doc" id="ExpressionEval">
+  <h3>Expression Eval <span class="badge badge-data">Data</span></h3>
+  <p>Evaluates mathematical or logical expressions.</p>
+  <dl class="props">
+    <dt>Expression</dt>
+    <dd>Supports <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code> arithmetic, and <code>&gt;</code> <code>&lt;</code> <code>==</code> <code>!=</code> comparisons. Can reference other card outputs, e.g. <code>#1.text</code>, <code>#2.x</code>.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Math calculation: <code>#1.x * 2 + 100</code> → doubles the coordinate and offsets by 100</div>
+    <div class="example-item">String comparison: <code>#3.text == "Success"</code> → checks if OCR result matches specific text</div>
+    <div class="example-item">Numeric comparison: <code>#2.x > 500</code> → checks if coordinate is in the right half</div>
+    <div class="example-item">Combined condition: <code>#1.result == true</code> → use with If branches</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Expression evaluation result (string)</div>
+    <div class="output-item"><code>#N.result</code> — Boolean result (when expression is a comparison)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="StringSubstring">
+  <h3>String Substring <span class="badge badge-data">Data</span></h3>
+  <p>Extracts a substring from a string.</p>
+  <dl class="props">
+    <dt>Text Source</dt>
+    <dd>Reference another task card's text output, or manually enter text.</dd>
+    <dt>Start Position Mode</dt>
+    <dd><strong>Manual</strong>: directly specify the start index (0-based); <strong>Find Character</strong>: locate the start position by searching for a specific character.</dd>
+    <dt>Manual Start Position</dt>
+    <dd>Start index for extraction (0-based). Only shown in manual mode.</dd>
+    <dt>Find Character</dt>
+    <dd>Character used to locate the start position. Only shown in find mode.</dd>
+    <dt>Find Offset</dt>
+    <dd>Offset after finding the character. Only shown in find mode.</dd>
+    <dt>Extraction Length</dt>
+    <dd>Number of characters to extract. -1 extracts to the end.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Extracted substring</div>
+  </div>
+</div>
+
+<div class="card-doc" id="TypeConvert">
+  <h3>Type Convert <span class="badge badge-data">Data</span></h3>
+  <p>Converts a string to an integer. Supports referencing other tasks' text outputs or variables.</p>
+  <dl class="props">
+    <dt>Text Source</dt>
+    <dd>Reference another task card's text output, or manually enter an expression.</dd>
+    <dt>Input Expression</dt>
+    <dd>Text to convert. Supports <code>@variables</code> and <code>#task references</code>.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Converted value (string form)</div>
+    <div class="output-item"><code>#N.result</code> — Converted integer value</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ArrayParse">
+  <h3>Array Parse <span class="badge badge-data">Data</span></h3>
+  <p>Extracts an element by index from an array-format string. Supports coordinate arrays, string arrays, etc.</p>
+  <dl class="props">
+    <dt>Array Type</dt>
+    <dd>Integer / String / Coordinate / Double.</dd>
+    <dt>Index</dt>
+    <dd>Element index to extract (0-based). Supports expressions.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Extract 2nd coordinate from Blob results: Array Type = <code>Coordinate</code>, Index = <code>1</code></div>
+    <div class="example-item">Dynamic index: Index = <code>{{#5.loopIndex}}</code> (sequentially extract each element in a For loop)</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Extracted element value (string form)</div>
+    <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Coordinate values (for coordinate array type)</div>
+  </div>
+</div>
+
+<!-- ==================== AI Operations ==================== -->
+<div class="category-title">AI Operations</div>
+
+<div class="card-doc" id="LlmTranslate">
+  <h3>LLM Translate <span class="badge badge-ai">AI</span></h3>
+  <p>Uses a Large Language Model (LLM) to translate text. Requires configuring an API key in "Model Management" first.</p>
+  <dl class="props">
+    <dt>Translation Model</dt>
+    <dd>LLM model configured in Model Management.</dd>
+    <dt>Source Text</dt>
+    <dd>Text to translate. Supports expression references to OCR results, e.g. <code>{{#4.text}}</code>.</dd>
+    <dt>Target Language</dt>
+    <dd>Translation target language, default "Chinese".</dd>
+    <dt>System Prompt</dt>
+    <dd>Custom translation instructions. Can be modified to adjust translation style. Supports <code>{target language}</code> placeholder.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Translate OCR result: Source text = <code>{{#4.text}}</code>, Target language = <code>Chinese</code> (#4 is the OCR card)</div>
+    <div class="example-item">Real-time translation pipeline: Screenshot → Crop subtitle area → OCR → LLM Translate → Subtitle display</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Translated text</div>
+  </div>
+</div>
+
+<div class="card-doc" id="LlmVision">
+  <h3>Multimodal Vision <span class="badge badge-ai">AI</span></h3>
+  <p>Uses a vision-capable Large Language Model to analyze image content. Can be used for image description, content understanding, etc.</p>
+  <dl class="props">
+    <dt>Model</dt>
+    <dd>Multimodal LLM model configured in Model Management.</dd>
+    <dt>Prompt</dt>
+    <dd>Instructions telling the model how to analyze the image. Supports <code>@variables</code> and <code>#task references</code>.</dd>
+    <dt>System Prompt</dt>
+    <dd>Custom analysis instructions. Can be modified to adjust response style.</dd>
+    <dt>Source Image</dt>
+    <dd>Reference the output from a preceding screenshot or image processing card.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Image description: Prompt = <code>Describe the main content in the image</code></div>
+    <div class="example-item">Status check: Prompt = <code>Is the button in the image enabled? Answer only "yes" or "no"</code>, use with If branch</div>
+    <div class="example-item">Extract information: Prompt = <code>Extract all numbers in the image, separated by commas</code></div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.text</code> — Model analysis result text</div>
+    <div class="output-item"><code>#N.result</code> — Whether analysis was successful (true/false)</div>
+  </div>
+</div>
+
+<!-- ==================== Control Flow ==================== -->
+<div class="category-title">Control Flow</div>
+
+<div class="card-doc" id="IfElse">
+  <h3>If-Else Branch <span class="badge badge-flow">Control Flow</span></h3>
+  <p>Executes different branches based on a condition. Supports multiple Elif branches and an optional Else branch.</p>
+  <dl class="props">
+    <dt>Condition Source</dt>
+    <dd>Manually enter an expression or reference another card's execution result (Result).</dd>
+    <dt>Condition Expression</dt>
+    <dd>An expression that returns a boolean, e.g. <code>#1.result == true</code>.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Check template match result: Source = <code>TaskResult</code>, reference the template match card → If branch on success, Else on failure</div>
+    <div class="example-item">Manual condition: Source = <code>ManualInput</code>, Expression = <code>#3.text == "Confirm"</code></div>
+    <div class="example-item">Multi-condition branching: If + Elif + Else for three-way or more branch logic</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No direct output (controls execution path)</div>
+  </div>
+  <p style="margin-top:8px"><strong>Tip:</strong> Right-click the IF start card to add Elif branches or show/hide the Else branch. The collapse button (▶) can fold the entire branch block.</p>
+</div>
+
+<div class="card-doc" id="ForLoop">
+  <h3>For Loop <span class="badge badge-flow">Control Flow</span></h3>
+  <p>Repeats execution of task cards inside the loop body a specified number of times.</p>
+  <dl class="props">
+    <dt>Loop Count</dt>
+    <dd>Total number of iterations. Supports expressions.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title">💡 Examples</div>
+    <div class="example-item">Fixed loop: Count = <code>10</code> → repeats 10 times</div>
+    <div class="example-item">Iterate Blob results: Count = <code>{{#5.blobCount}}</code>, use Array Parse + index <code>{{#N.loopIndex}}</code> inside the loop to process each item</div>
+    <div class="example-item">With Break: use If inside the loop to check a condition and break when met</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item"><code>#N.loopIndex</code> — Current loop index (starts from 0)</div>
+  </div>
+  <p style="margin-top:8px"><strong>Tip:</strong> Inside the loop body you can use <code>#N.loopIndex</code> to reference the current loop index (N is the loop start card's number).</p>
+</div>
+
+<div class="card-doc" id="BreakLoop">
+  <h3>Break Loop <span class="badge badge-flow">Control Flow</span></h3>
+  <p>Immediately exits the nearest For loop and continues executing tasks after the loop. Typically used with an If condition.</p>
+  <div class="output-section">
+    <div class="output-title">📤 Output</div>
+    <div class="output-item">No output (controls loop exit only)</div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
+
+</body>
+</html>

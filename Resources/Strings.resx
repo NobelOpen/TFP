@@ -1,0 +1,862 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute name="xml:space" use="optional" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- ========== Common / Dialog ========== -->
+  <data name="Common_OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common_Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Common_Help" xml:space="preserve"><value>Help</value></data>
+  <data name="Common_Browse" xml:space="preserve"><value>Browse</value></data>
+  <data name="Common_Test" xml:space="preserve"><value>Test</value></data>
+  <data name="Common_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Common_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Common_Tip" xml:space="preserve"><value>Tip</value></data>
+  <data name="Common_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Common_Warning" xml:space="preserve"><value>Warning</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="Common_Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="Common_No" xml:space="preserve"><value>No</value></data>
+
+  <!-- ========== TaskType Names ========== -->
+  <data name="TaskType_IfStart" xml:space="preserve"><value>IF Start</value></data>
+  <data name="TaskType_IfEnd" xml:space="preserve"><value>IF End</value></data>
+  <data name="TaskType_ElifStart" xml:space="preserve"><value>ELIF Start</value></data>
+  <data name="TaskType_ElseStart" xml:space="preserve"><value>ELSE Start</value></data>
+  <data name="TaskType_ElseEnd" xml:space="preserve"><value>Branch End</value></data>
+  <data name="TaskType_ForLoopStart" xml:space="preserve"><value>Loop Start</value></data>
+  <data name="TaskType_ForLoopEnd" xml:space="preserve"><value>Loop End</value></data>
+  <data name="TaskType_EndTask" xml:space="preserve"><value>End Current Flow</value></data>
+  <data name="TaskType_EndAllFlows" xml:space="preserve"><value>End All Flows</value></data>
+  <data name="TaskType_PauseTask" xml:space="preserve"><value>Pause All Tasks</value></data>
+  <data name="TaskType_BreakLoop" xml:space="preserve"><value>Break Loop</value></data>
+  <data name="TaskType_WinLaunchApp" xml:space="preserve"><value>Launch App</value></data>
+  <data name="TaskType_WinScreenshot" xml:space="preserve"><value>Win Screenshot Tool</value></data>
+  <data name="TaskType_WinClick" xml:space="preserve"><value>Win Simulate Click</value></data>
+  <data name="TaskType_WinCloseApp" xml:space="preserve"><value>Win Close App</value></data>
+  <data name="TaskType_WinUiAutomation" xml:space="preserve"><value>WinUI Automation</value></data>
+  <data name="TaskType_WinSimulateInput" xml:space="preserve"><value>Win Simulate Input</value></data>
+  <data name="TaskType_WinSubtitle" xml:space="preserve"><value>Win Subtitle Prompt</value></data>
+  <data name="TaskType_AdbConnect" xml:space="preserve"><value>ADB Connect</value></data>
+  <data name="TaskType_AdbLaunchApp" xml:space="preserve"><value>ADB Launch App</value></data>
+  <data name="TaskType_AdbScreenshot" xml:space="preserve"><value>ADB Screenshot Tool</value></data>
+  <data name="TaskType_AdbClick" xml:space="preserve"><value>ADB Simulate Click</value></data>
+  <data name="TaskType_AdbCloseApp" xml:space="preserve"><value>ADB Close App</value></data>
+  <data name="TaskType_AdbDisconnect" xml:space="preserve"><value>ADB Disconnect</value></data>
+  <data name="TaskType_ImgCrop" xml:space="preserve"><value>Image Crop</value></data>
+  <data name="TaskType_ImgTemplateMatch" xml:space="preserve"><value>Template Match</value></data>
+  <data name="TaskType_ImgOcr" xml:space="preserve"><value>OCR Recognition</value></data>
+  <data name="TaskType_ImgColorDetect" xml:space="preserve"><value>Color Detection</value></data>
+  <data name="TaskType_ImgColorSegment" xml:space="preserve"><value>Color Segmentation</value></data>
+  <data name="TaskType_ImgPreprocess" xml:space="preserve"><value>Image Preprocess</value></data>
+  <data name="TaskType_ImgBlobAnalysis" xml:space="preserve"><value>Blob Analysis</value></data>
+  <data name="TaskType_ImgResize" xml:space="preserve"><value>Image Resize</value></data>
+  <data name="TaskType_ExpressionEval" xml:space="preserve"><value>Expression Eval</value></data>
+  <data name="TaskType_StringSubstring" xml:space="preserve"><value>String Substring</value></data>
+  <data name="TaskType_TypeConvert" xml:space="preserve"><value>Type Convert</value></data>
+  <data name="TaskType_ArrayParse" xml:space="preserve"><value>Array Parse</value></data>
+  <data name="TaskType_GetTimestamp" xml:space="preserve"><value>Get Current Time</value></data>
+  <data name="TaskType_LlmTranslate" xml:space="preserve"><value>LLM Translate</value></data>
+  <data name="TaskType_LlmVision" xml:space="preserve"><value>Multimodal Vision</value></data>
+
+  <!-- ========== MainWindow ========== -->
+  <data name="Main_Title" xml:space="preserve"><value>TaskFlow</value></data>
+  <data name="Main_NewProject" xml:space="preserve"><value>New</value></data>
+  <data name="Main_OpenProject" xml:space="preserve"><value>Open</value></data>
+  <data name="Main_SaveProject" xml:space="preserve"><value>Save</value></data>
+  <data name="Main_SaveAs" xml:space="preserve"><value>Save As</value></data>
+  <data name="Main_Load" xml:space="preserve"><value>Load</value></data>
+  <data name="Main_Hide" xml:space="preserve"><value>Hide</value></data>
+  <data name="Main_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Main_Variables" xml:space="preserve"><value>Variables</value></data>
+  <data name="Main_Flows" xml:space="preserve"><value>Flows</value></data>
+  <data name="Main_Models" xml:space="preserve"><value>Models</value></data>
+  <data name="Main_RunOnce" xml:space="preserve"><value>Run Once</value></data>
+  <data name="Main_RunCurrent" xml:space="preserve"><value>Run Current</value></data>
+  <data name="Main_RunCurrentFlow" xml:space="preserve"><value>Run Current Flow</value></data>
+  <data name="Main_RunAllFlows" xml:space="preserve"><value>Run All Flows</value></data>
+  <data name="Main_RunAll" xml:space="preserve"><value>Run All</value></data>
+  <data name="Main_StopAll" xml:space="preserve"><value>Stop All</value></data>
+  <data name="Main_PauseAll" xml:space="preserve"><value>Pause All</value></data>
+  <data name="Main_ImagePreview" xml:space="preserve"><value>Image Preview</value></data>
+  <data name="Main_LiveView" xml:space="preserve"><value>Live View</value></data>
+  <data name="Main_LogOutput" xml:space="preserve"><value>Log Output</value></data>
+  <data name="Main_ClearLog" xml:space="preserve"><value>Clear Log</value></data>
+  <data name="Main_ExportLog" xml:space="preserve"><value>Export Log</value></data>
+  <data name="Main_RunLog" xml:space="preserve"><value>Run Log</value></data>
+  <data name="Main_OutputInfo" xml:space="preserve"><value>Output Info</value></data>
+  <data name="Main_SearchTask" xml:space="preserve"><value>Search Task</value></data>
+  <data name="Main_AddTask" xml:space="preserve"><value>Add Task</value></data>
+  <data name="Main_SaveImage" xml:space="preserve"><value>Save Image</value></data>
+  <data name="Main_ResetSize" xml:space="preserve"><value>Reset Size</value></data>
+  <data name="Main_EmptyHint" xml:space="preserve"><value>Right-click to add task cards</value></data>
+  <data name="Main_NoTaskSelected" xml:space="preserve"><value>No task selected</value></data>
+  <data name="Main_Minimize" xml:space="preserve"><value>Minimize</value></data>
+  <data name="Main_Maximize" xml:space="preserve"><value>Maximize</value></data>
+  <data name="Main_Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Main_LiveStartHint" xml:space="preserve"><value>Click ⚙ Settings button → ▶ to start</value></data>
+  <data name="Main_StartLive" xml:space="preserve"><value>Start Live View</value></data>
+  <data name="Main_StopLive" xml:space="preserve"><value>Stop Live View</value></data>
+  <data name="Main_LiveSettings" xml:space="preserve"><value>Live Settings</value></data>
+
+  <!-- ========== Context Menu ========== -->
+  <data name="Menu_AddTaskBelow" xml:space="preserve"><value>Add Task Below</value></data>
+  <data name="Menu_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Menu_Paste" xml:space="preserve"><value>Paste</value></data>
+  <data name="Menu_Cut" xml:space="preserve"><value>Cut</value></data>
+  <data name="Menu_AddElifBranch" xml:space="preserve"><value>Add Elif Branch</value></data>
+  <data name="Menu_ShowElse" xml:space="preserve"><value>Show Else</value></data>
+  <data name="Menu_HideElse" xml:space="preserve"><value>Hide Else</value></data>
+  <data name="Menu_General" xml:space="preserve"><value>General</value></data>
+  <data name="Menu_WinOps" xml:space="preserve"><value>Windows</value></data>
+  <data name="Menu_AdbOps" xml:space="preserve"><value>ADB</value></data>
+  <data name="Menu_ImgProc" xml:space="preserve"><value>Image Processing</value></data>
+  <data name="Menu_DataProc" xml:space="preserve"><value>Data Processing</value></data>
+  <data name="Menu_AiOps" xml:space="preserve"><value>AI Operations</value></data>
+  <data name="Menu_ControlFlow" xml:space="preserve"><value>Control Flow</value></data>
+  <data name="Menu_IfElseBranch" xml:space="preserve"><value>If-Else Branch</value></data>
+  <data name="Menu_ForLoop" xml:space="preserve"><value>For Loop</value></data>
+
+  <!-- ========== Settings Dialog ========== -->
+  <data name="Settings_Title" xml:space="preserve"><value>Settings</value></data>
+  <data name="Settings_Management" xml:space="preserve"><value>Settings Management</value></data>
+  <data name="Settings_Startup" xml:space="preserve"><value>Startup Settings</value></data>
+  <data name="Settings_AutoStart" xml:space="preserve"><value>Start with OS</value></data>
+  <data name="Settings_AutoLoadLast" xml:space="preserve"><value>Auto load last project on startup</value></data>
+  <data name="Settings_RunAllOnStartup" xml:space="preserve"><value>Run all flows on startup</value></data>
+  <data name="Settings_HideOnStartup" xml:space="preserve"><value>Hide window on startup</value></data>
+  <data name="Settings_Execution" xml:space="preserve"><value>Execution Settings</value></data>
+  <data name="Settings_FlowInterval" xml:space="preserve"><value>Flow execution interval (ms):</value></data>
+  <data name="Settings_RepeatRunAll" xml:space="preserve"><value>Repeat all flows in loop</value></data>
+  <data name="Settings_RepeatInterval" xml:space="preserve"><value>Repeat interval (ms):</value></data>
+  <data name="Settings_KeepScreenOn" xml:space="preserve"><value>Keep screen on while running</value></data>
+  <data name="Settings_Log" xml:space="preserve"><value>Log Settings</value></data>
+  <data name="Settings_MaxLogLines" xml:space="preserve"><value>Max log lines:</value></data>
+  <data name="Settings_AutoSaveLog" xml:space="preserve"><value>Auto save log to file</value></data>
+  <data name="Settings_OcrEngine" xml:space="preserve"><value>OCR Engine Settings</value></data>
+  <data name="Settings_OcrStatus" xml:space="preserve"><value>Status: ⚠ Not configured</value></data>
+  <data name="Settings_OcrStatusOk" xml:space="preserve"><value>Status: ✔ Verified</value></data>
+  <data name="Settings_OcrExePath" xml:space="preserve"><value>OCR executable path:</value></data>
+  <data name="Settings_OcrDirPath" xml:space="preserve"><value>WeChat runtime directory:</value></data>
+  <data name="Settings_AutoDetect" xml:space="preserve"><value>Auto Detect</value></data>
+  <data name="Settings_TestAvailability" xml:space="preserve"><value>Test Availability</value></data>
+  <data name="Settings_About" xml:space="preserve"><value>ℹ About</value></data>
+  <data name="Settings_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Settings_LanguageLabel" xml:space="preserve"><value>Interface language:</value></data>
+  <data name="Settings_RestartRequired" xml:space="preserve"><value>Language change requires restart to take effect.</value></data>
+
+  <!-- ========== Add Variable Dialog ========== -->
+  <data name="AddVar_Title" xml:space="preserve"><value>Add Variable</value></data>
+  <data name="AddVar_Name" xml:space="preserve"><value>Variable name (without @ prefix):</value></data>
+  <data name="AddVar_Type" xml:space="preserve"><value>Variable type:</value></data>
+  <data name="AddVar_InitialValue" xml:space="preserve"><value>Initial value:</value></data>
+
+  <!-- ========== Rename Dialog ========== -->
+  <data name="Rename_Title" xml:space="preserve"><value>Rename</value></data>
+  <data name="Rename_TaskName" xml:space="preserve"><value>Task name</value></data>
+
+  <!-- ========== Flow Manager ========== -->
+  <data name="Flow_Title" xml:space="preserve"><value>Flow Management</value></data>
+  <data name="Flow_AddFlow" xml:space="preserve"><value>Add Flow</value></data>
+  <data name="Flow_Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Flow_Delete" xml:space="preserve"><value>Delete Flow</value></data>
+
+  <!-- ========== Model Manager ========== -->
+  <data name="Model_Title" xml:space="preserve"><value>LLM Model Management</value></data>
+  <data name="Model_GlobalTitle" xml:space="preserve"><value>Global Model Management</value></data>
+  <data name="Model_Add" xml:space="preserve"><value>Add Model</value></data>
+  <data name="Model_Edit" xml:space="preserve"><value>Edit Model</value></data>
+  <data name="Model_Delete" xml:space="preserve"><value>Delete Model</value></data>
+  <data name="Model_TestConnection" xml:space="preserve"><value>Test Connection</value></data>
+  <data name="Model_ResetStats" xml:space="preserve"><value>Reset Stats</value></data>
+  <data name="Model_DisplayName" xml:space="preserve"><value>Display Name</value></data>
+  <data name="Model_ApiEndpoint" xml:space="preserve"><value>API Endpoint</value></data>
+  <data name="Model_ApiKey" xml:space="preserve"><value>API Key</value></data>
+  <data name="Model_ModelName" xml:space="preserve"><value>Model Name (actual)</value></data>
+  <data name="Model_Timeout" xml:space="preserve"><value>Timeout (seconds)</value></data>
+
+  <!-- ========== Variable Manager ========== -->
+  <data name="VarMgr_Title" xml:space="preserve"><value>Variable Management</value></data>
+  <data name="VarMgr_AddVariable" xml:space="preserve"><value>Add Variable</value></data>
+  <data name="VarMgr_DeleteSelected" xml:space="preserve"><value>Delete Selected</value></data>
+
+  <!-- ========== Task Property Dialog ========== -->
+  <data name="TaskProp_Title" xml:space="preserve"><value>Task Properties</value></data>
+  <data name="TaskProp_EditTitle" xml:space="preserve"><value>Edit Task Properties</value></data>
+  <data name="TaskProp_TaskName" xml:space="preserve"><value>Task name:</value></data>
+  <data name="TaskProp_ImageSource" xml:space="preserve"><value>Use other task's output image</value></data>
+  <data name="TaskProp_ImageSourceTask" xml:space="preserve"><value>Image source task:</value></data>
+  <data name="TaskProp_ImageFilePath" xml:space="preserve"><value>Image file path:</value></data>
+  <data name="TaskProp_SelectImage" xml:space="preserve"><value>Select Image</value></data>
+  <data name="TaskProp_RoiArea" xml:space="preserve"><value>ROI Area</value></data>
+  <data name="TaskProp_RoiX" xml:space="preserve"><value>X Expression</value></data>
+  <data name="TaskProp_RoiY" xml:space="preserve"><value>Y Expression</value></data>
+  <data name="TaskProp_RoiWidth" xml:space="preserve"><value>Width Expression</value></data>
+  <data name="TaskProp_RoiHeight" xml:space="preserve"><value>Height Expression</value></data>
+  <data name="TaskProp_SelectRoi" xml:space="preserve"><value>Select ROI Area</value></data>
+  <data name="TaskProp_Eyedropper" xml:space="preserve"><value>💧 Color Eyedropper (pick HSV from image)</value></data>
+
+  <!-- ========== Live Preview ========== -->
+  <data name="Live_SettingsTitle" xml:space="preserve"><value>Live View Settings</value></data>
+  <data name="Live_ProcessName" xml:space="preserve"><value>Process name (without .exe):</value></data>
+  <data name="Live_ProcessHint" xml:space="preserve"><value>Example: notepad, chrome, WeChat</value></data>
+  <data name="Live_Display" xml:space="preserve"><value>Live View</value></data>
+  <data name="Live_DisplayWithName" xml:space="preserve"><value>{0} Live View</value></data>
+
+  <!-- ========== Messages ========== -->
+  <data name="Msg_HelpNotFound" xml:space="preserve"><value>Help document not found. Please check the installation directory.</value></data>
+  <data name="Msg_SetInputImage" xml:space="preserve"><value>Please set input image first</value></data>
+  <data name="Msg_ConfirmDelete" xml:space="preserve"><value>Are you sure you want to delete?</value></data>
+  <data name="Msg_CannotOpenHelp" xml:space="preserve"><value>Cannot open help document: {0}</value></data>
+  <data name="Msg_SavedSuccessfully" xml:space="preserve"><value>Saved successfully</value></data>
+  <data name="Msg_LanguageRestart" xml:space="preserve"><value>Language has been changed. Please restart the application for it to take effect.</value></data>
+  <data name="Msg_ConfirmDeleteBranchGroup" xml:space="preserve"><value>Are you sure you want to delete the entire branch group?</value></data>
+  <data name="Msg_ConfirmDeleteTask" xml:space="preserve"><value>Are you sure you want to delete task "{0}"?</value></data>
+  <data name="Msg_NoImageToSave" xml:space="preserve"><value>No image to save</value></data>
+  <data name="Msg_ImageSaved" xml:space="preserve"><value>Image saved: {0}</value></data>
+  <data name="Msg_SaveFailed" xml:space="preserve"><value>Save failed: {0}</value></data>
+  <data name="Msg_NoLogToExport" xml:space="preserve"><value>No log content to export</value></data>
+  <data name="Msg_LogExported" xml:space="preserve"><value>Log exported: {0}</value></data>
+  <data name="Msg_ExportFailed" xml:space="preserve"><value>Export failed: {0}</value></data>
+  <data name="Msg_LiveSetProcess" xml:space="preserve"><value>Please set the process name first via ◉ button</value></data>
+  <data name="Msg_LiveCannotCapture" xml:space="preserve"><value>Cannot capture window: {0}</value></data>
+  <data name="Msg_LiveSaved" xml:space="preserve"><value>Live preview image saved: {0}</value></data>
+
+  <!-- ========== Output Panel ========== -->
+  <data name="Output_CardName" xml:space="preserve"><value>Card Name</value></data>
+  <data name="Output_CardType" xml:space="preserve"><value>Card Type</value></data>
+  <data name="Output_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Output_StatusIdle" xml:space="preserve"><value>Idle</value></data>
+  <data name="Output_StatusRunning" xml:space="preserve"><value>Running</value></data>
+  <data name="Output_StatusSuccess" xml:space="preserve"><value>Success</value></data>
+  <data name="Output_StatusFailed" xml:space="preserve"><value>Failed</value></data>
+  <data name="Output_Duration" xml:space="preserve"><value>Duration</value></data>
+  <data name="Output_Seconds" xml:space="preserve"><value>{0} sec</value></data>
+  <data name="Output_Milliseconds" xml:space="preserve"><value>{0} ms</value></data>
+  <data name="Output_Data" xml:space="preserve"><value>Output Data</value></data>
+  <data name="Output_NoData" xml:space="preserve"><value>No output data yet</value></data>
+  <data name="Output_Result" xml:space="preserve"><value>Result</value></data>
+  <data name="Output_Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Output_Coords" xml:space="preserve"><value>Coords (X, Y)</value></data>
+  <data name="Output_LoopIndex" xml:space="preserve"><value>Loop Index</value></data>
+  <data name="Output_CurrentLoop" xml:space="preserve"><value>Current Loop</value></data>
+  <data name="Output_MatchRatio" xml:space="preserve"><value>Match Ratio</value></data>
+  <data name="Output_MatchCount" xml:space="preserve"><value>Match Count</value></data>
+  <data name="Output_BestMatchScore" xml:space="preserve"><value>Best Match Score</value></data>
+  <data name="Output_BestMatchCoords" xml:space="preserve"><value>Best Match Coords</value></data>
+  <data name="Output_ScoreArray" xml:space="preserve"><value>Score Array</value></data>
+  <data name="Output_CoordsArray" xml:space="preserve"><value>Coords Array</value></data>
+  <data name="Output_BlobCount" xml:space="preserve"><value>Blob Count</value></data>
+  <data name="Output_FirstBlobCoords" xml:space="preserve"><value>First Blob Coords</value></data>
+  <data name="Output_BlobCoordsArray" xml:space="preserve"><value>Blob Coords Array</value></data>
+  <data name="Output_BlobSizeArray" xml:space="preserve"><value>Blob Size Array</value></data>
+  <data name="Output_BlobAreaArray" xml:space="preserve"><value>Blob Area Array</value></data>
+  <data name="Output_ScaleRatio" xml:space="preserve"><value>Scale Ratio</value></data>
+  <data name="Output_ConvertResult" xml:space="preserve"><value>Convert Result (Int)</value></data>
+  <data name="Output_ParseResultInt" xml:space="preserve"><value>Parse Result (Int)</value></data>
+  <data name="Output_ParseResultString" xml:space="preserve"><value>Parse Result (String)</value></data>
+  <data name="Output_ParseResultCoords" xml:space="preserve"><value>Parse Result (X,Y)</value></data>
+  <data name="Output_ParseResultDouble" xml:space="preserve"><value>Parse Result (Double)</value></data>
+  <data name="Output_CurrentTime" xml:space="preserve"><value>Current Time</value></data>
+  <data name="Output_ErrorMessage" xml:space="preserve"><value>Error Message</value></data>
+
+  <!-- ========== File Dialog Filters ========== -->
+  <data name="Filter_PngImage" xml:space="preserve"><value>PNG Image|*.png</value></data>
+  <data name="Filter_JpegImage" xml:space="preserve"><value>JPEG Image|*.jpg</value></data>
+  <data name="Filter_BmpImage" xml:space="preserve"><value>BMP Image|*.bmp</value></data>
+  <data name="Filter_TextFile" xml:space="preserve"><value>Text File|*.txt</value></data>
+  <data name="Filter_ExeFile" xml:space="preserve"><value>Executable|*.exe</value></data>
+
+  <!-- ========== Property Dialog Labels ========== -->
+  <data name="Prop_EditPrefix" xml:space="preserve"><value>Edit: {0}</value></data>
+  <data name="Prop_TaskName" xml:space="preserve"><value>Task Name</value></data>
+  <data name="Prop_LoopCount" xml:space="preserve"><value>Loop Count (number / @var / #task ref)</value></data>
+  <data name="Prop_PauseDuration" xml:space="preserve"><value>Pause Duration ms (number / @var / #task ref)</value></data>
+  <data name="Prop_OutputFormat" xml:space="preserve"><value>Output Format</value></data>
+  <data name="Prop_TimeFmt_HMS" xml:space="preserve"><value>HH:mm:ss (HHmmss)</value></data>
+  <data name="Prop_TimeFmt_DHMS" xml:space="preserve"><value>dd HH:mm:ss (ddHHmmss)</value></data>
+  <data name="Prop_TimeFmt_MDHMS" xml:space="preserve"><value>MM-dd HH:mm:ss (MMddHHmmss)</value></data>
+  <data name="Prop_TimeFmt_YMDHMS" xml:space="preserve"><value>yyyy-MM-dd HH:mm:ss (yyyyMMddHHmmss)</value></data>
+  <data name="Prop_ExePath" xml:space="preserve"><value>EXE Path</value></data>
+  <data name="Prop_Arguments" xml:space="preserve"><value>Launch Arguments</value></data>
+  <data name="Prop_ProcessName" xml:space="preserve"><value>Process Name</value></data>
+  <data name="Prop_IncludeTitleBar" xml:space="preserve"><value>Include System Titlebar</value></data>
+  <data name="Prop_CropTopHeight" xml:space="preserve"><value>Extra Crop Top Height (px)</value></data>
+  <data name="Prop_ConvertGrayscale" xml:space="preserve"><value>Convert to Grayscale</value></data>
+  <data name="Prop_DeviceIp" xml:space="preserve"><value>Device IP</value></data>
+  <data name="Prop_DevicePort" xml:space="preserve"><value>Port</value></data>
+  <data name="Prop_DeviceSerial" xml:space="preserve"><value>Device Serial</value></data>
+  <data name="Prop_PackageName" xml:space="preserve"><value>Package Name</value></data>
+  <data name="Prop_ActivityName" xml:space="preserve"><value>Activity Name</value></data>
+  <data name="Prop_MatchThreshold" xml:space="preserve"><value>Match Threshold</value></data>
+  <data name="Prop_MaxMatchCount" xml:space="preserve"><value>Max Match Count (1=single)</value></data>
+  <data name="Prop_TargetText" xml:space="preserve"><value>Target Text</value></data>
+  <data name="Prop_CheckContainsText" xml:space="preserve"><value>Check Contains Text</value></data>
+  <data name="Prop_EnableGrayscale" xml:space="preserve"><value>Enable Grayscale Conversion</value></data>
+  <data name="Prop_BinarizeMethod" xml:space="preserve"><value>Binarize Method</value></data>
+  <data name="Prop_BinarizeNone" xml:space="preserve"><value>None</value></data>
+  <data name="Prop_BinarizeBinary" xml:space="preserve"><value>Binary</value></data>
+  <data name="Prop_BinarizeBinaryInv" xml:space="preserve"><value>Binary Inverted</value></data>
+  <data name="Prop_BinarizeOtsu" xml:space="preserve"><value>Auto Threshold (Otsu)</value></data>
+  <data name="Prop_BinarizeTriangle" xml:space="preserve"><value>Auto Threshold (Triangle)</value></data>
+  <data name="Prop_BinarizeThreshold" xml:space="preserve"><value>Binarize Threshold (0-255)</value></data>
+  <data name="Prop_MorphMethod" xml:space="preserve"><value>Morphology Operation</value></data>
+  <data name="Prop_MorphNone" xml:space="preserve"><value>None</value></data>
+  <data name="Prop_MorphOpen" xml:space="preserve"><value>Opening (Denoise)</value></data>
+  <data name="Prop_MorphClose" xml:space="preserve"><value>Closing (Fill Holes)</value></data>
+  <data name="Prop_MorphDilate" xml:space="preserve"><value>Dilation</value></data>
+  <data name="Prop_MorphErode" xml:space="preserve"><value>Erosion</value></data>
+  <data name="Prop_MorphKernelSize" xml:space="preserve"><value>Morphology Kernel Size</value></data>
+  <data name="Prop_RoiArea" xml:space="preserve"><value>ROI Area</value></data>
+  <data name="Prop_HsvRange" xml:space="preserve"><value>HSV Range</value></data>
+  <data name="Prop_SelectRoiMask" xml:space="preserve"><value>▭ Select Analysis Region / Draw Mask</value></data>
+  <data name="Prop_MinArea" xml:space="preserve"><value>Min Area</value></data>
+  <data name="Prop_MaxArea" xml:space="preserve"><value>Max Area</value></data>
+  <data name="Prop_SortMode" xml:space="preserve"><value>Sort Mode</value></data>
+  <data name="Prop_SortAreaDesc" xml:space="preserve"><value>Area Descending</value></data>
+  <data name="Prop_SortAreaAsc" xml:space="preserve"><value>Area Ascending</value></data>
+  <data name="Prop_SortLeftToRight" xml:space="preserve"><value>Left to Right</value></data>
+  <data name="Prop_SortTopToBottom" xml:space="preserve"><value>Top to Bottom</value></data>
+  <data name="Prop_MaxBlobCount" xml:space="preserve"><value>Max Blob Count</value></data>
+  <data name="Prop_InvertBinary" xml:space="preserve"><value>Detect Dark Blobs (Invert Polarity)</value></data>
+  <data name="Prop_TargetWidth" xml:space="preserve"><value>Target Width</value></data>
+  <data name="Prop_TargetHeight" xml:space="preserve"><value>Target Height</value></data>
+  <data name="Prop_ConditionExpr" xml:space="preserve"><value>{0}Condition Expression</value></data>
+  <data name="Prop_ElifCondition" xml:space="preserve"><value>▸ Elif {0} Condition (#{1})</value></data>
+  <data name="Prop_XCoordExpr" xml:space="preserve"><value>X Coordinate Expression</value></data>
+  <data name="Prop_YCoordExpr" xml:space="preserve"><value>Y Coordinate Expression</value></data>
+  <data name="Prop_ClickType" xml:space="preserve"><value>Click Type</value></data>
+  <data name="Prop_ClickSingle" xml:space="preserve"><value>Single Click</value></data>
+  <data name="Prop_ClickDouble" xml:space="preserve"><value>Double Click</value></data>
+  <data name="Prop_ClickSwipe" xml:space="preserve"><value>Swipe</value></data>
+  <data name="Prop_EndXExpr" xml:space="preserve"><value>End X Expression</value></data>
+  <data name="Prop_EndYExpr" xml:space="preserve"><value>End Y Expression</value></data>
+  <data name="Prop_SwipeDuration" xml:space="preserve"><value>Swipe Duration (ms)</value></data>
+  <data name="Prop_MultiClick" xml:space="preserve"><value>Perform Multiple Clicks</value></data>
+  <data name="Prop_ClickCount" xml:space="preserve"><value>Click Count</value></data>
+  <data name="Prop_ClickInterval" xml:space="preserve"><value>Click Interval (ms)</value></data>
+  <data name="Prop_EnableOffscreen" xml:space="preserve"><value>Enable Offscreen Click (send background messages to target process)</value></data>
+  <data name="Prop_SearchBy" xml:space="preserve"><value>Search By</value></data>
+  <data name="Prop_SearchByName" xml:space="preserve"><value>By Name</value></data>
+  <data name="Prop_SearchByAutomationId" xml:space="preserve"><value>By AutomationId</value></data>
+  <data name="Prop_ButtonName" xml:space="preserve"><value>Button Name</value></data>
+  <data name="Prop_MatchMode" xml:space="preserve"><value>Match Mode</value></data>
+  <data name="Prop_MatchExact" xml:space="preserve"><value>Exact Match</value></data>
+  <data name="Prop_MatchContains" xml:space="preserve"><value>Contains</value></data>
+  <data name="Prop_MatchRegex" xml:space="preserve"><value>Regular Expression</value></data>
+  <data name="Prop_ModifierKey" xml:space="preserve"><value>Modifier Key</value></data>
+  <data name="Prop_InputAction" xml:space="preserve"><value>Input Action</value></data>
+  <data name="Prop_ScrollDown" xml:space="preserve"><value>Mouse Scroll Down</value></data>
+  <data name="Prop_ScrollUp" xml:space="preserve"><value>Mouse Scroll Up</value></data>
+  <data name="Prop_KeyPress" xml:space="preserve"><value>Keyboard Key Press</value></data>
+  <data name="Prop_KeyName" xml:space="preserve"><value>Key Name (e.g. A, ENTER)</value></data>
+  <data name="Prop_ScrollAmount" xml:space="preserve"><value>Scroll Amount</value></data>
+  <data name="Prop_RepeatCount" xml:space="preserve"><value>Repeat Count</value></data>
+  <data name="Prop_RepeatInterval" xml:space="preserve"><value>Repeat Interval (ms)</value></data>
+  <data name="Prop_SelectModel" xml:space="preserve"><value>Select Model</value></data>
+  <data name="Prop_SourceText" xml:space="preserve"><value>Input Text (supports expression / @var / #task output)</value></data>
+  <data name="Prop_TargetLanguage" xml:space="preserve"><value>Target Language (e.g. Chinese, English)</value></data>
+  <data name="Prop_SystemPrompt" xml:space="preserve"><value>System Prompt</value></data>
+  <data name="Prop_Prompt" xml:space="preserve"><value>Prompt (supports expression / @var / #task output)</value></data>
+  <data name="Prop_DisplayText" xml:space="preserve"><value>Display Text Expression</value></data>
+  <data name="Prop_SpecifyWindow" xml:space="preserve"><value>Specify Window</value></data>
+  <data name="Prop_SelectSubtitleRegion" xml:space="preserve"><value>📐 Select Display Region (auto screenshot and select)</value></data>
+  <data name="Prop_FillProcessFirst" xml:space="preserve"><value>Please fill in Process Name first</value></data>
+  <data name="Prop_ScreenshotFailed" xml:space="preserve"><value>Screenshot failed: {0}</value></data>
+  <data name="Prop_SelectSubtitleArea" xml:space="preserve"><value>Select Subtitle Display Area</value></data>
+  <data name="Prop_XYOffset" xml:space="preserve"><value>X / Y Offset</value></data>
+  <data name="Prop_SubtitleWidthHeight" xml:space="preserve"><value>Subtitle Width / Height (0=auto)</value></data>
+  <data name="Prop_FontSize" xml:space="preserve"><value>Font Size</value></data>
+  <data name="Prop_FontColor" xml:space="preserve"><value>Font Color</value></data>
+  <data name="Prop_SelectColor" xml:space="preserve"><value>Select Color</value></data>
+  <data name="Prop_BackgroundStyle" xml:space="preserve"><value>Background Style</value></data>
+  <data name="Prop_BgAcrylic" xml:space="preserve"><value>Acrylic Glass</value></data>
+  <data name="Prop_BgSolid" xml:space="preserve"><value>Solid Color</value></data>
+  <data name="Prop_BgTransparent" xml:space="preserve"><value>Transparent</value></data>
+  <data name="Prop_BgAutoSample" xml:space="preserve"><value>Auto Sample</value></data>
+  <data name="Prop_BgColor" xml:space="preserve"><value>Background Color (with alpha, e.g. #80FFFFFF)</value></data>
+  <data name="Prop_SelectBgColor" xml:space="preserve"><value>Select Background Color</value></data>
+  <data name="Prop_Duration" xml:space="preserve"><value>Duration (ms, 0=permanent)</value></data>
+  <data name="Prop_WaitClose" xml:space="preserve"><value>Wait for subtitle to close before continuing</value></data>
+  <data name="Prop_RoiW" xml:space="preserve"><value>W</value></data>
+  <data name="Prop_RoiH" xml:space="preserve"><value>H</value></data>
+  <data name="Prop_HsvLowerH" xml:space="preserve"><value>H Lower (0-180):</value></data>
+  <data name="Prop_HsvUpperH" xml:space="preserve"><value>H Upper (0-180):</value></data>
+  <data name="Prop_HsvLowerS" xml:space="preserve"><value>S Lower (0-255):</value></data>
+  <data name="Prop_HsvUpperS" xml:space="preserve"><value>S Upper (0-255):</value></data>
+  <data name="Prop_HsvLowerV" xml:space="preserve"><value>V Lower (0-255):</value></data>
+  <data name="Prop_HsvUpperV" xml:space="preserve"><value>V Upper (0-255):</value></data>
+  <data name="Prop_SetImageFirst" xml:space="preserve"><value>Please set input image first (select source task or specify image file path)</value></data>
+  <data name="Prop_MaskNotSet" xml:space="preserve"><value>Mask not set</value></data>
+  <data name="Prop_MaskSet" xml:space="preserve"><value>✔ Mask set</value></data>
+  <data name="Prop_XExpr" xml:space="preserve"><value>X Coordinate Expression</value></data>
+  <data name="Prop_YExpr" xml:space="preserve"><value>Y Coordinate Expression</value></data>
+  <data name="Prop_WidthExpr" xml:space="preserve"><value>Width Expression</value></data>
+  <data name="Prop_HeightExpr" xml:space="preserve"><value>Height Expression</value></data>
+  <data name="Prop_SelectRoiArea" xml:space="preserve"><value>Select ROI Area</value></data>
+  <data name="Prop_TemplatePreview" xml:space="preserve"><value>Current Template Preview</value></data>
+  <data name="Prop_SelectTemplate" xml:space="preserve"><value>Select Template Area</value></data>
+  <data name="Prop_SelectSearchRoiMask" xml:space="preserve"><value>▭ Select Search Area / Draw Mask</value></data>
+  <data name="Prop_MaskPaint" xml:space="preserve"><value>🖌 Mask Paint</value></data>
+  <data name="Prop_ClearMask" xml:space="preserve"><value>Clear Mask</value></data>
+  <data name="Prop_SaveFailed" xml:space="preserve"><value>Save failed: {0}</value></data>
+  <data name="Prop_ImageSourceTask" xml:space="preserve"><value>Image Source Task</value></data>
+  <data name="Prop_SelectTask" xml:space="preserve"><value>-- Select Task --</value></data>
+  <data name="Prop_ImageFilePath" xml:space="preserve"><value>Image File Path</value></data>
+  <data name="Filter_ImageFile" xml:space="preserve"><value>Image Files|*.png;*.jpg;*.bmp</value></data>
+  <data name="Prop_UseSourceTaskImage" xml:space="preserve"><value>Use output image from another task</value></data>
+  <data name="Prop_ColorPicker" xml:space="preserve"><value>💧 Color Picker (Pick HSV Range from Image)</value></data>
+  <data name="Prop_AssignExpr" xml:space="preserve"><value>Assignment Expression</value></data>
+  <data name="Prop_AssignHint" xml:space="preserve"><value>Format: @VarName = Expression
+Separate multiple statements with ";" or newline
+Example: @A = 1; @B = @A + 1</value></data>
+  <data name="Prop_TargetLoop" xml:space="preserve"><value>Target Loop</value></data>
+  <data name="Prop_SelectLoop" xml:space="preserve"><value>-- Select Loop --</value></data>
+  <data name="Prop_TextSourceTask" xml:space="preserve"><value>Text Source Task</value></data>
+  <data name="Prop_InputText" xml:space="preserve"><value>Input Text (used when no source task)</value></data>
+  <data name="Prop_StartMode" xml:space="preserve"><value>Start Position Mode</value></data>
+  <data name="Prop_ManualMode" xml:space="preserve"><value>Manual</value></data>
+  <data name="Prop_FindCharMode" xml:space="preserve"><value>Find Character</value></data>
+  <data name="Prop_ManualStart" xml:space="preserve"><value>Manual Start Position (0-based)</value></data>
+  <data name="Prop_SearchChar" xml:space="preserve"><value>Search Character/String</value></data>
+  <data name="Prop_SearchOffset" xml:space="preserve"><value>Search Offset</value></data>
+  <data name="Prop_SubstringLength" xml:space="preserve"><value>Substring Length (-1=to end)</value></data>
+  <data name="Prop_InputExpr" xml:space="preserve"><value>Input Expression (supports @VarName)</value></data>
+  <data name="Prop_ArrayType" xml:space="preserve"><value>Array Variable Type</value></data>
+  <data name="Prop_ArrayInt" xml:space="preserve"><value>Int (Integer)</value></data>
+  <data name="Prop_ArrayString" xml:space="preserve"><value>String</value></data>
+  <data name="Prop_ArrayCoord" xml:space="preserve"><value>Coordinate (X/Y)</value></data>
+  <data name="Prop_ArrayDouble" xml:space="preserve"><value>Double (Float)</value></data>
+  <data name="Prop_ArraySourceExpr" xml:space="preserve"><value>Array Source Expression (e.g. #1 TemplateMatch.MatchCoords)</value></data>
+  <data name="Prop_OutputIndex" xml:space="preserve"><value>Output Index (integer or @variable)</value></data>
+  <data name="Prop_OcrEngine" xml:space="preserve"><value>OCR Engine</value></data>
+  <data name="Prop_PaddleOcr" xml:space="preserve"><value>PaddleOCR (Built-in)</value></data>
+  <data name="Prop_WeChatOcr" xml:space="preserve"><value>WeChat OCR</value></data>
+  <data name="Prop_WeChatOcrTip" xml:space="preserve"><value>⚠ WeChat OCR requires configuration in Settings</value></data>
+
+  <data name="Dlg_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Dlg_SettingsTitle" xml:space="preserve"><value>Settings Management</value></data>
+  <data name="Dlg_StartupSettings" xml:space="preserve"><value>Startup Settings</value></data>
+  <data name="Dlg_AutoStart" xml:space="preserve"><value>Auto start with Windows</value></data>
+  <data name="Dlg_AutoLoadLast" xml:space="preserve"><value>Auto load last project on startup</value></data>
+  <data name="Dlg_RunAllOnStartup" xml:space="preserve"><value>Run all flows immediately after startup</value></data>
+  <data name="Dlg_HideOnStartup" xml:space="preserve"><value>Hide window after startup</value></data>
+  <data name="Dlg_ExecutionSettings" xml:space="preserve"><value>Execution Settings</value></data>
+  <data name="Dlg_FlowInterval" xml:space="preserve"><value>Flow execution interval (ms):</value></data>
+  <data name="Dlg_RepeatRunAll" xml:space="preserve"><value>Repeat run all flows</value></data>
+  <data name="Dlg_RepeatInterval" xml:space="preserve"><value>Repeat interval (ms):</value></data>
+  <data name="Dlg_KeepScreenOn" xml:space="preserve"><value>Keep screen on while running</value></data>
+  <data name="Dlg_LogSettings" xml:space="preserve"><value>Log Settings</value></data>
+  <data name="Dlg_MaxLogLines" xml:space="preserve"><value>Max log lines:</value></data>
+  <data name="Dlg_AutoSaveLog" xml:space="preserve"><value>Auto save log to file</value></data>
+  <data name="Dlg_OcrSettings" xml:space="preserve"><value>OCR Engine Settings</value></data>
+  <data name="Dlg_OcrStatusNotConfigured" xml:space="preserve"><value>Status: ⚠ Not configured</value></data>
+  <data name="Dlg_OcrStatusAvailable" xml:space="preserve"><value>Status: ✅ Available</value></data>
+  <data name="Dlg_OcrStatusConfigured" xml:space="preserve"><value>Status: ⚠ Configured, not verified</value></data>
+  <data name="Dlg_OcrStatusTesting" xml:space="preserve"><value>Status: 🔄 Testing...</value></data>
+  <data name="Dlg_OcrStatusUnavailable" xml:space="preserve"><value>Status: ❌ Unavailable</value></data>
+  <data name="Dlg_OcrStatusError" xml:space="preserve"><value>Status: ❌ Test error</value></data>
+  <data name="Dlg_OcrExePath" xml:space="preserve"><value>OCR executable path:</value></data>
+  <data name="Dlg_WeChatRuntimeDir" xml:space="preserve"><value>WeChat runtime directory:</value></data>
+  <data name="Dlg_Browse" xml:space="preserve"><value>Browse</value></data>
+  <data name="Dlg_AutoDetect" xml:space="preserve"><value>Auto Detect</value></data>
+  <data name="Dlg_TestAvailability" xml:space="preserve"><value>Test Availability</value></data>
+  <data name="Dlg_Testing" xml:space="preserve"><value>Testing...</value></data>
+  <data name="Dlg_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Dlg_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Dlg_OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Dlg_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Dlg_IntervalMustBeNonNeg" xml:space="preserve"><value>Flow execution interval must be a non-negative integer</value></data>
+  <data name="Dlg_LogLinesMustBe10" xml:space="preserve"><value>Max log lines must be at least 10</value></data>
+  <data name="Dlg_RepeatIntervalMustBeNonNeg" xml:space="preserve"><value>Repeat interval must be a non-negative integer</value></data>
+  <data name="Dlg_FormatError" xml:space="preserve"><value>Format Error</value></data>
+  <data name="Dlg_SelectOcrExeTitle" xml:space="preserve"><value>Select WeChat OCR executable</value></data>
+  <data name="Dlg_OcrFileFilter" xml:space="preserve"><value>OCR Files|WeChatOCR.exe;wxocr.dll|All Files|*.*</value></data>
+  <data name="Dlg_SelectWeChatDir" xml:space="preserve"><value>Select WeChat runtime directory</value></data>
+  <data name="Dlg_AutoDetectSuccess" xml:space="preserve"><value>Auto detect succeeded</value></data>
+  <data name="Dlg_AutoDetectSuccessMsg" xml:space="preserve"><value>Auto detected WeChat OCR paths:\n\nOCR File: {0}\nRuntime Dir: {1}\n\nPlease click "Test Availability" to verify.</value></data>
+  <data name="Dlg_AutoDetectFailed" xml:space="preserve"><value>Auto detect failed. WeChat OCR components not found.\n\nPlease confirm WeChat is installed, or specify paths manually.</value></data>
+  <data name="Dlg_AutoDetectPartialExe" xml:space="preserve"><value>Found OCR file: {0}\nBut runtime directory not found, please specify manually.</value></data>
+  <data name="Dlg_AutoDetectPartialDir" xml:space="preserve"><value>Found runtime directory: {0}\nBut OCR executable not found, please specify manually.</value></data>
+  <data name="Dlg_ConfigureOcrFirst" xml:space="preserve"><value>Please configure OCR executable path and WeChat runtime directory first.</value></data>
+  <data name="Dlg_Hint" xml:space="preserve"><value>Hint</value></data>
+  <data name="Dlg_TestSuccess" xml:space="preserve"><value>Test Succeeded</value></data>
+  <data name="Dlg_TestFailed" xml:space="preserve"><value>Test Failed</value></data>
+  <data name="Dlg_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Dlg_TestError" xml:space="preserve"><value>Test error: {0}</value></data>
+  <data name="Dlg_AddVariable" xml:space="preserve"><value>Add Variable</value></data>
+  <data name="Dlg_VarNameLabel" xml:space="preserve"><value>Variable name (without @ prefix):</value></data>
+  <data name="Dlg_VarTypeLabel" xml:space="preserve"><value>Variable type:</value></data>
+  <data name="Dlg_VarInitValue" xml:space="preserve"><value>Initial value:</value></data>
+  <data name="Dlg_NameEmpty" xml:space="preserve"><value>Name is empty</value></data>
+  <data name="Dlg_EnterVarName" xml:space="preserve"><value>Please enter a variable name.</value></data>
+  <data name="Dlg_IntFormatError" xml:space="preserve"><value>Int initial value must be an integer.</value></data>
+  <data name="Dlg_DoubleFormatError" xml:space="preserve"><value>Double initial value must be a number.</value></data>
+  <data name="Dlg_BoolFormatError" xml:space="preserve"><value>Bool initial value must be True or False.</value></data>
+  <data name="Dlg_Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Dlg_TaskNameLabel" xml:space="preserve"><value>Task Name</value></data>
+  <data name="Dlg_EnterValidName" xml:space="preserve"><value>Please enter a valid name.</value></data>
+  <data name="Dlg_SearchTask" xml:space="preserve"><value>Search Task</value></data>
+  <data name="Dlg_EnterIdOrName" xml:space="preserve"><value>Enter ID or name</value></data>
+  <data name="Dlg_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Dlg_EnterIdOrNamePrompt" xml:space="preserve"><value>Please enter ID or name</value></data>
+  <data name="Dlg_NotFound" xml:space="preserve"><value>No task matching "{0}" found</value></data>
+  <data name="Dlg_ModelManager" xml:space="preserve"><value>LLM Model Management</value></data>
+  <data name="Dlg_GlobalModelManager" xml:space="preserve"><value>Global Model Management</value></data>
+  <data name="Dlg_DisplayName" xml:space="preserve"><value>Display Name</value></data>
+  <data name="Dlg_TokenStats" xml:space="preserve"><value>Token Stats</value></data>
+  <data name="Dlg_AddModel" xml:space="preserve"><value>Add Model</value></data>
+  <data name="Dlg_EditModel" xml:space="preserve"><value>Edit Model</value></data>
+  <data name="Dlg_DeleteModel" xml:space="preserve"><value>Delete Model</value></data>
+  <data name="Dlg_TestConnection" xml:space="preserve"><value>Test Connection</value></data>
+  <data name="Dlg_ResetStats" xml:space="preserve"><value>Reset Stats</value></data>
+  <data name="Dlg_DeleteConfirm" xml:space="preserve"><value>Delete Confirmation</value></data>
+  <data name="Dlg_ConfirmDeleteModel" xml:space="preserve"><value>Are you sure to delete model '{0}'?</value></data>
+  <data name="Dlg_ResetConfirm" xml:space="preserve"><value>Reset Confirmation</value></data>
+  <data name="Dlg_ConfirmResetStats" xml:space="preserve"><value>Reset token usage stats for model '{0}'?</value></data>
+  <data name="Dlg_ApiEmptyError" xml:space="preserve"><value>API Endpoint or Model Name is empty, cannot test.</value></data>
+  <data name="Dlg_ConnSuccess" xml:space="preserve"><value>Connection successful!\nHTTP Status: {0}\nResponse Preview: {1}</value></data>
+  <data name="Dlg_ConnFailed" xml:space="preserve"><value>Connection failed. HTTP Status: {0}\nResponse:\n{1}</value></data>
+  <data name="Dlg_ConnException" xml:space="preserve"><value>Connection exception:\n{0}</value></data>
+  <data name="Dlg_ModelEdit" xml:space="preserve"><value>Edit Model</value></data>
+  <data name="Dlg_ActualModelName" xml:space="preserve"><value>Model Name</value></data>
+  <data name="Dlg_Timeout" xml:space="preserve"><value>Timeout (seconds)</value></data>
+  <data name="Dlg_DisplayNameEmpty" xml:space="preserve"><value>Display name cannot be empty.</value></data>
+  <data name="Dlg_FlowManager" xml:space="preserve"><value>Flow Management</value></data>
+  <data name="Dlg_AddFlow" xml:space="preserve"><value>Add Flow</value></data>
+  <data name="Dlg_DeleteFlow" xml:space="preserve"><value>Delete Flow</value></data>
+  <data name="Dlg_RenameFlow" xml:space="preserve"><value>Rename Flow</value></data>
+  <data name="Dlg_EnterNewName" xml:space="preserve"><value>Enter new name:</value></data>
+  <data name="Dlg_CannotDelete" xml:space="preserve"><value>Cannot delete</value></data>
+  <data name="Dlg_KeepOneFlow" xml:space="preserve"><value>At least one flow must be kept.</value></data>
+  <data name="Dlg_ConfirmDeleteFlow" xml:space="preserve"><value>Are you sure to delete flow "{0}"? All tasks in this flow will be deleted.</value></data>
+  <data name="Dlg_FlowPrefix" xml:space="preserve"><value>Flow{0}</value></data>
+  <data name="Dlg_VariableManager" xml:space="preserve"><value>Variable Management</value></data>
+  <data name="Dlg_GlobalVariableManager" xml:space="preserve"><value>Global Variable Management</value></data>
+  <data name="Dlg_VarName" xml:space="preserve"><value>Name</value></data>
+  <data name="Dlg_VarType" xml:space="preserve"><value>Type</value></data>
+  <data name="Dlg_VarCurrentValue" xml:space="preserve"><value>Current Value</value></data>
+  <data name="Dlg_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Dlg_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Dlg_NameConflict" xml:space="preserve"><value>Name Conflict</value></data>
+  <data name="Dlg_VarNameExists" xml:space="preserve"><value>Variable name already exists or is empty. Please use another name.</value></data>
+  <data name="Dlg_NewNameExists" xml:space="preserve"><value>New name already exists or is empty. Please use another name.</value></data>
+  <data name="Dlg_NoVarSelected" xml:space="preserve"><value>No variable selected</value></data>
+  <data name="Dlg_SelectVarFirst" xml:space="preserve"><value>Please select a variable from the list first.</value></data>
+  <data name="Dlg_ConfirmDeleteVar" xml:space="preserve"><value>Are you sure to delete variable "@{0}"? This cannot be undone.</value></data>
+  <data name="Dlg_IntValueError" xml:space="preserve"><value>Int value must be an integer</value></data>
+  <data name="Dlg_DoubleValueError" xml:space="preserve"><value>Double value must be a number</value></data>
+  <data name="Dlg_BoolValueError" xml:space="preserve"><value>Bool value must be True or False</value></data>
+  <data name="Dlg_Add_Title" xml:space="preserve"><value>Add</value></data>
+  <data name="Dlg_Edit_Title" xml:space="preserve"><value>Edit</value></data>
+  <data name="Dlg_ModelTitle" xml:space="preserve"><value>{0} Model</value></data>
+
+  <data name="Svc_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Svc_ApiTimeout" xml:space="preserve"><value>API Timeout</value></data>
+  <data name="Svc_ApiException" xml:space="preserve"><value>API call exception: {0}</value></data>
+  <data name="Svc_ParseIndexFailed" xml:space="preserve"><value>Index expression parse failed: '{0}' => '{1}'</value></data>
+  <data name="Svc_ParseException" xml:space="preserve"><value>Expression exception: {0}</value></data>
+  <data name="Svc_ExprNotSet" xml:space="preserve"><value>Expression not set</value></data>
+  <data name="Svc_ExprFormatError" xml:space="preserve"><value>Expression format error: '{0}'. Correct format: #N Property.Property</value></data>
+  <data name="Svc_TaskNotFound" xml:space="preserve"><value>Task #{0} not found</value></data>
+  <data name="Svc_TaskNameMismatch" xml:space="preserve"><value>Task #{0} name mismatch: expected "{1}", actual "{2}"</value></data>
+  <data name="Svc_UnsupportedProperty" xml:space="preserve"><value>Unsupported property: {0}. Supported: Score, Coordinate</value></data>
+  <data name="Svc_TypeMismatch" xml:space="preserve"><value>Type mismatch: '{0}' requires {1} type, current is {2}</value></data>
+  <data name="Svc_IndexOutOfRange" xml:space="preserve"><value>Index {0} out of range, array length is {1}</value></data>
+  <data name="Svc_Score" xml:space="preserve"><value>Score</value></data>
+  <data name="Svc_Coordinate" xml:space="preserve"><value>Coordinate</value></data>
+  <data name="Svc_UnsupportedSourceType" xml:space="preserve"><value>Source type not supported: {0}</value></data>
+  <data name="Svc_AxisExprFailed" xml:space="preserve"><value>{0} expression parse failed: {1} => {2}</value></data>
+  <data name="Svc_AxisExprException" xml:space="preserve"><value>{0} expression exception: {1}</value></data>
+  <data name="Svc_OcrNotConfigured" xml:space="preserve"><value>WeChat OCR not configured or not verified.</value></data>
+  <data name="Svc_ImageEmpty" xml:space="preserve"><value>Input image is empty.</value></data>
+  <data name="Svc_OcrInitFailed" xml:space="preserve"><value>WeChat OCR initialization failed.</value></data>
+  <data name="Svc_DllNotFound" xml:space="preserve"><value>wcocr.dll not found. Please ensure it is in the application directory.</value></data>
+  <data name="Svc_OcrException" xml:space="preserve"><value>WeChat OCR error: {0}</value></data>
+  <data name="Svc_TestSuccess" xml:space="preserve"><value>Test successful! Recognized: {0}</value></data>
+  <data name="Svc_TestFailedNoResult" xml:space="preserve"><value>Test failed: WeChat OCR returned no result.</value></data>
+  <data name="Svc_TestFailedDll" xml:space="preserve"><value>Test failed: wcocr.dll not found.</value></data>
+  <data name="Svc_TestFailedException" xml:space="preserve"><value>Test failed: {0}</value></data>
+  <data name="VM_WindowTitle" xml:space="preserve"><value>TaskFlow Automation</value></data>
+  <data name="VM_FlowDefault" xml:space="preserve"><value>Flow{0}</value></data>
+  <data name="VM_AddFlowLog" xml:space="preserve"><value>Added flow tab: {0}</value></data>
+  <data name="VM_KeepOneFlow" xml:space="preserve"><value>At least one flow tab must be kept</value></data>
+  <data name="VM_ConfirmDeleteFlow" xml:space="preserve"><value>Are you sure to delete flow tab "{0}"?</value></data>
+  <data name="VM_DeleteConfirm" xml:space="preserve"><value>Confirm Delete</value></data>
+  <data name="VM_DeleteFlowLog" xml:space="preserve"><value>Deleted flow tab: {0}</value></data>
+  <data name="VM_NewProject" xml:space="preserve"><value>========== New Project ==========</value></data>
+  <data name="VM_SavedTo" xml:space="preserve"><value>Saved to: {0}</value></data>
+  <data name="VM_SaveFailed" xml:space="preserve"><value>Save failed: {0}</value></data>
+  <data name="VM_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="VM_JsonFilter" xml:space="preserve"><value>JSON Files|*.json</value></data>
+  <data name="VM_LoadFailed" xml:space="preserve"><value>Load failed: {0}</value></data>
+  <data name="VM_Loaded" xml:space="preserve"><value>Loaded: {0}</value></data>
+  <data name="VM_AutoLoaded" xml:space="preserve"><value>Auto loaded last project: {0}</value></data>
+  <data name="VM_AutoLoadFailed" xml:space="preserve"><value>Auto load failed: {0}</value></data>
+  <data name="VM_RunAllLog" xml:space="preserve"><value>========== Run All ==========</value></data>
+  <data name="VM_RepeatRound" xml:space="preserve"><value>========== Round {0} repeat run all ==========</value></data>
+  <data name="VM_StartRunAll" xml:space="preserve"><value>========== Start running all ==========</value></data>
+  <data name="VM_StartFlowTab" xml:space="preserve"><value>--- Start running flow tab: {0} ({1}/{2}) ---</value></data>
+  <data name="VM_FlowTabDone" xml:space="preserve"><value>--- Flow tab {0} done ---</value></data>
+  <data name="VM_WaitInterval" xml:space="preserve"><value>--- Wait {0}ms ---</value></data>
+  <data name="VM_RepeatWait" xml:space="preserve"><value>--- Repeat interval: wait {0}ms ---</value></data>
+  <data name="VM_ExecutionCancelled" xml:space="preserve"><value>Execution cancelled</value></data>
+  <data name="VM_ExecutionError" xml:space="preserve"><value>Execution error: {0}</value></data>
+  <data name="VM_StartBranch" xml:space="preserve"><value>========== Start running branch: {0} tasks ==========</value></data>
+  <data name="VM_StartSingle" xml:space="preserve"><value>========== Start running: {0} ==========</value></data>
+  <data name="VM_StopExecution" xml:space="preserve"><value>========== Execution stopped ==========</value></data>
+  <data name="VM_AddedTask" xml:space="preserve"><value>Added: {0}</value></data>
+  <data name="VM_AddedIfElse" xml:space="preserve"><value>Added If-Else branch</value></data>
+  <data name="VM_AddedElif" xml:space="preserve"><value>Added Elif branch</value></data>
+  <data name="VM_AddedForLoop" xml:space="preserve"><value>Added For loop</value></data>
+  <data name="VM_DeletedElif" xml:space="preserve"><value>Deleted Elif branch: {0} tasks</value></data>
+  <data name="VM_DeletedBranch" xml:space="preserve"><value>Deleted branch: {0} tasks</value></data>
+  <data name="VM_DeletedBranchAll" xml:space="preserve"><value>Deleted branch: {0} tasks</value></data>
+  <data name="VM_Deleted" xml:space="preserve"><value>Deleted: {0}</value></data>
+  <data name="VM_BranchNoSingleDelete" xml:space="preserve"><value>Branch task cannot be deleted individually</value></data>
+  <data name="VM_Duplicated" xml:space="preserve"><value>Duplicated: {0}</value></data>
+  <data name="VM_DuplicateFailed" xml:space="preserve"><value>Duplicate failed: {0}</value></data>
+  <data name="VM_ClipboardEmpty" xml:space="preserve"><value>Clipboard is empty, copy a task first</value></data>
+  <data name="VM_Pasted" xml:space="preserve"><value>Pasted: {0}</value></data>
+  <data name="VM_PasteFailed" xml:space="preserve"><value>Paste failed: {0}</value></data>
+  <data name="VM_CurrentTab" xml:space="preserve"><value>current tab</value></data>
+  <data name="VM_StartCurrentTab" xml:space="preserve"><value>========== Start running current tab: {0} ==========</value></data>
+  <data name="VM_CurrentTabDone" xml:space="preserve"><value>========== Current tab done: {0} ==========</value></data>
+  <data name="VM_LogModelReply" xml:space="preserve"><value>Model reply: {0}</value></data>
+  <data name="Expr_UnsupportedProperty" xml:space="preserve"><value>Unsupported property: {0}</value></data>
+  <data name="Expr_CannotParse" xml:space="preserve"><value>Cannot parse expression: {0}</value></data>
+  <data name="Expr_UnsupportedOp" xml:space="preserve"><value>Unsupported operator: {0}</value></data>
+  <data name="Expr_UnsupportedNumOp" xml:space="preserve"><value>Unsupported numeric operator: {0}</value></data>
+  <data name="Expr_UnsupportedStrOp" xml:space="preserve"><value>Unsupported string operator: {0}</value></data>
+  <data name="AC_OutputText" xml:space="preserve"><value>Output Text</value></data>
+  <data name="AC_XCoord" xml:space="preserve"><value>X Coordinate</value></data>
+  <data name="AC_YCoord" xml:space="preserve"><value>Y Coordinate</value></data>
+  <data name="AC_ExecResult" xml:space="preserve"><value>Execution Result</value></data>
+  <data name="AC_LoopCounter" xml:space="preserve"><value>Loop Counter</value></data>
+  <data name="AC_CurrentTime" xml:space="preserve"><value>Current Time</value></data>
+  <data name="AC_BlobCount" xml:space="preserve"><value>Blob Count</value></data>
+  <data name="AC_ScaleFactor" xml:space="preserve"><value>Scale Factor</value></data>
+  <data name="AC_MatchScore" xml:space="preserve"><value>Match Score</value></data>
+  <data name="Json_FileNotFound" xml:space="preserve"><value>File not found: {0}</value></data>
+  <data name="Json_DefaultFlowName" xml:space="preserve"><value>Flow</value></data>
+  <data name="Win32_Found" xml:space="preserve"><value>Found: {0}</value></data>
+  <data name="Win32_NotFound" xml:space="preserve"><value>Not found</value></data>
+
+  <data name="Svc_ButtonNotSupported" xml:space="preserve"><value>Button not supported</value></data>
+  <data name="Svc_UIAutoFailed" xml:space="preserve"><value>UI automation failed: {0}</value></data>
+  <data name="Svc_ScrollUp" xml:space="preserve"><value>Scroll Up({0})</value></data>
+  <data name="Svc_ScrollDown" xml:space="preserve"><value>Scroll Down({0})</value></data>
+  <data name="Svc_KeyPress" xml:space="preserve"><value>Key Press({0})</value></data>
+  <data name="Svc_Unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="Svc_WinSimFailed" xml:space="preserve"><value>Win simulation failed</value></data>
+  <data name="Svc_PromptTextEmpty" xml:space="preserve"><value>Prompt text is empty.</value></data>
+  <data name="Svc_CannotGetSourceImg" xml:space="preserve"><value>Cannot get source image.</value></data>
+  <data name="Svc_CannotGetTemplateImg" xml:space="preserve"><value>Cannot get template image.</value></data>
+  <data name="Svc_OcrFailed" xml:space="preserve"><value>OCR recognition failed</value></data>
+  <data name="Svc_ColorSegFailed" xml:space="preserve"><value>Color segmentation failed</value></data>
+  <data name="Svc_TargetSizeMustBePositive" xml:space="preserve"><value>Target width and height must be greater than 0</value></data>
+  <data name="Svc_TextEmpty" xml:space="preserve"><value>Text is empty</value></data>
+  <data name="Svc_StringEmpty" xml:space="preserve"><value>String is empty</value></data>
+  <data name="Svc_CharNotFound" xml:space="preserve"><value>Character not found: {0}</value></data>
+  <data name="Svc_StartIndexOutOfRange" xml:space="preserve"><value>Start index {0} out of range (0-{1})</value></data>
+  <data name="Svc_SubstrFailed" xml:space="preserve"><value>String extraction failed: {0}</value></data>
+  <data name="Svc_InputEmptyCheckExpr" xml:space="preserve"><value>Input is empty, check source expression</value></data>
+  <data name="Svc_NoConvertibleChars" xml:space="preserve"><value>"{0}" has no convertible characters</value></data>
+  <data name="Svc_ConvertFailed" xml:space="preserve"><value>"{0}" cannot be converted to integer: "{1}"</value></data>
+  <data name="Svc_ConvertException" xml:space="preserve"><value>Type conversion failed: {0}</value></data>
+  <data name="Svc_ExprEmpty" xml:space="preserve"><value>Expression is empty</value></data>
+  <data name="Svc_InvalidAssignment" xml:space="preserve"><value>Invalid assignment statement: {0}\nFormat should be: @VarName = Expression</value></data>
+  <data name="Svc_VarNotExist" xml:space="preserve"><value>Variable @{0} does not exist, check variable list</value></data>
+  <data name="Svc_ExprEvalFailed" xml:space="preserve"><value>Expression evaluation failed: {0}</value></data>
+  <data name="Svc_ModelNotSelected" xml:space="preserve"><value>Model not selected.</value></data>
+  <data name="Svc_ModelDeleted" xml:space="preserve"><value>Selected model does not exist or has been deleted.</value></data>
+  <data name="Svc_PromptExprException" xml:space="preserve"><value>Prompt expression exception: {0}</value></data>
+  <data name="Svc_PromptEmpty" xml:space="preserve"><value>Prompt is empty.</value></data>
+  <data name="Svc_ApiFailed" xml:space="preserve"><value>API call failed: {0} - {1}</value></data>
+  <data name="Svc_ApiResultEmpty" xml:space="preserve"><value>API returned empty or unexpected format</value></data>
+  <data name="Svc_CannotGetImgForVision" xml:space="preserve"><value>Cannot get source image or image file path.</value></data>
+  <data name="Svc_VisionPromptExprException" xml:space="preserve"><value>Vision prompt expression exception: {0}</value></data>
+  <data name="Svc_VisionPromptEmpty" xml:space="preserve"><value>Vision prompt is empty.</value></data>
+  <data name="Svc_AdbClickFailed" xml:space="preserve"><value>ADB click failed</value></data>
+  <data name="Svc_AdbUnknownAction" xml:space="preserve"><value>Unknown action</value></data>
+  <data name="Svc_RoiWidth" xml:space="preserve"><value>ROI Width</value></data>
+  <data name="Svc_RoiHeight" xml:space="preserve"><value>ROI Height</value></data>
+
+  <data name="Win_Position" xml:space="preserve"><value>Position: ({0}, {1})  H:{2} S:{3} V:{4}</value></data>
+  <data name="Win_ColorPicked" xml:space="preserve"><value>✔ Picked  H:{0} S:{1} V:{2}  (Position: {3}, {4})</value></data>
+  <data name="Win_PickColorFirst" xml:space="preserve"><value>Please click on the image to pick a color first</value></data>
+  <data name="Win_CannotCaptureScreen" xml:space="preserve"><value>Cannot capture screen: {0}</value></data>
+  <data name="Win_InitRoiStatus" xml:space="preserve"><value>Initial ROI: ({0}, {1}) {2}×{3} — Drag or redraw directly</value></data>
+  <data name="Win_RectRoiHint" xml:space="preserve"><value>Rectangle ROI: hold left button on image and drag a rectangle</value></data>
+  <data name="Win_AffineRoiHint" xml:space="preserve"><value>Affine ROI: click on image points to mark 4 corners, right click to undo</value></data>
+  <data name="Win_CircleRoiHint" xml:space="preserve"><value>Circle ROI: hold left button and drag to draw a circle</value></data>
+  <data name="Win_SelectRoiTypeHint" xml:space="preserve"><value>Select ROI type and draw, use the mask button for masking</value></data>
+  <data name="Win_EraserMode" xml:space="preserve"><value>Eraser mode: restore area. Right click to switch</value></data>
+  <data name="Win_PaintMode" xml:space="preserve"><value>Paint mode: paint mask on area. Right click to switch to eraser</value></data>
+  <data name="Win_EraserModeShort" xml:space="preserve"><value>Eraser mode: restore</value></data>
+  <data name="Win_PaintModeShort" xml:space="preserve"><value>Paint mode: paint mask on area</value></data>
+  <data name="Win_SelectRoiFirst" xml:space="preserve"><value>Please select ROI first</value></data>
+  <data name="Win_MaskSaved" xml:space="preserve"><value>✔ Has mask</value></data>
+  <data name="Win_NoMask" xml:space="preserve"><value>No mask</value></data>
+  <data name="Win_RectRoiDrawing" xml:space="preserve"><value>Rectangle ROI: ({0}, {1}) {2}×{3}</value></data>
+  <data name="Win_CircleRoiDrawing" xml:space="preserve"><value>Circle ROI: center ({0}, {1}) radius {2}</value></data>
+  <data name="Win_RectRoiConfirmed" xml:space="preserve"><value>Rectangle ROI confirmed: ({0}, {1}) {2}×{3} — Done!</value></data>
+  <data name="Win_CircleRoiConfirmed" xml:space="preserve"><value>Circle ROI confirmed: ({0}, {1}) {2}×{3} — Done!</value></data>
+  <data name="Win_AffineRoiMarked" xml:space="preserve"><value>Affine ROI: marked {0}/4 corners</value></data>
+  <data name="Win_AffineRoiConfirmed" xml:space="preserve"><value>Affine ROI confirmed: ({0}, {1}) {2}×{3} — Done!</value></data>
+  <data name="Win_TooSmallRedraw" xml:space="preserve"><value>Area too small, please redraw</value></data>
+  <data name="Win_SaveMaskFailed" xml:space="preserve"><value>Save mask failed: {0}</value></data>
+  <data name="Win_Executing" xml:space="preserve"><value>Executing...</value></data>
+  <data name="Win_WaitingExec" xml:space="preserve"><value>Waiting to execute...</value></data>
+  <data name="Win_DrawRoiOnImage" xml:space="preserve"><value>Please draw an ROI region on the image first.</value></data>
+  <data name="Win_RoiInvalid" xml:space="preserve"><value>ROI invalid, please redraw.</value></data>
+  <data name="Win_TemplateSaved" xml:space="preserve"><value>Template saved: {0}</value></data>
+  <data name="Win_SaveTemplateFailed" xml:space="preserve"><value>Save template failed: {0}</value></data>
+  <data name="Win_TemplateRoiHint" xml:space="preserve"><value>Select ROI type, then draw on the image</value></data>
+  <data name="Win_TemplateRoiConfirmed" xml:space="preserve"><value>Rectangle ROI confirmed: ({0}, {1}) {2}×{3} — Done! Save template</value></data>
+  <data name="Win_TemplateCircleConfirmed" xml:space="preserve"><value>Circle ROI confirmed: ({0}, {1}) {2}×{3} — Done! Save template</value></data>
+  <data name="Win_TemplateAffineConfirmed" xml:space="preserve"><value>Affine ROI confirmed: ({0}, {1}) {2}×{3} — Done! Save template</value></data>
+  <data name="Win_TemplateDoneHint" xml:space="preserve"><value>Done — Select ROI type and draw</value></data>
+
+  <data name="UI_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="UI_SettingsManagement" xml:space="preserve"><value>Settings Management</value></data>
+  <data name="UI_Startup" xml:space="preserve"><value>Startup</value></data>
+  <data name="UI_AutoStart" xml:space="preserve"><value>Start with system</value></data>
+  <data name="UI_AutoLoadLast" xml:space="preserve"><value>Auto load last project on startup</value></data>
+  <data name="UI_RunAllOnStartup" xml:space="preserve"><value>Run all on startup</value></data>
+  <data name="UI_HideOnStartup" xml:space="preserve"><value>Hide window on startup</value></data>
+  <data name="UI_Execution" xml:space="preserve"><value>Execution</value></data>
+  <data name="UI_FlowInterval" xml:space="preserve"><value>Flow interval (ms)</value></data>
+  <data name="UI_RepeatExecution" xml:space="preserve"><value>Repeat execution</value></data>
+  <data name="UI_RepeatCount" xml:space="preserve"><value>Repeat count</value></data>
+  <data name="UI_RepeatInterval" xml:space="preserve"><value>Repeat interval (ms)</value></data>
+  <data name="UI_LogOutput" xml:space="preserve"><value>Log &amp; Output</value></data>
+  <data name="UI_ShowOverlay" xml:space="preserve"><value>Show floating overlay when running</value></data>
+  <data name="UI_AutoScrollLog" xml:space="preserve"><value>Auto scroll log</value></data>
+  <data name="UI_MaxLogLines" xml:space="preserve"><value>Max log lines</value></data>
+  <data name="UI_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="UI_LanguageLabel" xml:space="preserve"><value>Interface language</value></data>
+  <data name="UI_LangRestartHint" xml:space="preserve"><value>Restart required after language change</value></data>
+  <data name="UI_WeChatOcr" xml:space="preserve"><value>WeChat OCR</value></data>
+  <data name="UI_OcrExePath" xml:space="preserve"><value>OCR Exe path</value></data>
+  <data name="UI_OcrDirPath" xml:space="preserve"><value>Runtime directory</value></data>
+  <data name="UI_AutoDetect" xml:space="preserve"><value>Auto Detect</value></data>
+  <data name="UI_TestOcr" xml:space="preserve"><value>Test Availability</value></data>
+  <data name="UI_About" xml:space="preserve"><value>About</value></data>
+  <data name="UI_Version" xml:space="preserve"><value>Version</value></data>
+  <data name="UI_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="UI_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="UI_OK" xml:space="preserve"><value>OK</value></data>
+  <data name="UI_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="UI_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="UI_Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="UI_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="UI_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="UI_Reset" xml:space="preserve"><value>Reset</value></data>
+  <data name="UI_Complete" xml:space="preserve"><value>Complete</value></data>
+  <data name="UI_AddVariable" xml:space="preserve"><value>Add Variable</value></data>
+  <data name="UI_VarName" xml:space="preserve"><value>Name (auto-prefixed with @):</value></data>
+  <data name="UI_VarType" xml:space="preserve"><value>Type:</value></data>
+  <data name="UI_VarInitValue" xml:space="preserve"><value>Initial Value:</value></data>
+  <data name="UI_RenameTitle" xml:space="preserve"><value>Rename</value></data>
+  <data name="UI_NewName" xml:space="preserve"><value>New Name</value></data>
+  <data name="UI_SearchTask" xml:space="preserve"><value>Search</value></data>
+  <data name="UI_SearchKeyword" xml:space="preserve"><value>Task name or keyword</value></data>
+  <data name="UI_FlowManager" xml:space="preserve"><value>Flow Manager</value></data>
+  <data name="UI_FlowManagerTitle" xml:space="preserve"><value>Flow Manager</value></data>
+  <data name="UI_VariableManager" xml:space="preserve"><value>Variable Manager</value></data>
+  <data name="UI_GlobalVars" xml:space="preserve"><value>Global Variables</value></data>
+  <data name="UI_VarColumnName" xml:space="preserve"><value>Name</value></data>
+  <data name="UI_VarColumnType" xml:space="preserve"><value>Type</value></data>
+  <data name="UI_VarColumnValue" xml:space="preserve"><value>Current Value</value></data>
+  <data name="UI_ModelManager" xml:space="preserve"><value>LLM Model Manager</value></data>
+  <data name="UI_AllModels" xml:space="preserve"><value>All Model Management</value></data>
+  <data name="UI_ModelDisplayName" xml:space="preserve"><value>Display Name</value></data>
+  <data name="UI_ModelTokenStats" xml:space="preserve"><value>Token Stats</value></data>
+  <data name="UI_AddModel" xml:space="preserve"><value>Add Model</value></data>
+  <data name="UI_EditModel" xml:space="preserve"><value>Edit Model</value></data>
+  <data name="UI_DeleteModel" xml:space="preserve"><value>Delete Model</value></data>
+  <data name="UI_TestModel" xml:space="preserve"><value>Test</value></data>
+  <data name="UI_ResetTokens" xml:space="preserve"><value>Reset Tokens</value></data>
+  <data name="UI_ModelEditTitle" xml:space="preserve"><value>Edit Model</value></data>
+  <data name="UI_DisplayName" xml:space="preserve"><value>Display Name</value></data>
+  <data name="UI_ModelApiHint" xml:space="preserve"><value>e.g. https://api.openai.com/v1/chat/completions</value></data>
+  <data name="UI_ModelName" xml:space="preserve"><value>Model Name</value></data>
+  <data name="UI_ModelNameHint" xml:space="preserve"><value>e.g. gpt-4o, gpt-3.5-turbo</value></data>
+  <data name="UI_TimeoutSec" xml:space="preserve"><value>Timeout (seconds)</value></data>
+  <data name="UI_TaskProperty" xml:space="preserve"><value>Properties</value></data>
+  <data name="UI_EditProperties" xml:space="preserve"><value>Edit Properties</value></data>
+  <data name="UI_Properties" xml:space="preserve"><value>Properties</value></data>
+  <data name="UI_ColorPicker" xml:space="preserve"><value>Color Picker - Click to pick color</value></data>
+  <data name="UI_ColorPickerHint" xml:space="preserve"><value>👆 Click on image to pick HSV color for automation</value></data>
+  <data name="UI_ClickToPickColor" xml:space="preserve"><value>Click image to pick color</value></data>
+  <data name="UI_MaskPaint" xml:space="preserve"><value>Mask Paint</value></data>
+  <data name="UI_Brush" xml:space="preserve"><value>🖌 Brush</value></data>
+  <data name="UI_Eraser" xml:space="preserve"><value>🧹 Eraser</value></data>
+  <data name="UI_BrushSize" xml:space="preserve"><value>Brush size:</value></data>
+  <data name="UI_MaskAll" xml:space="preserve"><value>Mask All</value></data>
+  <data name="UI_ClearAll" xml:space="preserve"><value>Clear All</value></data>
+  <data name="UI_MaskHint" xml:space="preserve"><value>Paint to mask area, right click to switch brush/eraser</value></data>
+  <data name="UI_RoiSelection" xml:space="preserve"><value>Select ROI Region</value></data>
+  <data name="UI_RectRoi" xml:space="preserve"><value>▢ Rect ROI</value></data>
+  <data name="UI_AffineRoi" xml:space="preserve"><value>◇ Affine ROI</value></data>
+  <data name="UI_CircleRoi" xml:space="preserve"><value>○ Circle ROI</value></data>
+  <data name="UI_ClearRoi" xml:space="preserve"><value>Clear ROI</value></data>
+  <data name="UI_MaskLabel" xml:space="preserve"><value>Mask:</value></data>
+  <data name="UI_TemplateTraining" xml:space="preserve"><value>Template Training</value></data>
+  <data name="UI_Overlay_SwitchFlow" xml:space="preserve"><value>Switch to next flow</value></data>
+  <data name="UI_Overlay_RunAll" xml:space="preserve"><value>Run all flows</value></data>
+  <data name="UI_Overlay_RunCurrent" xml:space="preserve"><value>Run current flow</value></data>
+  <data name="UI_Overlay_Stop" xml:space="preserve"><value>Stop execution</value></data>
+  <data name="UI_Overlay_ShowMain" xml:space="preserve"><value>Show main window</value></data>
+  <data name="UI_Overlay_Prev" xml:space="preserve"><value>Previous</value></data>
+  <data name="UI_Overlay_Current" xml:space="preserve"><value>Current</value></data>
+  <data name="UI_Overlay_Next" xml:space="preserve"><value>Next</value></data>
+  <data name="UI_MainTooltipRun" xml:space="preserve"><value>Run</value></data>
+  <data name="UI_MainTooltipSearch" xml:space="preserve"><value>Search</value></data>
+  <data name="UI_MainTooltipStartOverlay" xml:space="preserve"><value>Start floating overlay</value></data>
+  <data name="UI_MainTooltipStopOverlay" xml:space="preserve"><value>Stop floating overlay</value></data>
+  <data name="UI_TokenFormat" xml:space="preserve"><value>Total {0:N0} (In:{1:N0} Out:{2:N0})</value></data>
+  <data name="UI_HelpNotFound" xml:space="preserve">
+    <value>Help document not found. Please check the installation directory.</value>
+  </data>
+  <data name="Dlg_LangChangedMsg" xml:space="preserve">
+    <value>Language has been changed, please restart the application to apply.</value>
+  </data>
+  <data name="UI_Confirm" xml:space="preserve"><value>Confirm</value></data>
+</root>
+

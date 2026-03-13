@@ -1,0 +1,3175 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using TaskFlow.Helpers;
+using TaskFlow.Resources;
+using System.Windows.Media;
+using Microsoft.Win32;
+using Mat = OpenCvSharp.Mat;
+using Cv2 = OpenCvSharp.Cv2;
+using TaskFlow.Models.TaskCards;
+using TaskFlow.ViewModels;
+
+namespace TaskFlow.Views.Dialogs
+{
+    public partial class TaskPropertyDialog : Window
+    {
+        private readonly TaskCardBase _task;
+        private readonly MainViewModel _viewModel;
+        private readonly Dictionary<string, Control> _propertyControls = new();
+
+        public TaskPropertyDialog(TaskCardBase task, MainViewModel viewModel)
+        {
+            InitializeComponent();
+            ApplyLocalization();
+            _task = task;
+            _viewModel = viewModel;
+
+            TitleText.Text = string.Format(TaskFlow.Resources.Strings.Prop_EditPrefix, task.Name);
+            SubtitleText.Text = task.TaskTypeName;
+
+            BuildPropertyControls();
+        }
+
+        private void BuildPropertyControls()
+        {
+            PropertyPanel.Children.Clear();
+            _propertyControls.Clear();
+
+            // 通用属性：名称
+            AddTextProperty("Name", TaskFlow.Resources.Strings.Prop_TaskName, _task.Name);
+
+            // 根据任务类型添加特定属性
+            switch (_task)
+            {
+                case IfElseBranchTaskCard ifCard when ifCard.BranchRole == BranchRole.IfStart:
+                    AddConditionExpressionProperty(ifCard);
+                    // 动态显示所有elif卡片的条件设置
+                    AddElifConditionProperties(ifCard);
+                    break;
+
+                case IfElseBranchTaskCard elifCard when elifCard.BranchRole == BranchRole.ElifStart:
+                    AddConditionExpressionProperty(elifCard, "Elif");
+                    break;
+
+                case ForLoopTaskCard loopCard when loopCard.BranchRole == BranchRole.ForLoopStart:
+                    // 合并输入：直接输入数字、@变量 或 #任务引用
+                    AddTextProperty("LoopCountExpression", TaskFlow.Resources.Strings.Prop_LoopCount,
+                        !string.IsNullOrWhiteSpace(loopCard.LoopCountExpression)
+                            ? loopCard.LoopCountExpression
+                            : loopCard.LoopCount.ToString());
+                    break;
+
+                case PauseTaskCard pauseCard:
+                    // 合并输入：直接输入数字、@变量 或 #任务引用
+                    AddTextProperty("PauseDurationExpression", TaskFlow.Resources.Strings.Prop_PauseDuration,
+                        !string.IsNullOrWhiteSpace(pauseCard.PauseDurationExpression)
+                            ? pauseCard.PauseDurationExpression
+                            : pauseCard.PauseDurationMs.ToString());
+                    break;
+
+                case GetTimestampTaskCard timestampCard:
+                    {
+                        var label = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_OutputFormat, Style = FindResource("PropertyLabel") as Style };
+                        var combo = new ComboBox { Foreground = System.Windows.Media.Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+                        combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_TimeFmt_HMS, Tag = TimestampFormat.HourMinuteSecond });
+                        combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_TimeFmt_DHMS, Tag = TimestampFormat.DayHourMinuteSecond });
+                        combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_TimeFmt_MDHMS, Tag = TimestampFormat.MonthDayHourMinuteSecond });
+                        combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_TimeFmt_YMDHMS, Tag = TimestampFormat.YearMonthDayHourMinuteSecond });
+                        combo.SelectedIndex = (int)timestampCard.TimestampFormat;
+                        PropertyPanel.Children.Add(label);
+                        PropertyPanel.Children.Add(combo);
+                        _propertyControls["TimestampFormat"] = combo;
+                        break;
+                    }
+
+                case WinLaunchAppTaskCard launchCard:
+                    AddFilePathProperty("ExePath", TaskFlow.Resources.Strings.Prop_ExePath, launchCard.ExePath, TaskFlow.Resources.Strings.Filter_ExeFile);
+                    AddTextProperty("Arguments", TaskFlow.Resources.Strings.Prop_Arguments, launchCard.Arguments);
+                    break;
+
+                case WinCloseAppTaskCard closeAppCard:
+                    AddTextProperty("ProcessName", TaskFlow.Resources.Strings.Prop_ProcessName, closeAppCard.ProcessName);
+                    break;
+
+                case WinScreenshotTaskCard screenshotCard:
+                    AddTextProperty("ProcessName", TaskFlow.Resources.Strings.Prop_ProcessName, screenshotCard.ProcessName);
+                    AddCheckboxProperty("IncludeTitleBar", TaskFlow.Resources.Strings.Prop_IncludeTitleBar, screenshotCard.IncludeTitleBar);
+                    AddIntProperty("CropTopHeight", TaskFlow.Resources.Strings.Prop_CropTopHeight, screenshotCard.CropTopHeight);
+                    AddCheckboxProperty("ConvertToGrayscale", TaskFlow.Resources.Strings.Prop_ConvertGrayscale, screenshotCard.ConvertToGrayscale);
+                    break;
+
+                case WinClickTaskCard clickCard:
+                    AddClickProperties(clickCard);
+                    break;
+
+                case AdbConnectTaskCard connectCard:
+                    AddTextProperty("DeviceIp", TaskFlow.Resources.Strings.Prop_DeviceIp, connectCard.DeviceIp);
+                    AddIntProperty("DevicePort", TaskFlow.Resources.Strings.Prop_DevicePort, connectCard.DevicePort);
+                    break;
+
+                case AdbLaunchAppTaskCard adbLaunchCard:
+                    AddTextProperty("DeviceSerial", TaskFlow.Resources.Strings.Prop_DeviceSerial, adbLaunchCard.DeviceSerial);
+                    AddTextProperty("PackageName", TaskFlow.Resources.Strings.Prop_PackageName, adbLaunchCard.PackageName);
+                    AddTextProperty("ActivityName", TaskFlow.Resources.Strings.Prop_ActivityName, adbLaunchCard.ActivityName);
+                    break;
+
+                case AdbScreenshotTaskCard adbScreenshotCard:
+                    AddTextProperty("DeviceSerial", TaskFlow.Resources.Strings.Prop_DeviceSerial, adbScreenshotCard.DeviceSerial);
+                    AddCheckboxProperty("ConvertToGrayscale", TaskFlow.Resources.Strings.Prop_ConvertGrayscale, adbScreenshotCard.ConvertToGrayscale);
+                    break;
+
+                case AdbClickTaskCard adbClickCard:
+                    AddTextProperty("DeviceSerial", TaskFlow.Resources.Strings.Prop_DeviceSerial, adbClickCard.DeviceSerial);
+                    AddAdbClickProperties(adbClickCard);
+                    break;
+
+                case AdbCloseAppTaskCard adbCloseCard:
+                    AddTextProperty("DeviceSerial", TaskFlow.Resources.Strings.Prop_DeviceSerial, adbCloseCard.DeviceSerial);
+                    AddTextProperty("PackageName", TaskFlow.Resources.Strings.Prop_PackageName, adbCloseCard.PackageName);
+                    break;
+
+                case AdbDisconnectTaskCard adbDisconnectCard:
+                    AddTextProperty("DeviceSerial", TaskFlow.Resources.Strings.Prop_DeviceSerial, adbDisconnectCard.DeviceSerial);
+                    break;
+
+                case WinUiAutomationTaskCard uiAutoCard:
+                    AddTextProperty("ProcessName", TaskFlow.Resources.Strings.Prop_ProcessName, uiAutoCard.ProcessName);
+                    AddUiAutomationProperties(uiAutoCard);
+                    break;
+
+                case WinSimulateInputTaskCard simCard:
+                    AddSimulateInputProperties(simCard);
+                    break;
+
+                case WinSubtitleTaskCard subtitleCard:
+                    AddSubtitleProperties(subtitleCard);
+                    break;
+
+                case ImgCropTaskCard cropCard:
+                    AddImageSourceProperty(cropCard);
+                    AddRoiProperty(cropCard);
+                    break;
+
+                case ImgTemplateMatchTaskCard matchCard:
+                    AddImageSourcePropertyMatch(matchCard);
+                    AddTemplateProperty(matchCard);
+                    AddDoubleProperty("MatchThreshold", TaskFlow.Resources.Strings.Prop_MatchThreshold, matchCard.MatchThreshold);
+                    AddIntProperty("MaxMatchCount", TaskFlow.Resources.Strings.Prop_MaxMatchCount, matchCard.MaxMatchCount);
+                    break;
+
+                case ImgOcrTaskCard ocrCard:
+                    AddImageSourcePropertyOcr(ocrCard);
+                    // 间隔分割线
+                    PropertyPanel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(Color.FromRgb(232, 230, 220)) });
+                    // 检查包含文本（条件显示目标文本）
+                    var targetTextLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TargetText, Style = FindResource("PropertyLabel") as Style };
+                    var targetTextBox = new TextBox { Text = ocrCard.TargetText, Style = FindResource("PropertyTextBox") as Style };
+                    AutoCompleteHelper.Attach(targetTextBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+                    _propertyControls["TargetText"] = targetTextBox;
+                    void UpdateTargetVis(bool show) { targetTextLabel.Visibility = targetTextBox.Visibility = show ? Visibility.Visible : Visibility.Collapsed; }
+                    var checkTextCb = new CheckBox { Content = TaskFlow.Resources.Strings.Prop_CheckContainsText, IsChecked = ocrCard.CheckContainsText, Style = FindResource("PropertyCheckBox") as Style };
+                    checkTextCb.Checked += (s, e) => UpdateTargetVis(true);
+                    checkTextCb.Unchecked += (s, e) => UpdateTargetVis(false);
+                    PropertyPanel.Children.Add(checkTextCb);
+                    _propertyControls["CheckContainsText"] = checkTextCb;
+                    PropertyPanel.Children.Add(targetTextLabel);
+                    PropertyPanel.Children.Add(targetTextBox);
+                    UpdateTargetVis(ocrCard.CheckContainsText);
+                    break;
+                    
+                case LlmTranslateTaskCard llmCard:
+                    AddLlmTranslateProperties(llmCard);
+                    break;
+
+                case LlmVisionTaskCard visionCard:
+                    AddLlmVisionProperties(visionCard);
+                    break;
+
+                case ImgColorDetectTaskCard colorCard:
+                    AddImageSourcePropertyColor(colorCard);
+                    AddColorDetectProperties(colorCard);
+                    break;
+
+                case ImgColorSegmentTaskCard segCard:
+                    AddImageSourcePropertyColorSegment(segCard);
+                    AddColorSegmentProperties(segCard);
+                    break;
+
+                case ImgPreprocessTaskCard prepCard:
+                    AddImageSourceProperty_Generic(prepCard.UseSourceTaskImage, prepCard.SourceTaskIdForImage, prepCard.ImageFilePath);
+                    AddCheckboxProperty("EnableGrayscale", TaskFlow.Resources.Strings.Prop_EnableGrayscale, prepCard.EnableGrayscale);
+                    AddEnumComboProperty<BinarizeMethod>("BinarizeMethod", TaskFlow.Resources.Strings.Prop_BinarizeMethod, prepCard.BinarizeMethod, new Dictionary<BinarizeMethod, string>
+                    {
+                        { BinarizeMethod.None, TaskFlow.Resources.Strings.Prop_BinarizeNone },
+                        { BinarizeMethod.Binary, TaskFlow.Resources.Strings.Prop_BinarizeBinary },
+                        { BinarizeMethod.BinaryInv, TaskFlow.Resources.Strings.Prop_BinarizeBinaryInv },
+                        { BinarizeMethod.Otsu, TaskFlow.Resources.Strings.Prop_BinarizeOtsu },
+                        { BinarizeMethod.Triangle, TaskFlow.Resources.Strings.Prop_BinarizeTriangle }
+                    });
+                    AddIntProperty("BinarizeThreshold", TaskFlow.Resources.Strings.Prop_BinarizeThreshold, prepCard.BinarizeThreshold);
+                    AddEnumComboProperty<MorphologyMethod>("MorphologyMethod", TaskFlow.Resources.Strings.Prop_MorphMethod, prepCard.MorphologyMethod, new Dictionary<MorphologyMethod, string>
+                    {
+                        { MorphologyMethod.None, TaskFlow.Resources.Strings.Prop_MorphNone },
+                        { MorphologyMethod.Open, TaskFlow.Resources.Strings.Prop_MorphOpen },
+                        { MorphologyMethod.Close, TaskFlow.Resources.Strings.Prop_MorphClose },
+                        { MorphologyMethod.Dilate, TaskFlow.Resources.Strings.Prop_MorphDilate },
+                        { MorphologyMethod.Erode, TaskFlow.Resources.Strings.Prop_MorphErode }
+                    });
+                    AddIntProperty("MorphologyKernelSize", TaskFlow.Resources.Strings.Prop_MorphKernelSize, prepCard.MorphologyKernelSize);
+                    break;
+
+                case ImgBlobAnalysisTaskCard blobCard:
+                    AddImageSourceProperty_Generic(blobCard.UseSourceTaskImage, blobCard.SourceTaskIdForImage, blobCard.ImageFilePath);
+                    // ROI区域（紧凑布局）
+                    AddRoiCompactProperties(blobCard.RoiX, blobCard.RoiY, blobCard.RoiWidth, blobCard.RoiHeight);
+                    // 框选区域 + 绘制掩膜
+                    _currentMaskPath = blobCard.MaskImagePath;
+                    var blobRoiBtn = new Button
+                    {
+                        Content = TaskFlow.Resources.Strings.Prop_SelectRoiMask,
+                        Height = 32,
+                        Margin = new Thickness(0, 0, 0, 4),
+                        Style = FindResource("ActionButton") as Style
+                    };
+                    blobRoiBtn.Click += (s, e) => SelectRoiGeneric(blobCard.UseSourceTaskImage, blobCard.SourceTaskIdForImage, blobCard.ImageFilePath);
+                    PropertyPanel.Children.Add(blobRoiBtn);
+                    // 分割线
+                    PropertyPanel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(Color.FromRgb(232, 230, 220)) });
+                    AddIntProperty("MinArea", TaskFlow.Resources.Strings.Prop_MinArea, blobCard.MinArea);
+                    AddIntProperty("MaxArea", TaskFlow.Resources.Strings.Prop_MaxArea, blobCard.MaxArea);
+                    AddEnumComboProperty<BlobSortMode>("SortMode", TaskFlow.Resources.Strings.Prop_SortMode, blobCard.SortMode, new Dictionary<BlobSortMode, string>
+                    {
+                        { BlobSortMode.AreaDesc, TaskFlow.Resources.Strings.Prop_SortAreaDesc },
+                        { BlobSortMode.AreaAsc, TaskFlow.Resources.Strings.Prop_SortAreaAsc },
+                        { BlobSortMode.LeftToRight, TaskFlow.Resources.Strings.Prop_SortLeftToRight },
+                        { BlobSortMode.TopToBottom, TaskFlow.Resources.Strings.Prop_SortTopToBottom }
+                    });
+                    AddIntProperty("MaxBlobCount", TaskFlow.Resources.Strings.Prop_MaxBlobCount, blobCard.MaxBlobCount);
+                    AddCheckboxProperty("InvertBinary", TaskFlow.Resources.Strings.Prop_InvertBinary, blobCard.InvertBinary);
+                    break;
+
+                case ImgResizeTaskCard resizeCard:
+                    AddImageSourceProperty_Generic(resizeCard.UseSourceTaskImage, resizeCard.SourceTaskIdForImage, resizeCard.ImageFilePath);
+                    AddIntProperty("TargetWidth", TaskFlow.Resources.Strings.Prop_TargetWidth, resizeCard.TargetWidth);
+                    AddIntProperty("TargetHeight", TaskFlow.Resources.Strings.Prop_TargetHeight, resizeCard.TargetHeight);
+                    break;
+
+                case ExpressionEvalTaskCard exprCard:
+                    AddExpressionEvalProperties(exprCard);
+                    break;
+
+                case BreakLoopTaskCard breakCard:
+                    AddBreakLoopProperties(breakCard);
+                    break;
+
+                case StringSubstringTaskCard substringCard:
+                    AddStringSubstringProperties(substringCard);
+                    break;
+
+                case TypeConvertTaskCard typeConvertCard:
+                    AddTypeConvertProperties(typeConvertCard);
+                    break;
+
+                case ArrayParseTaskCard arrayParseCard:
+                    AddArrayParseProperties(arrayParseCard);
+                    break;
+            }
+        }
+
+        #region Property Builder Methods
+
+        private void AddTextProperty(string propertyName, string label, string value)
+        {
+            var labelBlock = new TextBlock { Text = label, Style = FindResource("PropertyLabel") as Style };
+            var textBox = new TextBox { Text = value, Style = FindResource("PropertyTextBox") as Style };
+
+            // 为文本属性输入框附加自动补全
+            AutoCompleteHelper.Attach(textBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+
+            PropertyPanel.Children.Add(labelBlock);
+            PropertyPanel.Children.Add(textBox);
+            _propertyControls[propertyName] = textBox;
+        }
+
+        private void AddIntProperty(string propertyName, string label, int value)
+        {
+            var labelBlock = new TextBlock { Text = label, Style = FindResource("PropertyLabel") as Style };
+            var textBox = new TextBox { Text = value.ToString(), Style = FindResource("PropertyTextBox") as Style };
+
+            PropertyPanel.Children.Add(labelBlock);
+            PropertyPanel.Children.Add(textBox);
+            _propertyControls[propertyName] = textBox;
+        }
+
+        /// <summary>
+        /// 以紧凑 2×2 网格布局添加 ROI 四个属性
+        /// </summary>
+        private void AddRoiCompactProperties(int roiX, int roiY, int roiW, int roiH)
+        {
+            var headerLabel = new TextBlock
+            {
+                Text = TaskFlow.Resources.Strings.Prop_RoiArea,
+                Style = FindResource("PropertyLabel") as Style,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            PropertyPanel.Children.Add(headerLabel);
+
+            var grid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            // 4 列：每列一个 label+textbox 对，中间用间距列隔开
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4, GridUnitType.Pixel) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4, GridUnitType.Pixel) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4, GridUnitType.Pixel) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var items = new[]
+            {
+                ("RoiX", "X:", roiX, 0),
+                ("RoiY", "Y:", roiY, 2),
+                ("RoiWidth", TaskFlow.Resources.Strings.Prop_RoiW + ":", roiW, 4),
+                ("RoiHeight", TaskFlow.Resources.Strings.Prop_RoiH + ":", roiH, 6),
+            };
+
+            foreach (var (key, label, val, col) in items)
+            {
+                var dock = new DockPanel();
+                var lbl = new TextBlock
+                {
+                    Text = label,
+                    Foreground = new SolidColorBrush(Color.FromRgb(107, 106, 101)),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontSize = 12
+                };
+                DockPanel.SetDock(lbl, Dock.Left);
+                var tb = new TextBox
+                {
+                    Text = val.ToString(),
+                    Style = FindResource("PropertyTextBox") as Style,
+                    Margin = new Thickness(4, 0, 0, 0)
+                };
+                dock.Children.Add(lbl);
+                dock.Children.Add(tb);
+                Grid.SetRow(dock, 0);
+                Grid.SetColumn(dock, col);
+                grid.Children.Add(dock);
+                _propertyControls[key] = tb;
+            }
+
+            PropertyPanel.Children.Add(grid);
+        }
+
+        /// <summary>
+        /// 以紧凑 3×2 网格布局添加 HSV 上下限属性
+        /// </summary>
+        private void AddHsvCompactProperties(int lH, int lS, int lV, int uH, int uS, int uV)
+        {
+            var headerLabel = new TextBlock
+            {
+                Text = TaskFlow.Resources.Strings.Prop_HsvRange,
+                Style = FindResource("PropertyLabel") as Style,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            PropertyPanel.Children.Add(headerLabel);
+
+            var grid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4, GridUnitType.Pixel) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var items = new[]
+            {
+                ("HsvLowerH", TaskFlow.Resources.Strings.Prop_HsvLowerH, lH, 0, 0),
+                ("HsvUpperH", TaskFlow.Resources.Strings.Prop_HsvUpperH, uH, 0, 2),
+                ("HsvLowerS", TaskFlow.Resources.Strings.Prop_HsvLowerS, lS, 1, 0),
+                ("HsvUpperS", TaskFlow.Resources.Strings.Prop_HsvUpperS, uS, 1, 2),
+                ("HsvLowerV", TaskFlow.Resources.Strings.Prop_HsvLowerV, lV, 2, 0),
+                ("HsvUpperV", TaskFlow.Resources.Strings.Prop_HsvUpperV, uV, 2, 2),
+            };
+
+            foreach (var (key, label, val, row, col) in items)
+            {
+                var dock = new DockPanel { Margin = new Thickness(0, 1, 0, 1) };
+                var lbl = new TextBlock
+                {
+                    Text = label,
+                    Foreground = new SolidColorBrush(Color.FromRgb(107, 106, 101)),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontSize = 12
+                };
+                DockPanel.SetDock(lbl, Dock.Left);
+                var tb = new TextBox
+                {
+                    Text = val.ToString(),
+                    Style = FindResource("PropertyTextBox") as Style,
+                    Margin = new Thickness(4, 0, 0, 0)
+                };
+                dock.Children.Add(lbl);
+                dock.Children.Add(tb);
+                Grid.SetRow(dock, row);
+                Grid.SetColumn(dock, col);
+                grid.Children.Add(dock);
+                _propertyControls[key] = tb;
+            }
+
+            PropertyPanel.Children.Add(grid);
+        }
+
+        private void AddDoubleProperty(string propertyName, string label, double value)
+        {
+            var labelBlock = new TextBlock { Text = label, Style = FindResource("PropertyLabel") as Style };
+            var textBox = new TextBox { Text = value.ToString("F2"), Style = FindResource("PropertyTextBox") as Style };
+
+            PropertyPanel.Children.Add(labelBlock);
+            PropertyPanel.Children.Add(textBox);
+            _propertyControls[propertyName] = textBox;
+        }
+
+        private void AddCheckboxProperty(string propertyName, string label, bool value)
+        {
+            var checkBox = new CheckBox { Content = label, IsChecked = value, Style = FindResource("PropertyCheckBox") as Style };
+
+            PropertyPanel.Children.Add(checkBox);
+            _propertyControls[propertyName] = checkBox;
+        }
+
+        private void AddFilePathProperty(string propertyName, string label, string value, string filter)
+        {
+            var labelBlock = new TextBlock { Text = label, Style = FindResource("PropertyLabel") as Style };
+
+            var grid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var textBox = new TextBox
+            {
+                Text = value,
+                Style = FindResource("PropertyTextBox") as Style,
+                Margin = new Thickness(0)
+            };
+            Grid.SetColumn(textBox, 0);
+
+            var browseButton = new Button
+            {
+                Content = "...",
+                Width = 32,
+                Margin = new Thickness(4, 0, 0, 0),
+                VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
+                Style = FindResource("ActionButton") as Style
+            };
+            browseButton.Click += (s, e) =>
+            {
+                var dialog = new OpenFileDialog { Filter = filter };
+                if (dialog.ShowDialog() == true)
+                {
+                    textBox.Text = dialog.FileName;
+                }
+            };
+            Grid.SetColumn(browseButton, 1);
+
+            grid.Children.Add(textBox);
+            grid.Children.Add(browseButton);
+
+            PropertyPanel.Children.Add(labelBlock);
+            PropertyPanel.Children.Add(grid);
+            _propertyControls[propertyName] = textBox;
+        }
+
+        /// <summary>
+        /// 添加条件表达式输入属性
+        /// </summary>
+        private void AddConditionExpressionProperty(IfElseBranchTaskCard card, string prefix = "")
+        {
+            string keyPrefix = string.IsNullOrEmpty(prefix) ? "" : prefix + "_";
+            string labelPrefix = string.IsNullOrEmpty(prefix) ? "" : prefix + " ";
+
+            // 条件表达式输入框
+            var exprLabel = new TextBlock { Text = string.Format(TaskFlow.Resources.Strings.Prop_ConditionExpr, labelPrefix), Style = FindResource("PropertyLabel") as Style };
+            var exprTextBox = new TextBox { Text = card.ConditionExpression, Style = FindResource("PropertyTextBox") as Style };
+
+            // 为条件表达式输入框附加自动补全
+            AutoCompleteHelper.Attach(exprTextBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+
+            PropertyPanel.Children.Add(exprLabel);
+            PropertyPanel.Children.Add(exprTextBox);
+            _propertyControls[$"{keyPrefix}ConditionExpression"] = exprTextBox;
+
+        }
+
+        /// <summary>
+        /// 在IfStart属性中动态显示同组所有elif卡片的条件设置
+        /// </summary>
+        private void AddElifConditionProperties(IfElseBranchTaskCard ifStartCard)
+        {
+            if (!ifStartCard.BranchGroupId.HasValue) return;
+
+            var elifCards = _viewModel.TaskCards
+                .Where(t => t.BranchGroupId == ifStartCard.BranchGroupId && t.BranchRole == BranchRole.ElifStart)
+                .Cast<IfElseBranchTaskCard>()
+                .ToList();
+
+            for (int idx = 0; idx < elifCards.Count; idx++)
+            {
+                var elifCard = elifCards[idx];
+
+                // 分隔线
+                var separator = new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(232, 230, 220)) };
+                PropertyPanel.Children.Add(separator);
+
+                // 标题
+                var titleBlock = new TextBlock
+                {
+                    Text = string.Format(TaskFlow.Resources.Strings.Prop_ElifCondition, idx + 1, elifCard.Order),
+                    FontWeight = FontWeights.Bold,
+                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(217, 119, 87)),
+                    FontSize = 13,
+                    Margin = new Thickness(0, 0, 0, 8),
+                    Style = FindResource("PropertyLabel") as Style
+                };
+                PropertyPanel.Children.Add(titleBlock);
+
+                AddConditionExpressionProperty(elifCard, $"Elif{idx}");
+            }
+        }
+
+        private void AddClickProperties(WinClickTaskCard card)
+        {
+            // X/Y 坐标表达式
+            AddTextProperty("StartXInput", TaskFlow.Resources.Strings.Prop_XExpr,
+                !string.IsNullOrWhiteSpace(card.StartXExpression)
+                    ? card.StartXExpression
+                    : card.StartX.ToString());
+            AddTextProperty("StartYInput", TaskFlow.Resources.Strings.Prop_YExpr,
+                !string.IsNullOrWhiteSpace(card.StartYExpression)
+                    ? card.StartYExpression
+                    : card.StartY.ToString());
+
+            // 点击类型
+            var clickTypeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ClickType, Style = FindResource("PropertyLabel") as Style };
+            var clickTypeCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickSingle, Tag = ClickType.Single });
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickDouble, Tag = ClickType.Double });
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickSwipe, Tag = ClickType.Swipe });
+            clickTypeCombo.SelectedIndex = (int)card.ClickType;
+
+            PropertyPanel.Children.Add(clickTypeLabel);
+            PropertyPanel.Children.Add(clickTypeCombo);
+            _propertyControls["ClickType"] = clickTypeCombo;
+
+            // 滑动专属面板
+            var swipePanel = new StackPanel();
+            var endXLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_EndXExpr, Style = FindResource("PropertyLabel") as Style };
+            var endXBox = new TextBox { Text = card.EndX.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            AutoCompleteHelper.Attach(endXBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+            var endYLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_EndYExpr, Style = FindResource("PropertyLabel") as Style };
+            var endYBox = new TextBox { Text = card.EndY.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            AutoCompleteHelper.Attach(endYBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+            var swipeDurLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SwipeDuration, Style = FindResource("PropertyLabel") as Style };
+            var swipeDurBox = new TextBox { Text = card.SwipeDurationMs.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            swipePanel.Children.Add(endXLabel);
+            swipePanel.Children.Add(endXBox);
+            swipePanel.Children.Add(endYLabel);
+            swipePanel.Children.Add(endYBox);
+            swipePanel.Children.Add(swipeDurLabel);
+            swipePanel.Children.Add(swipeDurBox);
+            _propertyControls["EndX"] = endXBox;
+            _propertyControls["EndY"] = endYBox;
+            _propertyControls["SwipeDurationMs"] = swipeDurBox;
+            PropertyPanel.Children.Add(swipePanel);
+
+            // 双击专属面板
+            var doubleClickPanel = new StackPanel();
+            var multiClickCheck = new CheckBox
+            {
+                Content = TaskFlow.Resources.Strings.Prop_MultiClick,
+                IsChecked = card.MultiClickEnabled,
+                Style = FindResource("PropertyCheckBox") as Style,
+                Margin = new Thickness(0, 6, 0, 4)
+            };
+            var multiCountLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ClickCount, Style = FindResource("PropertyLabel") as Style };
+            var multiCountBox = new TextBox { Text = card.MultiClickCount.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            doubleClickPanel.Children.Add(multiClickCheck);
+            doubleClickPanel.Children.Add(multiCountLabel);
+            doubleClickPanel.Children.Add(multiCountBox);
+            var intervalLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ClickInterval, Style = FindResource("PropertyLabel") as Style };
+            var intervalBox = new TextBox { Text = card.ClickIntervalMs.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            doubleClickPanel.Children.Add(intervalLabel);
+            doubleClickPanel.Children.Add(intervalBox);
+            _propertyControls["MultiClickEnabled"] = multiClickCheck;
+            _propertyControls["MultiClickCount"] = multiCountBox;
+            _propertyControls["ClickIntervalMs"] = intervalBox;
+            PropertyPanel.Children.Add(doubleClickPanel);
+
+            // 根据当前选择显隐
+            swipePanel.Visibility = card.ClickType == ClickType.Swipe ? Visibility.Visible : Visibility.Collapsed;
+            doubleClickPanel.Visibility = card.ClickType == ClickType.Double ? Visibility.Visible : Visibility.Collapsed;
+
+            // 联动切换
+            clickTypeCombo.SelectionChanged += (s, e) =>
+            {
+                if (clickTypeCombo.SelectedItem is ComboBoxItem item && item.Tag is ClickType ct)
+                {
+                    swipePanel.Visibility = ct == ClickType.Swipe ? Visibility.Visible : Visibility.Collapsed;
+                    doubleClickPanel.Visibility = ct == ClickType.Double ? Visibility.Visible : Visibility.Collapsed;
+                }
+            };
+
+            // 离屏点击功能
+            PropertyPanel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(Color.FromRgb(232, 230, 220)) });
+            var offScreenCheck = new CheckBox
+            {
+                Content = TaskFlow.Resources.Strings.Prop_EnableOffscreen,
+                IsChecked = card.EnableOffScreenClick,
+                Style = FindResource("PropertyCheckBox") as Style,
+                Margin = new Thickness(0, 6, 0, 4)
+            };
+            var processLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ProcessName, Style = FindResource("PropertyLabel") as Style };
+            var processBox = new TextBox { Text = card.ProcessName, Style = FindResource("PropertyTextBox") as Style };
+
+            _propertyControls["EnableOffScreenClick"] = offScreenCheck;
+            _propertyControls["ProcessName"] = processBox;
+
+            PropertyPanel.Children.Add(offScreenCheck);
+            PropertyPanel.Children.Add(processLabel);
+            PropertyPanel.Children.Add(processBox);
+
+            // 联动隐藏进程名输入
+            processLabel.Visibility = card.EnableOffScreenClick ? Visibility.Visible : Visibility.Collapsed;
+            processBox.Visibility = card.EnableOffScreenClick ? Visibility.Visible : Visibility.Collapsed;
+            offScreenCheck.Checked += (s, e) => { processLabel.Visibility = Visibility.Visible; processBox.Visibility = Visibility.Visible; };
+            offScreenCheck.Unchecked += (s, e) => { processLabel.Visibility = Visibility.Collapsed; processBox.Visibility = Visibility.Collapsed; };
+        }
+
+        /// <summary>
+        /// WinUI自动化任务卡片的属性编辑控件
+        /// </summary>
+        private void AddUiAutomationProperties(WinUiAutomationTaskCard card)
+        {
+            // 查找方式下拉框
+            var searchByLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SearchBy, Style = FindResource("PropertyLabel") as Style };
+            var searchByCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            searchByCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SearchByName, Tag = UiSearchBy.Name });
+            searchByCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SearchByAutomationId, Tag = UiSearchBy.AutomationId });
+            searchByCombo.SelectedIndex = (int)card.SearchBy;
+            PropertyPanel.Children.Add(searchByLabel);
+            PropertyPanel.Children.Add(searchByCombo);
+            _propertyControls["SearchBy"] = searchByCombo;
+
+            // 按钮名称输入框
+            var btnNameLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ButtonName, Style = FindResource("PropertyLabel") as Style };
+            var btnNameBox = new TextBox { Text = card.ButtonName, Style = FindResource("PropertyTextBox") as Style };
+            PropertyPanel.Children.Add(btnNameLabel);
+            PropertyPanel.Children.Add(btnNameBox);
+            _propertyControls["ButtonName"] = btnNameBox;
+
+            // 匹配方式下拉框
+            var matchModeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_MatchMode, Style = FindResource("PropertyLabel") as Style };
+            var matchModeCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            matchModeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_MatchExact, Tag = UiMatchMode.Exact });
+            matchModeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_MatchContains, Tag = UiMatchMode.Contains });
+            matchModeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_MatchRegex, Tag = UiMatchMode.Regex });
+            matchModeCombo.SelectedIndex = (int)card.MatchMode;
+            PropertyPanel.Children.Add(matchModeLabel);
+            PropertyPanel.Children.Add(matchModeCombo);
+            _propertyControls["MatchMode"] = matchModeCombo;
+
+            // AutomationId 输入框
+            var autoIdLabel = new TextBlock { Text = "AutomationId", Style = FindResource("PropertyLabel") as Style };
+            var autoIdBox = new TextBox { Text = card.AutomationId, Style = FindResource("PropertyTextBox") as Style };
+            PropertyPanel.Children.Add(autoIdLabel);
+            PropertyPanel.Children.Add(autoIdBox);
+            _propertyControls["AutomationId"] = autoIdBox;
+
+            // 联动显隐：按名称时显示按钮名称+匹配方式，隐藏AutomationId；反之亦然
+            void UpdateVisibility(UiSearchBy searchBy)
+            {
+                var byName = searchBy == UiSearchBy.Name ? Visibility.Visible : Visibility.Collapsed;
+                var byAutoId = searchBy == UiSearchBy.AutomationId ? Visibility.Visible : Visibility.Collapsed;
+                btnNameLabel.Visibility = byName;
+                btnNameBox.Visibility = byName;
+                matchModeLabel.Visibility = byName;
+                matchModeCombo.Visibility = byName;
+                autoIdLabel.Visibility = byAutoId;
+                autoIdBox.Visibility = byAutoId;
+            }
+            UpdateVisibility(card.SearchBy);
+
+            searchByCombo.SelectionChanged += (s, e) =>
+            {
+                if (searchByCombo.SelectedItem is ComboBoxItem item && item.Tag is UiSearchBy sb)
+                {
+                    UpdateVisibility(sb);
+                }
+            };
+        }
+
+        private void AddSimulateInputProperties(WinSimulateInputTaskCard card)
+        {
+            AddEnumComboProperty<ModifierKeyType>("ModifierKey", TaskFlow.Resources.Strings.Prop_ModifierKey, card.ModifierKey, new Dictionary<ModifierKeyType, string>
+            {
+                { ModifierKeyType.None, TaskFlow.Resources.Strings.Prop_BinarizeNone },
+                { ModifierKeyType.Ctrl, "Ctrl" },
+                { ModifierKeyType.Shift, "Shift" },
+                { ModifierKeyType.Alt, "Alt" },
+                { ModifierKeyType.CtrlShift, "Ctrl + Shift" },
+                { ModifierKeyType.CtrlAlt, "Ctrl + Alt" }
+            });
+
+            // 输入动作
+            var actionLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_InputAction, Style = FindResource("PropertyLabel") as Style };
+            var actionCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            actionCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ScrollDown, Tag = InputActionType.ScrollDown });
+            actionCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ScrollUp, Tag = InputActionType.ScrollUp });
+            actionCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_KeyPress, Tag = InputActionType.KeyPress });
+
+            foreach (ComboBoxItem item in actionCombo.Items)
+            {
+                if ((InputActionType)item.Tag == card.ActionType)
+                {
+                    actionCombo.SelectedItem = item;
+                    break;
+                }
+            }
+            PropertyPanel.Children.Add(actionLabel);
+            PropertyPanel.Children.Add(actionCombo);
+            _propertyControls["ActionType"] = actionCombo;
+
+            // 按键名称
+            var keyNameLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_KeyName, Style = FindResource("PropertyLabel") as Style };
+            var keyNameBox = new TextBox { Text = card.KeyName, Style = FindResource("PropertyTextBox") as Style };
+            PropertyPanel.Children.Add(keyNameLabel);
+            PropertyPanel.Children.Add(keyNameBox);
+            _propertyControls["KeyName"] = keyNameBox;
+
+            // 滚动量
+            var scrollLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ScrollAmount, Style = FindResource("PropertyLabel") as Style };
+            var scrollBox = new TextBox { Text = card.ScrollAmount.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            PropertyPanel.Children.Add(scrollLabel);
+            PropertyPanel.Children.Add(scrollBox);
+            _propertyControls["ScrollAmount"] = scrollBox;
+
+            // 更新显示逻辑
+            void UpdateVisibility(InputActionType action)
+            {
+                var showKey = action == InputActionType.KeyPress ? Visibility.Visible : Visibility.Collapsed;
+                var showScroll = (action == InputActionType.ScrollUp || action == InputActionType.ScrollDown) ? Visibility.Visible : Visibility.Collapsed;
+
+                keyNameLabel.Visibility = showKey;
+                keyNameBox.Visibility = showKey;
+
+                scrollLabel.Visibility = showScroll;
+                scrollBox.Visibility = showScroll;
+            }
+
+            UpdateVisibility(card.ActionType);
+
+            actionCombo.SelectionChanged += (s, e) =>
+            {
+                if (actionCombo.SelectedItem is ComboBoxItem item && item.Tag is InputActionType act)
+                {
+                    UpdateVisibility(act);
+                }
+            };
+
+            AddIntProperty("RepeatCount", TaskFlow.Resources.Strings.Prop_RepeatCount, card.RepeatCount);
+            AddIntProperty("IntervalMs", TaskFlow.Resources.Strings.Prop_RepeatInterval, card.IntervalMs);
+        }
+
+        private void AddLlmTranslateProperties(LlmTranslateTaskCard card)
+        {
+            // 模型选择ComboBox
+            var modelLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SelectModel, Style = FindResource("PropertyLabel") as Style };
+            var modelCombo = new ComboBox
+            {
+                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
+                Style = FindResource("PropertyComboBox") as Style,
+                DisplayMemberPath = "DisplayName",
+                SelectedValuePath = "Id",
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            // 加载模型列表并绑定
+            TaskFlow.Helpers.LlmModelManager.Load();
+            modelCombo.ItemsSource = TaskFlow.Helpers.LlmModelManager.Models;
+
+            if (!string.IsNullOrEmpty(card.ModelId))
+            {
+                modelCombo.SelectedValue = card.ModelId;
+            }
+
+            modelCombo.SelectionChanged += (s, e) =>
+            {
+                var selectedId = modelCombo.SelectedValue?.ToString() ?? "";
+                if (card.ModelId != selectedId)
+                {
+                    card.ModelId = selectedId;
+                }
+            };
+
+            PropertyPanel.Children.Add(modelLabel);
+            PropertyPanel.Children.Add(modelCombo);
+
+            // 待翻译文本，支持补全
+            AddTextProperty("SourceTextExpression", TaskFlow.Resources.Strings.Prop_SourceText, card.SourceTextExpression);
+            
+            AddTextProperty("TargetLanguage", TaskFlow.Resources.Strings.Prop_TargetLanguage, card.TargetLanguage);
+            
+            // System Prompt 使用多行TextBox
+            var promptLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SystemPrompt, Style = FindResource("PropertyLabel") as Style };
+            var promptTextBox = new TextBox
+            {
+                Text = card.SystemPrompt,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                Height = 80,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = Brushes.White,
+                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
+                Padding = new Thickness(6, 4, 6, 4),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            
+            promptTextBox.TextChanged += (s, e) => 
+            {
+                if (card.SystemPrompt != promptTextBox.Text)
+                {
+                    card.SystemPrompt = promptTextBox.Text;
+                }
+            };
+
+            PropertyPanel.Children.Add(promptLabel);
+            PropertyPanel.Children.Add(promptTextBox);
+        }
+
+        /// <summary>
+        /// 多模态识图任务卡片的属性编辑控件
+        /// </summary>
+        private void AddLlmVisionProperties(LlmVisionTaskCard card)
+        {
+            // 模型选择ComboBox
+            var modelLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SelectModel, Style = FindResource("PropertyLabel") as Style };
+            var modelCombo = new ComboBox
+            {
+                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
+                Style = FindResource("PropertyComboBox") as Style,
+                DisplayMemberPath = "DisplayName",
+                SelectedValuePath = "Id",
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            // 加载模型列表并绑定
+            TaskFlow.Helpers.LlmModelManager.Load();
+            modelCombo.ItemsSource = TaskFlow.Helpers.LlmModelManager.Models;
+
+            if (!string.IsNullOrEmpty(card.ModelId))
+            {
+                modelCombo.SelectedValue = card.ModelId;
+            }
+
+            modelCombo.SelectionChanged += (s, e) =>
+            {
+                var selectedId = modelCombo.SelectedValue?.ToString() ?? "";
+                if (card.ModelId != selectedId)
+                {
+                    card.ModelId = selectedId;
+                }
+            };
+
+            PropertyPanel.Children.Add(modelLabel);
+            PropertyPanel.Children.Add(modelCombo);
+
+            // 图像来源（复用通用图像来源控件）
+            PropertyPanel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(Color.FromRgb(232, 230, 220)) });
+            AddImageSourceProperty_Generic(card.UseSourceTaskImage, card.SourceTaskIdForImage, card.ImageFilePath);
+
+            // 提示词，支持补全
+            PropertyPanel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(Color.FromRgb(232, 230, 220)) });
+            AddTextProperty("PromptExpression", TaskFlow.Resources.Strings.Prop_Prompt, card.PromptExpression);
+
+            // System Prompt 使用多行TextBox
+            var promptLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SystemPrompt, Style = FindResource("PropertyLabel") as Style };
+            var promptTextBox = new TextBox
+            {
+                Text = card.SystemPrompt,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                Height = 80,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = Brushes.White,
+                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
+                Padding = new Thickness(6, 4, 6, 4),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            promptTextBox.TextChanged += (s, e) =>
+            {
+                if (card.SystemPrompt != promptTextBox.Text)
+                {
+                    card.SystemPrompt = promptTextBox.Text;
+                }
+            };
+
+            PropertyPanel.Children.Add(promptLabel);
+            PropertyPanel.Children.Add(promptTextBox);
+        }
+
+        /// <summary>
+        /// Win字幕提示任务卡片的属性编辑控件
+        /// </summary>
+        private void AddSubtitleProperties(WinSubtitleTaskCard card)
+        {
+            // ==================== 显示文本表达式 ====================
+            AddTextProperty("DisplayText", TaskFlow.Resources.Strings.Prop_DisplayText, card.DisplayText);
+
+            // ==================== 是否指定窗口 ====================
+            // 用于控制进程名称和框选显示区域按钮的条件显隐
+            var windowSpecPanel = new StackPanel(); // 容纳进程名 + 框选按钮
+
+            var useWindowCheck = new CheckBox
+            {
+                Content = TaskFlow.Resources.Strings.Prop_SpecifyWindow,
+                IsChecked = card.UseSpecifiedWindow,
+                Style = FindResource("PropertyCheckBox") as Style,
+                Foreground = new SolidColorBrush(Color.FromRgb(217, 119, 87)),
+                Margin = new Thickness(0, 8, 0, 4)
+            };
+            PropertyPanel.Children.Add(useWindowCheck);
+            _propertyControls["UseSpecifiedWindow"] = useWindowCheck;
+
+            // 进程名称
+            var procLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ProcessName, Style = FindResource("PropertyLabel") as Style };
+            var procBox = new TextBox { Text = card.ProcessName, Style = FindResource("PropertyTextBox") as Style };
+            AutoCompleteHelper.Attach(procBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+            windowSpecPanel.Children.Add(procLabel);
+            windowSpecPanel.Children.Add(procBox);
+            _propertyControls["ProcessName"] = procBox;
+
+            // 框选显示区域按钮
+            var selectRegionBtn = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_SelectSubtitleRegion,
+                Style = FindResource("ToolbarButton") as Style,
+                Margin = new Thickness(0, 4, 0, 8),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Padding = new Thickness(12, 6, 12, 6)
+            };
+            selectRegionBtn.Click += async (s, e) =>
+            {
+                string procName = procBox.Text.Trim();
+                if (string.IsNullOrEmpty(procName))
+                {
+                    MessageBox.Show(TaskFlow.Resources.Strings.Prop_FillProcessFirst, "", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var screenshotService = new Services.ScreenshotService();
+                var result = await screenshotService.CaptureWindowAsync(procName);
+                if (!result.Success || result.Image == null)
+                {
+                    MessageBox.Show(string.Format(TaskFlow.Resources.Strings.Prop_ScreenshotFailed, result.Error), "", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                int initX = 0, initY = 0, initW = 0, initH = 0;
+                if (_propertyControls.TryGetValue("OffsetX", out var oxCtrl) && oxCtrl is TextBox oxBox)
+                    int.TryParse(oxBox.Text, out initX);
+                if (_propertyControls.TryGetValue("OffsetY", out var oyCtrl) && oyCtrl is TextBox oyBox)
+                    int.TryParse(oyBox.Text, out initY);
+                if (_propertyControls.TryGetValue("SubtitleWidth", out var swCtrl) && swCtrl is TextBox swBox)
+                    int.TryParse(swBox.Text, out initW);
+                if (_propertyControls.TryGetValue("SubtitleHeight", out var shCtrl) && shCtrl is TextBox shBox)
+                    int.TryParse(shBox.Text, out initH);
+
+                var roiWindow = new RoiSelectionWindow(result.Image, initX, initY, initW, initH, "");
+                roiWindow.Owner = this;
+                roiWindow.Title = TaskFlow.Resources.Strings.Prop_SelectSubtitleArea;
+                if (roiWindow.ShowDialog() == true)
+                {
+                    if (_propertyControls.TryGetValue("OffsetX", out var ox) && ox is TextBox oxTb)
+                        oxTb.Text = roiWindow.RoiX.ToString();
+                    if (_propertyControls.TryGetValue("OffsetY", out var oy) && oy is TextBox oyTb)
+                        oyTb.Text = roiWindow.RoiY.ToString();
+                    if (_propertyControls.TryGetValue("SubtitleWidth", out var sw) && sw is TextBox swTb)
+                        swTb.Text = roiWindow.RoiWidth.ToString();
+                    if (_propertyControls.TryGetValue("SubtitleHeight", out var sh) && sh is TextBox shTb)
+                        shTb.Text = roiWindow.RoiHeight.ToString();
+                }
+                result.Image.Dispose();
+            };
+            windowSpecPanel.Children.Add(selectRegionBtn);
+
+            // 条件显隐：勾选"是否指定窗口"后才显示进程名和框选按钮
+            windowSpecPanel.Visibility = card.UseSpecifiedWindow ? Visibility.Visible : Visibility.Collapsed;
+            useWindowCheck.Checked += (s, e) => windowSpecPanel.Visibility = Visibility.Visible;
+            useWindowCheck.Unchecked += (s, e) => windowSpecPanel.Visibility = Visibility.Collapsed;
+            PropertyPanel.Children.Add(windowSpecPanel);
+
+            // ==================== X偏移量 + Y偏移量（同一行） ====================
+            var offsetLabel = new TextBlock
+            {
+                Text = TaskFlow.Resources.Strings.Prop_XYOffset,
+                Style = FindResource("PropertyLabel") as Style,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            PropertyPanel.Children.Add(offsetLabel);
+
+            var offsetGrid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            offsetGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            offsetGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8, GridUnitType.Pixel) });
+            offsetGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var offsetXBox = new TextBox { Text = card.OffsetX.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            Grid.SetColumn(offsetXBox, 0);
+            offsetGrid.Children.Add(offsetXBox);
+            _propertyControls["OffsetX"] = offsetXBox;
+
+            var offsetYBox = new TextBox { Text = card.OffsetY.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            Grid.SetColumn(offsetYBox, 2);
+            offsetGrid.Children.Add(offsetYBox);
+            _propertyControls["OffsetY"] = offsetYBox;
+
+            PropertyPanel.Children.Add(offsetGrid);
+
+            // ==================== 字幕宽度 + 字幕高度（同一行） ====================
+            var sizeLabel = new TextBlock
+            {
+                Text = TaskFlow.Resources.Strings.Prop_SubtitleWidthHeight,
+                Style = FindResource("PropertyLabel") as Style,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            PropertyPanel.Children.Add(sizeLabel);
+
+            var sizeGrid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8, GridUnitType.Pixel) });
+            sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var widthBox = new TextBox { Text = card.SubtitleWidth.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            Grid.SetColumn(widthBox, 0);
+            sizeGrid.Children.Add(widthBox);
+            _propertyControls["SubtitleWidth"] = widthBox;
+
+            var heightBox = new TextBox { Text = card.SubtitleHeight.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            Grid.SetColumn(heightBox, 2);
+            sizeGrid.Children.Add(heightBox);
+            _propertyControls["SubtitleHeight"] = heightBox;
+
+            PropertyPanel.Children.Add(sizeGrid);
+
+            // ==================== 字体大小 + 字体颜色（颜色选择器） ====================
+            AddTextProperty("FontSize", TaskFlow.Resources.Strings.Prop_FontSize, card.FontSize.ToString());
+
+            // 字体颜色行：标签 + 颜色文本框 + 颜色选择按钮
+            var colorLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_FontColor, Style = FindResource("PropertyLabel") as Style };
+            PropertyPanel.Children.Add(colorLabel);
+
+            var colorGrid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            colorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            colorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8, GridUnitType.Pixel) });
+            colorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var colorBox = new TextBox { Text = card.TextColor, Style = FindResource("PropertyTextBox") as Style };
+            Grid.SetColumn(colorBox, 0);
+            colorGrid.Children.Add(colorBox);
+            _propertyControls["TextColor"] = colorBox;
+
+            // 颜色预览色块按钮（统一样式 + 亮度反转图标）
+            var colorPreviewBtn = CreateColorPickerButton(colorBox, card.TextColor, TaskFlow.Resources.Strings.Prop_SelectColor);
+
+            Grid.SetColumn(colorPreviewBtn, 2);
+            colorGrid.Children.Add(colorPreviewBtn);
+            PropertyPanel.Children.Add(colorGrid);
+
+            // ==================== 背景样式下拉框 ====================
+            var bgLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_BackgroundStyle, Style = FindResource("PropertyLabel") as Style };
+            var bgCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            bgCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_BgAcrylic, Tag = SubtitleBackground.Acrylic });
+            bgCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_BgSolid, Tag = SubtitleBackground.SolidColor });
+            bgCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_BgTransparent, Tag = SubtitleBackground.Transparent });
+            bgCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_BgAutoSample, Tag = SubtitleBackground.AutoSample });
+            bgCombo.SelectedIndex = (int)card.Background;
+            PropertyPanel.Children.Add(bgLabel);
+            PropertyPanel.Children.Add(bgCombo);
+            _propertyControls["Background"] = bgCombo;
+
+            // ==================== 背景色（仅毛玻璃/纯色背景时显示）+ 颜色选择按钮 ====================
+            var bgColorPanel = new StackPanel();
+            var bgColorLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_BgColor, Style = FindResource("PropertyLabel") as Style };
+
+            var bgColorGrid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            bgColorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            bgColorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8, GridUnitType.Pixel) });
+            bgColorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var bgColorBox = new TextBox { Text = card.BackgroundColor, Style = FindResource("PropertyTextBox") as Style };
+            Grid.SetColumn(bgColorBox, 0);
+            bgColorGrid.Children.Add(bgColorBox);
+            _propertyControls["BackgroundColor"] = bgColorBox;
+
+            // 背景色颜色选择按钮（统一样式 + 亮度反转图标）
+            var bgColorPreviewBtn = CreateColorPickerButton(bgColorBox, card.BackgroundColor, TaskFlow.Resources.Strings.Prop_SelectBgColor);
+
+            Grid.SetColumn(bgColorPreviewBtn, 2);
+            bgColorGrid.Children.Add(bgColorPreviewBtn);
+
+            bgColorPanel.Children.Add(bgColorLabel);
+            bgColorPanel.Children.Add(bgColorGrid);
+
+            // 初始可见性
+            bool showBgColor = card.Background == SubtitleBackground.Acrylic || card.Background == SubtitleBackground.SolidColor;
+            bgColorPanel.Visibility = showBgColor ? Visibility.Visible : Visibility.Collapsed;
+
+            // 切换背景样式时条件显隐
+            bgCombo.SelectionChanged += (s, e) =>
+            {
+                if (bgCombo.SelectedItem is ComboBoxItem item && item.Tag is SubtitleBackground bg)
+                {
+                    bool show = bg == SubtitleBackground.Acrylic || bg == SubtitleBackground.SolidColor;
+                    bgColorPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+                }
+            };
+            PropertyPanel.Children.Add(bgColorPanel);
+
+            // ==================== 不显示吸色排除膜（SampleMaskPath 移除） ====================
+
+            // ==================== 显示时长 ====================
+            AddTextProperty("DurationMs", TaskFlow.Resources.Strings.Prop_Duration, card.DurationMs.ToString());
+
+            // ==================== 等待字幕关闭后再继续执行（暖红色字体） ====================
+            var waitCheck = new CheckBox
+            {
+                Content = TaskFlow.Resources.Strings.Prop_WaitClose,
+                IsChecked = card.WaitUntilClosed,
+                Style = FindResource("PropertyCheckBox") as Style,
+                Foreground = new SolidColorBrush(Color.FromRgb(217, 119, 87)),
+                Margin = new Thickness(0, 4, 0, 4)
+            };
+            PropertyPanel.Children.Add(waitCheck);
+            _propertyControls["WaitUntilClosed"] = waitCheck;
+        }
+
+        /// <summary>
+        /// 为颜色选择器按钮创建纯色块模板
+        /// </summary>
+        private FrameworkElementFactory CreateColorBlockTemplate()
+        {
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(4));
+            border.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(200, 200, 200)));
+            border.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+            return border;
+        }
+
+        /// <summary>
+        /// 创建带🎨图标的颜色选择按钮模板
+        /// </summary>
+        private FrameworkElementFactory CreateColorBlockWithIconTemplate()
+        {
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(4));
+            border.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(200, 200, 200)));
+            border.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+
+            var contentPresenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            contentPresenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            contentPresenter.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+
+            border.AppendChild(contentPresenter);
+            return border;
+        }
+
+        /// <summary>
+        /// 创建颜色选择按钮（统一样式：固定高度、🎨图标、亮度反转）
+        /// </summary>
+        private Button CreateColorPickerButton(TextBox colorBox, string initialColor, string tooltip)
+        {
+            var iconText = new TextBlock { Text = "🎨", FontSize = 13 };
+            var btn = new Button
+            {
+                Width = 36,
+                Height = 32,
+                Content = iconText,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(232, 230, 220)),
+                Margin = new Thickness(0),
+                ToolTip = tooltip
+            };
+
+            btn.Template = new ControlTemplate(typeof(Button))
+            {
+                VisualTree = CreateColorBlockWithIconTemplate()
+            };
+
+            // 设置初始颜色和图标颜色
+            UpdateColorButtonAppearance(btn, iconText, initialColor);
+
+            // 文本框变化时同步更新按钮
+            colorBox.TextChanged += (s, e) => UpdateColorButtonAppearance(btn, iconText, colorBox.Text);
+
+            // 点击弹出系统颜色选择器
+            btn.Click += (s, e) =>
+            {
+                var dlg = new System.Windows.Forms.ColorDialog();
+                try
+                {
+                    var cur = (Color)System.Windows.Media.ColorConverter.ConvertFromString(colorBox.Text.Trim());
+                    dlg.Color = System.Drawing.Color.FromArgb(cur.A, cur.R, cur.G, cur.B);
+                }
+                catch { }
+                if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    var chosen = dlg.Color;
+                    string hex = $"#{chosen.R:X2}{chosen.G:X2}{chosen.B:X2}";
+                    colorBox.Text = hex;
+                }
+            };
+
+            return btn;
+        }
+
+        /// <summary>
+        /// 更新颜色按钮背景和根据亮度反转图标颜色
+        /// </summary>
+        private static void UpdateColorButtonAppearance(Button btn, TextBlock iconText, string colorStr)
+        {
+            try
+            {
+                var c = (Color)System.Windows.Media.ColorConverter.ConvertFromString(colorStr.Trim());
+                btn.Background = new SolidColorBrush(c);
+                // 计算相对亮度 (ITU-R BT.709)
+                double brightness = 0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B;
+                iconText.Foreground = new SolidColorBrush(brightness < 128 ? Colors.White : Colors.Black);
+            }
+            catch
+            {
+                btn.Background = new SolidColorBrush(Colors.Gray);
+                iconText.Foreground = new SolidColorBrush(Colors.White);
+            }
+        }
+
+        private void AddAdbClickProperties(AdbClickTaskCard card)
+        {
+            // X/Y 坐标表达式
+            AddTextProperty("StartXInput", TaskFlow.Resources.Strings.Prop_XExpr,
+                !string.IsNullOrWhiteSpace(card.StartXExpression)
+                    ? card.StartXExpression
+                    : card.StartX.ToString());
+            AddTextProperty("StartYInput", TaskFlow.Resources.Strings.Prop_YExpr,
+                !string.IsNullOrWhiteSpace(card.StartYExpression)
+                    ? card.StartYExpression
+                    : card.StartY.ToString());
+
+            var clickTypeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ClickType, Style = FindResource("PropertyLabel") as Style };
+            var clickTypeCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickSingle, Tag = ClickType.Single });
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickDouble, Tag = ClickType.Double });
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickSwipe, Tag = ClickType.Swipe });
+            clickTypeCombo.SelectedIndex = (int)card.ClickType;
+
+            PropertyPanel.Children.Add(clickTypeLabel);
+            PropertyPanel.Children.Add(clickTypeCombo);
+            _propertyControls["ClickType"] = clickTypeCombo;
+
+            // 滑动专属面板
+            var swipePanel = new StackPanel();
+            var endXLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_EndXExpr, Style = FindResource("PropertyLabel") as Style };
+            var endXBox = new TextBox { Text = card.EndX.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            AutoCompleteHelper.Attach(endXBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+            var endYLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_EndYExpr, Style = FindResource("PropertyLabel") as Style };
+            var endYBox = new TextBox { Text = card.EndY.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            AutoCompleteHelper.Attach(endYBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+            var swipeDurLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SwipeDuration, Style = FindResource("PropertyLabel") as Style };
+            var swipeDurBox = new TextBox { Text = card.SwipeDurationMs.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            swipePanel.Children.Add(endXLabel);
+            swipePanel.Children.Add(endXBox);
+            swipePanel.Children.Add(endYLabel);
+            swipePanel.Children.Add(endYBox);
+            swipePanel.Children.Add(swipeDurLabel);
+            swipePanel.Children.Add(swipeDurBox);
+            _propertyControls["EndX"] = endXBox;
+            _propertyControls["EndY"] = endYBox;
+            _propertyControls["SwipeDurationMs"] = swipeDurBox;
+            PropertyPanel.Children.Add(swipePanel);
+
+            // 双击专属面板
+            var doubleClickPanel = new StackPanel();
+            var multiClickCheck = new CheckBox
+            {
+                Content = TaskFlow.Resources.Strings.Prop_MultiClick,
+                IsChecked = card.MultiClickEnabled,
+                Style = FindResource("PropertyCheckBox") as Style,
+                Margin = new Thickness(0, 6, 0, 4)
+            };
+            var multiCountLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ClickCount, Style = FindResource("PropertyLabel") as Style };
+            var multiCountBox = new TextBox { Text = card.MultiClickCount.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            doubleClickPanel.Children.Add(multiClickCheck);
+            doubleClickPanel.Children.Add(multiCountLabel);
+            doubleClickPanel.Children.Add(multiCountBox);
+            var intervalLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ClickInterval, Style = FindResource("PropertyLabel") as Style };
+            var intervalBox = new TextBox { Text = card.ClickIntervalMs.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            doubleClickPanel.Children.Add(intervalLabel);
+            doubleClickPanel.Children.Add(intervalBox);
+            _propertyControls["MultiClickEnabled"] = multiClickCheck;
+            _propertyControls["MultiClickCount"] = multiCountBox;
+            _propertyControls["ClickIntervalMs"] = intervalBox;
+            PropertyPanel.Children.Add(doubleClickPanel);
+
+            // 根据当前选择显隐
+            swipePanel.Visibility = card.ClickType == ClickType.Swipe ? Visibility.Visible : Visibility.Collapsed;
+            doubleClickPanel.Visibility = card.ClickType == ClickType.Double ? Visibility.Visible : Visibility.Collapsed;
+
+            // 联动切换
+            clickTypeCombo.SelectionChanged += (s, e) =>
+            {
+                if (clickTypeCombo.SelectedItem is ComboBoxItem item && item.Tag is ClickType ct)
+                {
+                    swipePanel.Visibility = ct == ClickType.Swipe ? Visibility.Visible : Visibility.Collapsed;
+                    doubleClickPanel.Visibility = ct == ClickType.Double ? Visibility.Visible : Visibility.Collapsed;
+                }
+            };
+        }
+
+        private void AddImageSourceProperty(ImgCropTaskCard card)
+        {
+            // 图像来源任务下拉框
+            var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var taskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+            foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
+                taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            taskCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForImage.HasValue)
+                for (int i = 1; i < taskCombo.Items.Count; i++)
+                    if (((ComboBoxItem)taskCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForImage) { taskCombo.SelectedIndex = i; break; }
+
+            // 图像文件路径
+            var fileLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageFilePath, Style = FindResource("PropertyLabel") as Style };
+            var fileGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var fileBox = new TextBox { Text = card.ImageFilePath ?? "", Style = FindResource("PropertyTextBox") as Style, Margin = new Thickness(0) };
+            Grid.SetColumn(fileBox, 0);
+            var browseBtn = new Button { Content = "...", Width = 32, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Stretch, Style = FindResource("ActionButton") as Style };
+            browseBtn.Click += (s, e) => { var dlg = new OpenFileDialog { Filter = TaskFlow.Resources.Strings.Filter_ImageFile }; if (dlg.ShowDialog() == true) fileBox.Text = dlg.FileName; };
+            Grid.SetColumn(browseBtn, 1);
+            fileGrid.Children.Add(fileBox); fileGrid.Children.Add(browseBtn);
+            _propertyControls["ImageFilePath"] = fileBox;
+
+            void UpdateVis(bool chk) { taskLabel.Visibility = taskCombo.Visibility = chk ? Visibility.Visible : Visibility.Collapsed; fileLabel.Visibility = fileGrid.Visibility = chk ? Visibility.Collapsed : Visibility.Visible; }
+            var cb = new CheckBox { Content = TaskFlow.Resources.Strings.Prop_UseSourceTaskImage, IsChecked = card.UseSourceTaskImage, Style = FindResource("PropertyCheckBox") as Style };
+            cb.Checked += (s, e) => UpdateVis(true); cb.Unchecked += (s, e) => UpdateVis(false);
+            PropertyPanel.Children.Add(cb); _propertyControls["UseSourceTaskImage"] = cb;
+            PropertyPanel.Children.Add(taskLabel); PropertyPanel.Children.Add(taskCombo); _propertyControls["SourceTaskIdForImage"] = taskCombo;
+            PropertyPanel.Children.Add(fileLabel); PropertyPanel.Children.Add(fileGrid);
+            UpdateVis(card.UseSourceTaskImage);
+        }
+
+        private void AddImageSourcePropertyMatch(ImgTemplateMatchTaskCard card)
+        {
+            var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var taskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+            foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
+                taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            taskCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForImage.HasValue)
+                for (int i = 1; i < taskCombo.Items.Count; i++)
+                    if (((ComboBoxItem)taskCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForImage) { taskCombo.SelectedIndex = i; break; }
+
+            var fileLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageFilePath, Style = FindResource("PropertyLabel") as Style };
+            var fileGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var fileBox = new TextBox { Text = card.ImageFilePath ?? "", Style = FindResource("PropertyTextBox") as Style, Margin = new Thickness(0) };
+            Grid.SetColumn(fileBox, 0);
+            var browseBtn = new Button { Content = "...", Width = 32, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Stretch, Style = FindResource("ActionButton") as Style };
+            browseBtn.Click += (s, e) => { var dlg = new OpenFileDialog { Filter = TaskFlow.Resources.Strings.Filter_ImageFile }; if (dlg.ShowDialog() == true) fileBox.Text = dlg.FileName; };
+            Grid.SetColumn(browseBtn, 1);
+            fileGrid.Children.Add(fileBox); fileGrid.Children.Add(browseBtn);
+            _propertyControls["ImageFilePath"] = fileBox;
+
+            void UpdateVis(bool chk) { taskLabel.Visibility = taskCombo.Visibility = chk ? Visibility.Visible : Visibility.Collapsed; fileLabel.Visibility = fileGrid.Visibility = chk ? Visibility.Collapsed : Visibility.Visible; }
+            var cb = new CheckBox { Content = TaskFlow.Resources.Strings.Prop_UseSourceTaskImage, IsChecked = card.UseSourceTaskImage, Style = FindResource("PropertyCheckBox") as Style };
+            cb.Checked += (s, e) => UpdateVis(true); cb.Unchecked += (s, e) => UpdateVis(false);
+            PropertyPanel.Children.Add(cb); _propertyControls["UseSourceTaskImage"] = cb;
+            PropertyPanel.Children.Add(taskLabel); PropertyPanel.Children.Add(taskCombo); _propertyControls["SourceTaskIdForImage"] = taskCombo;
+            PropertyPanel.Children.Add(fileLabel); PropertyPanel.Children.Add(fileGrid);
+            UpdateVis(card.UseSourceTaskImage);
+        }
+
+        // 当前 OCR/模板匹配的掩膜路径
+        private string? _currentMaskPath;
+
+        private void AddImageSourcePropertyOcr(ImgOcrTaskCard card)
+        {
+            // OCR 引擎选择
+            var engineLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_OcrEngine, Style = FindResource("PropertyLabel") as Style };
+            PropertyPanel.Children.Add(engineLabel);
+            var engineCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            engineCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_PaddleOcr, Tag = OcrEngine.PaddleOCR });
+
+            // 微信 OCR 选项：根据设置中的验证状态决定是否可选
+            var wechatItem = new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_WeChatOcr, Tag = OcrEngine.WeChatOCR };
+            if (!_viewModel.Settings.WeChatOcrVerified)
+            {
+                wechatItem.IsEnabled = false;
+                wechatItem.ToolTip = TaskFlow.Resources.Strings.Prop_WeChatOcrTip;
+            }
+            engineCombo.Items.Add(wechatItem);
+
+            engineCombo.SelectedIndex = (int)card.OcrEngine;
+            PropertyPanel.Children.Add(engineCombo);
+            _propertyControls["OcrEngine"] = engineCombo;
+
+            // 图像来源（条件显示）
+            var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var taskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+            foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
+                taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            taskCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForImage.HasValue)
+                for (int i = 1; i < taskCombo.Items.Count; i++)
+                    if (((ComboBoxItem)taskCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForImage) { taskCombo.SelectedIndex = i; break; }
+
+            var fileLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageFilePath, Style = FindResource("PropertyLabel") as Style };
+            var fileGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var fileBox = new TextBox { Text = card.ImageFilePath ?? "", Style = FindResource("PropertyTextBox") as Style, Margin = new Thickness(0) };
+            Grid.SetColumn(fileBox, 0);
+            var browseBtn = new Button { Content = "...", Width = 32, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Stretch, Style = FindResource("ActionButton") as Style };
+            browseBtn.Click += (s, e) => { var dlg = new OpenFileDialog { Filter = TaskFlow.Resources.Strings.Filter_ImageFile }; if (dlg.ShowDialog() == true) fileBox.Text = dlg.FileName; };
+            Grid.SetColumn(browseBtn, 1);
+            fileGrid.Children.Add(fileBox); fileGrid.Children.Add(browseBtn);
+            _propertyControls["ImageFilePath"] = fileBox;
+
+            void UpdateVis(bool chk) { taskLabel.Visibility = taskCombo.Visibility = chk ? Visibility.Visible : Visibility.Collapsed; fileLabel.Visibility = fileGrid.Visibility = chk ? Visibility.Collapsed : Visibility.Visible; }
+            var cb = new CheckBox { Content = TaskFlow.Resources.Strings.Prop_UseSourceTaskImage, IsChecked = card.UseSourceTaskImage, Style = FindResource("PropertyCheckBox") as Style };
+            cb.Checked += (s, e) => UpdateVis(true); cb.Unchecked += (s, e) => UpdateVis(false);
+            PropertyPanel.Children.Add(cb); _propertyControls["UseSourceTaskImage"] = cb;
+            PropertyPanel.Children.Add(taskLabel); PropertyPanel.Children.Add(taskCombo); _propertyControls["SourceTaskIdForImage"] = taskCombo;
+            PropertyPanel.Children.Add(fileLabel); PropertyPanel.Children.Add(fileGrid);
+            UpdateVis(card.UseSourceTaskImage);
+
+            // ROI区域（紧凑布局）
+            AddRoiCompactProperties(card.RoiX, card.RoiY, card.RoiWidth, card.RoiHeight);
+
+            // 合并按钮：框选识别区域 + 绘制掩膜
+            _currentMaskPath = card.MaskImagePath;
+            var selectRoiBtn = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_SelectRoiMask,
+                Height = 32,
+                Margin = new Thickness(0, 0, 0, 4),
+                Style = FindResource("ActionButton") as Style
+            };
+            selectRoiBtn.Click += (s, e) => SelectRoiGeneric(card.UseSourceTaskImage, card.SourceTaskIdForImage, card.ImageFilePath);
+            PropertyPanel.Children.Add(selectRoiBtn);
+        }
+
+        /// <summary>
+        /// 添加掩膜画笔按钮（OCR 和模板匹配共用）
+        /// </summary>
+        private void AddMaskPaintButton(bool useSourceTaskImage, Guid? sourceTaskIdForImage, string? imageFilePath)
+        {
+            // 掩膜状态显示
+            var maskStatusLabel = new TextBlock
+            {
+                Text = string.IsNullOrEmpty(_currentMaskPath) ? TaskFlow.Resources.Strings.Prop_MaskNotSet : TaskFlow.Resources.Strings.Prop_MaskSet,
+                Foreground = string.IsNullOrEmpty(_currentMaskPath)
+                    ? new SolidColorBrush(Color.FromRgb(176, 174, 165))
+                    : new SolidColorBrush(Color.FromRgb(120, 140, 93)),
+                FontSize = 11,
+                Margin = new Thickness(0, 4, 0, 4)
+            };
+            PropertyPanel.Children.Add(maskStatusLabel);
+
+            var maskBtn = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_MaskPaint,
+                Height = 32,
+                Margin = new Thickness(0, 0, 0, 4),
+                Style = FindResource("ActionButton") as Style
+            };
+            maskBtn.Click += (s, e) =>
+            {
+                OpenMaskPaintWindow(useSourceTaskImage, sourceTaskIdForImage, imageFilePath, maskStatusLabel);
+            };
+            PropertyPanel.Children.Add(maskBtn);
+
+            // 清除掩膜按钮
+            var clearMaskBtn = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_ClearMask,
+                Height = 32,
+                Margin = new Thickness(0, 0, 0, 12),
+                Style = FindResource("DangerButton") as Style
+            };
+            clearMaskBtn.Click += (s, e) =>
+            {
+                _currentMaskPath = null;
+                maskStatusLabel.Text = TaskFlow.Resources.Strings.Prop_MaskNotSet;
+                maskStatusLabel.Foreground = new SolidColorBrush(Color.FromRgb(176, 174, 165));
+            };
+            PropertyPanel.Children.Add(clearMaskBtn);
+        }
+
+        /// <summary>
+        /// 打开掩膜画笔窗口
+        /// </summary>
+        private void OpenMaskPaintWindow(bool useSourceTaskImage, Guid? sourceTaskIdForImage, string? imageFilePath,
+            TextBlock maskStatusLabel)
+        {
+            Mat? sourceImage = null;
+
+            if (useSourceTaskImage && sourceTaskIdForImage.HasValue)
+            {
+                var sourceTask = _viewModel.TaskCards.FirstOrDefault(t => t.Id == sourceTaskIdForImage.Value);
+                if (sourceTask?.OutputImage != null && !sourceTask.OutputImage.Empty())
+                {
+                    sourceImage = sourceTask.OutputImage.Clone();
+                }
+            }
+
+            if (sourceImage == null && !string.IsNullOrEmpty(imageFilePath) && System.IO.File.Exists(imageFilePath))
+            {
+                sourceImage = Cv2.ImRead(imageFilePath);
+            }
+
+            if (sourceImage == null || sourceImage.Empty())
+            {
+                AnthropicMessageDialog.ShowInfo("", TaskFlow.Resources.Strings.Prop_SetImageFirst, this);
+                sourceImage?.Dispose();
+                return;
+            }
+
+            try
+            {
+                var maskWindow = new MaskPaintWindow(sourceImage, _currentMaskPath)
+                {
+                    Owner = this
+                };
+
+                if (maskWindow.ShowDialog() == true)
+                {
+                    _currentMaskPath = maskWindow.MaskPath;
+                    if (string.IsNullOrEmpty(_currentMaskPath))
+                    {
+                        maskStatusLabel.Text = TaskFlow.Resources.Strings.Prop_MaskNotSet;
+                        maskStatusLabel.Foreground = new SolidColorBrush(Color.FromRgb(176, 174, 165));
+                    }
+                    else
+                    {
+                        maskStatusLabel.Text = TaskFlow.Resources.Strings.Prop_MaskSet;
+                        maskStatusLabel.Foreground = new SolidColorBrush(Color.FromRgb(120, 140, 93));
+                    }
+                }
+            }
+            finally
+            {
+                sourceImage.Dispose();
+            }
+        }
+
+        private void AddRoiProperty(ImgCropTaskCard card)
+        {
+            // ROI 区域：支持表达式引用
+            var headerLabel = new TextBlock
+            {
+                Text = TaskFlow.Resources.Strings.Prop_RoiArea,
+                Style = FindResource("PropertyLabel") as Style,
+                Margin = new Thickness(0, 4, 0, 2)
+            };
+            PropertyPanel.Children.Add(headerLabel);
+
+            // 将值/表达式转化为显示文本
+            string GetDisplayValue(string expr, int val) =>
+                !string.IsNullOrWhiteSpace(expr) ? expr : val.ToString();
+
+            AddTextProperty("RoiXInput", TaskFlow.Resources.Strings.Prop_XExpr, GetDisplayValue(card.RoiXExpression, card.RoiX));
+            AddTextProperty("RoiYInput", TaskFlow.Resources.Strings.Prop_YExpr, GetDisplayValue(card.RoiYExpression, card.RoiY));
+            AddTextProperty("RoiWidthInput", TaskFlow.Resources.Strings.Prop_WidthExpr, GetDisplayValue(card.RoiWidthExpression, card.RoiWidth));
+            AddTextProperty("RoiHeightInput", TaskFlow.Resources.Strings.Prop_HeightExpr, GetDisplayValue(card.RoiHeightExpression, card.RoiHeight));
+
+            var selectButton = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_SelectRoiArea,
+                Height = 32,
+                Margin = new Thickness(0, 0, 0, 12),
+                Style = FindResource("ActionButton") as Style
+            };
+            selectButton.Click += (s, e) => SelectRoi(card);
+            PropertyPanel.Children.Add(selectButton);
+        }
+
+        private void AddTemplateProperty(ImgTemplateMatchTaskCard card)
+        {
+            // 模板图像路径（隐藏控件，仅用于保存时读取）
+            var templatePathBox = new TextBox { Text = card.TemplateImagePath ?? string.Empty, Visibility = Visibility.Collapsed };
+            PropertyPanel.Children.Add(templatePathBox);
+            _propertyControls["TemplateImagePath"] = templatePathBox;
+
+            // 显示模板图像预览
+            if (!string.IsNullOrEmpty(card.TemplateImagePath) && System.IO.File.Exists(card.TemplateImagePath))
+            {
+                try
+                {
+                    var templateLabel = new TextBlock
+                    {
+                        Text = TaskFlow.Resources.Strings.Prop_TemplatePreview,
+                        Style = FindResource("PropertyLabel") as Style
+                    };
+                    PropertyPanel.Children.Add(templateLabel);
+
+                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(card.TemplateImagePath, UriKind.Absolute);
+                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+
+                    var templateImage = new System.Windows.Controls.Image
+                    {
+                        Source = bitmap,
+                        Stretch = Stretch.Uniform,
+                        MaxHeight = 200,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        Margin = new Thickness(0, 0, 0, 12)
+                    };
+
+                    var border = new Border
+                    {
+                        Background = new SolidColorBrush(Color.FromRgb(26, 26, 42)),
+                        BorderBrush = new SolidColorBrush(Color.FromRgb(68, 68, 68)),
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(4),
+                        Padding = new Thickness(4),
+                        Child = templateImage
+                    };
+                    PropertyPanel.Children.Add(border);
+                }
+                catch { /* 图像加载失败则跳过预览 */ }
+            }
+
+            var selectButton = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_SelectTemplate,
+                Height = 32,
+                Margin = new Thickness(0, 0, 0, 12),
+                Style = FindResource("ActionButton") as Style
+            };
+            selectButton.Click += (s, e) => SelectTemplateRoi(card);
+            PropertyPanel.Children.Add(selectButton);
+
+            // ROI区域框选
+            AddRoiCompactProperties(card.RoiX, card.RoiY, card.RoiWidth, card.RoiHeight);
+
+            // 合并按钮：框选搜索区域 + 绘制掩膜
+            _currentMaskPath = card.MaskImagePath;
+            var selectRoiBtn = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_SelectSearchRoiMask,
+                Height = 32,
+                Margin = new Thickness(0, 0, 0, 4),
+                Style = FindResource("ActionButton") as Style
+            };
+            selectRoiBtn.Click += (s, e) => SelectRoiGeneric(card.UseSourceTaskImage, card.SourceTaskIdForImage, card.ImageFilePath);
+            PropertyPanel.Children.Add(selectRoiBtn);
+        }
+
+        private void SelectRoi(ImgCropTaskCard card)
+        {
+            // 获取源图像
+            Mat? sourceImage = null;
+
+            if (card.UseSourceTaskImage && card.SourceTaskIdForImage.HasValue)
+            {
+                var sourceTask = _viewModel.TaskCards.FirstOrDefault(t => t.Id == card.SourceTaskIdForImage.Value);
+                if (sourceTask?.OutputImage != null && !sourceTask.OutputImage.Empty())
+                {
+                    sourceImage = sourceTask.OutputImage.Clone();
+                }
+            }
+
+            if (sourceImage == null && !string.IsNullOrEmpty(card.ImageFilePath) && System.IO.File.Exists(card.ImageFilePath))
+            {
+                sourceImage = Cv2.ImRead(card.ImageFilePath);
+            }
+
+            if (sourceImage == null || sourceImage.Empty())
+            {
+                AnthropicMessageDialog.ShowInfo("", TaskFlow.Resources.Strings.Prop_SetImageFirst, this);
+                sourceImage?.Dispose();
+                return;
+            }
+
+            try
+            {
+                var roiWindow = new RoiSelectionWindow(sourceImage)
+                {
+                    Owner = this
+                };
+
+                if (roiWindow.ShowDialog() == true)
+                {
+                    // 更新ROI坐标文本框
+                    if (_propertyControls.TryGetValue("RoiXInput", out var xCtrl) && xCtrl is TextBox xBox)
+                        xBox.Text = roiWindow.RoiX.ToString();
+                    if (_propertyControls.TryGetValue("RoiYInput", out var yCtrl) && yCtrl is TextBox yBox)
+                        yBox.Text = roiWindow.RoiY.ToString();
+                    if (_propertyControls.TryGetValue("RoiWidthInput", out var wCtrl) && wCtrl is TextBox wBox)
+                        wBox.Text = roiWindow.RoiWidth.ToString();
+                    if (_propertyControls.TryGetValue("RoiHeightInput", out var hCtrl) && hCtrl is TextBox hBox)
+                        hBox.Text = roiWindow.RoiHeight.ToString();
+                }
+            }
+            finally
+            {
+                sourceImage.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 通用ROI框选+掩膜绘制方法（合并窗口）
+        /// </summary>
+        private void SelectRoiGeneric(bool useSourceTaskImage, Guid? sourceTaskIdForImage, string? imageFilePath)
+        {
+            Mat? sourceImage = null;
+
+            if (useSourceTaskImage && sourceTaskIdForImage.HasValue)
+            {
+                var sourceTask = _viewModel.TaskCards.FirstOrDefault(t => t.Id == sourceTaskIdForImage.Value);
+                if (sourceTask?.OutputImage != null && !sourceTask.OutputImage.Empty())
+                {
+                    sourceImage = sourceTask.OutputImage.Clone();
+                }
+            }
+
+            if (sourceImage == null && !string.IsNullOrEmpty(imageFilePath) && System.IO.File.Exists(imageFilePath))
+            {
+                sourceImage = Cv2.ImRead(imageFilePath);
+            }
+
+            if (sourceImage == null || sourceImage.Empty())
+            {
+                AnthropicMessageDialog.ShowInfo("", TaskFlow.Resources.Strings.Prop_SetImageFirst, this);
+                sourceImage?.Dispose();
+                return;
+            }
+
+            try
+            {
+                // 读取已有ROI值
+                int initX = 0, initY = 0, initW = 0, initH = 0;
+                if (_propertyControls.TryGetValue("RoiX", out var xCtrl) && xCtrl is TextBox xBox && int.TryParse(xBox.Text, out int rx)) initX = rx;
+                if (_propertyControls.TryGetValue("RoiY", out var yCtrl) && yCtrl is TextBox yBox && int.TryParse(yBox.Text, out int ry)) initY = ry;
+                if (_propertyControls.TryGetValue("RoiWidth", out var wCtrl) && wCtrl is TextBox wBox && int.TryParse(wBox.Text, out int rw)) initW = rw;
+                if (_propertyControls.TryGetValue("RoiHeight", out var hCtrl) && hCtrl is TextBox hBox && int.TryParse(hBox.Text, out int rh)) initH = rh;
+
+                var roiWindow = new RoiSelectionWindow(sourceImage, initX, initY, initW, initH, _currentMaskPath)
+                {
+                    Owner = this
+                };
+
+                if (roiWindow.ShowDialog() == true)
+                {
+                    // 回写 ROI 值
+                    if (_propertyControls.TryGetValue("RoiX", out var xCtrl2) && xCtrl2 is TextBox xBox2)
+                        xBox2.Text = roiWindow.RoiX.ToString();
+                    if (_propertyControls.TryGetValue("RoiY", out var yCtrl2) && yCtrl2 is TextBox yBox2)
+                        yBox2.Text = roiWindow.RoiY.ToString();
+                    if (_propertyControls.TryGetValue("RoiWidth", out var wCtrl2) && wCtrl2 is TextBox wBox2)
+                        wBox2.Text = roiWindow.RoiWidth.ToString();
+                    if (_propertyControls.TryGetValue("RoiHeight", out var hCtrl2) && hCtrl2 is TextBox hBox2)
+                        hBox2.Text = roiWindow.RoiHeight.ToString();
+
+                    // 回写掩膜路径
+                    _currentMaskPath = roiWindow.MaskPath;
+                }
+            }
+            finally
+            {
+                sourceImage.Dispose();
+            }
+        }
+
+        private void SelectTemplateRoi(ImgTemplateMatchTaskCard card)
+        {
+            // 获取源图像
+            Mat? sourceImage = null;
+
+            // 优先从任务结果获取
+            if (card.UseSourceTaskImage && card.SourceTaskIdForImage.HasValue)
+            {
+                var sourceTask = _viewModel.TaskCards.FirstOrDefault(t => t.Id == card.SourceTaskIdForImage.Value);
+                if (sourceTask?.OutputImage != null && !sourceTask.OutputImage.Empty())
+                {
+                    sourceImage = sourceTask.OutputImage.Clone();
+                }
+            }
+
+            // 从文件路径加载
+            if (sourceImage == null && !string.IsNullOrEmpty(card.ImageFilePath) && System.IO.File.Exists(card.ImageFilePath))
+            {
+                sourceImage = Cv2.ImRead(card.ImageFilePath);
+            }
+
+            if (sourceImage == null || sourceImage.Empty())
+            {
+                AnthropicMessageDialog.ShowInfo("", TaskFlow.Resources.Strings.Prop_SetImageFirst, this);
+                sourceImage?.Dispose();
+                return;
+            }
+
+            try
+            {
+                var trainingWindow = new TemplateTrainingWindow(sourceImage, card.Id)
+                {
+                    Owner = this
+                };
+
+                if (trainingWindow.ShowDialog() == true && !string.IsNullOrEmpty(trainingWindow.TemplatePath))
+                {
+                    // 更新模板路径
+                    if (_propertyControls.TryGetValue("TemplateImagePath", out var control) && control is TextBox pathBox)
+                    {
+                        pathBox.Text = trainingWindow.TemplatePath;
+                    }
+                }
+            }
+            finally
+            {
+                sourceImage.Dispose();
+            }
+        }
+
+        #endregion
+
+        #region Button Handlers
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // 保存通用属性
+                if (_propertyControls.TryGetValue("Name", out var nameControl) && nameControl is TextBox nameBox)
+                {
+                    _task.Name = nameBox.Text;
+                }
+
+                // 保存特定属性
+                switch (_task)
+                {
+                    case LlmTranslateTaskCard llmCard:
+                        SaveLlmTranslateProperties(llmCard);
+                        break;
+
+                    case LlmVisionTaskCard visionCard:
+                        SaveLlmVisionProperties(visionCard);
+                        break;
+
+                    case IfElseBranchTaskCard ifCard when ifCard.BranchRole == BranchRole.IfStart:
+                        SaveIfElseProperties(ifCard);
+                        SaveElifProperties(ifCard);
+                        break;
+
+                    case IfElseBranchTaskCard elifCard when elifCard.BranchRole == BranchRole.ElifStart:
+                        SaveIfElseProperties(elifCard, "Elif");
+                        break;
+
+                    case ForLoopTaskCard loopCard when loopCard.BranchRole == BranchRole.ForLoopStart:
+                        if (GetStringValue("LoopCountExpression", out string loopInput))
+                        {
+                            loopInput = loopInput.Trim();
+                            if (int.TryParse(loopInput, out int directCount))
+                            {
+                                // 直接输入数字
+                                loopCard.LoopCount = directCount;
+                                loopCard.LoopCountExpression = string.Empty;
+                                loopCard.UseExpressionLoopCount = false;
+                            }
+                            else
+                            {
+                                // @变量 或 #任务引用
+                                loopCard.LoopCountExpression = loopInput;
+                                loopCard.UseExpressionLoopCount = true;
+                            }
+                        }
+                        break;
+
+                    case PauseTaskCard pauseCard:
+                        if (GetStringValue("PauseDurationExpression", out string pauseInput))
+                        {
+                            pauseInput = pauseInput.Trim();
+                            if (int.TryParse(pauseInput, out int directMs))
+                            {
+                                // 直接输入数字
+                                pauseCard.PauseDurationMs = directMs;
+                                pauseCard.PauseDurationExpression = string.Empty;
+                            }
+                            else
+                            {
+                                // @变量 或 #任务引用
+                                pauseCard.PauseDurationExpression = pauseInput;
+                            }
+                        }
+                        break;
+
+                    case GetTimestampTaskCard timestampCard:
+                        if (_propertyControls.TryGetValue("TimestampFormat", out var fmtControl) && fmtControl is ComboBox fmtCombo)
+                        {
+                            if (fmtCombo.SelectedIndex >= 0 && Enum.IsDefined(typeof(TimestampFormat), fmtCombo.SelectedIndex))
+                                timestampCard.TimestampFormat = (TimestampFormat)fmtCombo.SelectedIndex;
+                        }
+                        break;
+
+                    case WinLaunchAppTaskCard launchCard:
+                        if (GetStringValue("ExePath", out string exePath))
+                            launchCard.ExePath = exePath;
+                        if (GetStringValue("Arguments", out string args))
+                            launchCard.Arguments = args;
+                        break;
+
+                    case WinScreenshotTaskCard screenshotCard:
+                        if (GetStringValue("ProcessName", out string procName))
+                            screenshotCard.ProcessName = procName;
+                        if (GetBoolValue("IncludeTitleBar", out bool includeTitleBar))
+                            screenshotCard.IncludeTitleBar = includeTitleBar;
+                        if (GetIntValue("CropTopHeight", out int cropTop))
+                            screenshotCard.CropTopHeight = cropTop;
+                        if (GetBoolValue("ConvertToGrayscale", out bool winGray))
+                            screenshotCard.ConvertToGrayscale = winGray;
+                        break;
+
+                    case WinClickTaskCard clickCard:
+                        SaveClickProperties(clickCard);
+                        break;
+
+                    case WinCloseAppTaskCard closeAppCard:
+                        if (GetStringValue("ProcessName", out string closeAppProc))
+                            closeAppCard.ProcessName = closeAppProc;
+                        break;
+
+                    case AdbConnectTaskCard connectCard:
+                        if (GetStringValue("DeviceIp", out string ip))
+                            connectCard.DeviceIp = ip;
+                        if (GetIntValue("DevicePort", out int port))
+                            connectCard.DevicePort = port;
+                        break;
+
+                    case AdbLaunchAppTaskCard adbLaunchCard:
+                        if (GetStringValue("DeviceSerial", out string serial1))
+                            adbLaunchCard.DeviceSerial = serial1;
+                        if (GetStringValue("PackageName", out string pkg))
+                            adbLaunchCard.PackageName = pkg;
+                        if (GetStringValue("ActivityName", out string act))
+                            adbLaunchCard.ActivityName = act;
+                        break;
+
+                    case AdbScreenshotTaskCard adbScreenshotCard:
+                        if (GetStringValue("DeviceSerial", out string serial2))
+                            adbScreenshotCard.DeviceSerial = serial2;
+                        if (GetBoolValue("ConvertToGrayscale", out bool adbGray))
+                            adbScreenshotCard.ConvertToGrayscale = adbGray;
+                        break;
+
+                    case AdbClickTaskCard adbClickCard:
+                        if (GetStringValue("DeviceSerial", out string serial3))
+                            adbClickCard.DeviceSerial = serial3;
+                        SaveAdbClickProperties(adbClickCard);
+                        break;
+
+                    case AdbCloseAppTaskCard adbCloseCard:
+                        if (GetStringValue("DeviceSerial", out string serial4))
+                            adbCloseCard.DeviceSerial = serial4;
+                        if (GetStringValue("PackageName", out string closePkg))
+                            adbCloseCard.PackageName = closePkg;
+                        break;
+
+                    case AdbDisconnectTaskCard adbDisconnectCard:
+                        if (GetStringValue("DeviceSerial", out string serialDisc))
+                            adbDisconnectCard.DeviceSerial = serialDisc;
+                        break;
+
+                    case WinUiAutomationTaskCard uiAutoCard:
+                        if (GetStringValue("ProcessName", out string uiProcess))
+                            uiAutoCard.ProcessName = uiProcess;
+                        if (GetStringValue("ButtonName", out string uiButton))
+                            uiAutoCard.ButtonName = uiButton;
+                        if (GetStringValue("AutomationId", out string uiAutoId))
+                            uiAutoCard.AutomationId = uiAutoId;
+                        if (_propertyControls.TryGetValue("SearchBy", out var searchByCtrl) &&
+                            searchByCtrl is ComboBox searchByCombo &&
+                            searchByCombo.SelectedItem is ComboBoxItem searchByItem &&
+                            searchByItem.Tag is UiSearchBy searchByVal)
+                        {
+                            uiAutoCard.SearchBy = searchByVal;
+                        }
+                        if (_propertyControls.TryGetValue("MatchMode", out var matchModeCtrl) &&
+                            matchModeCtrl is ComboBox matchModeCombo &&
+                            matchModeCombo.SelectedItem is ComboBoxItem matchModeItem &&
+                            matchModeItem.Tag is UiMatchMode matchModeVal)
+                        {
+                            uiAutoCard.MatchMode = matchModeVal;
+                        }
+                        break;
+
+                    case WinSimulateInputTaskCard simCard:
+                    {
+                        if (GetEnumValue<ModifierKeyType>("ModifierKey", out var mod)) simCard.ModifierKey = mod;
+                        if (GetEnumValue<InputActionType>("ActionType", out var simAct)) simCard.ActionType = simAct;
+                        if (GetStringValue("KeyName", out string kn)) simCard.KeyName = kn;
+                        if (GetIntValue("ScrollAmount", out int sa)) simCard.ScrollAmount = sa;
+                        if (GetIntValue("RepeatCount", out int rc)) simCard.RepeatCount = rc;
+                        if (GetIntValue("IntervalMs", out int im)) simCard.IntervalMs = im;
+                        break;
+                    }
+
+                    case WinSubtitleTaskCard subtitleCard:
+                    {
+                        if (GetBoolValue("UseSpecifiedWindow", out bool useWin)) subtitleCard.UseSpecifiedWindow = useWin;
+                        if (GetStringValue("ProcessName", out string subProc)) subtitleCard.ProcessName = subProc;
+                        if (GetStringValue("DisplayText", out string subText)) subtitleCard.DisplayText = subText;
+                        if (GetIntValue("OffsetX", out int subOx)) subtitleCard.OffsetX = subOx;
+                        if (GetIntValue("OffsetY", out int subOy)) subtitleCard.OffsetY = subOy;
+                        if (GetIntValue("SubtitleWidth", out int subW)) subtitleCard.SubtitleWidth = subW;
+                        if (GetIntValue("SubtitleHeight", out int subH)) subtitleCard.SubtitleHeight = subH;
+                        if (GetIntValue("FontSize", out int subFs)) subtitleCard.FontSize = subFs;
+                        if (GetStringValue("TextColor", out string subTc)) subtitleCard.TextColor = subTc;
+                        if (_propertyControls.TryGetValue("Background", out var bgCtrl) &&
+                            bgCtrl is ComboBox bgCombo &&
+                            bgCombo.SelectedItem is ComboBoxItem bgItem &&
+                            bgItem.Tag is SubtitleBackground bgVal)
+                        {
+                            subtitleCard.Background = bgVal;
+                        }
+                        if (GetStringValue("BackgroundColor", out string subBc)) subtitleCard.BackgroundColor = subBc;
+                        if (GetIntValue("DurationMs", out int subDur)) subtitleCard.DurationMs = subDur;
+                        if (_propertyControls.TryGetValue("WaitUntilClosed", out var waitCtrl) &&
+                            waitCtrl is CheckBox waitCheck)
+                        {
+                            subtitleCard.WaitUntilClosed = waitCheck.IsChecked == true;
+                        }
+                        break;
+                    }
+
+                    case ImgCropTaskCard cropCard:
+                        SaveImageCropProperties(cropCard);
+                        break;
+
+                    case ImgTemplateMatchTaskCard matchCard:
+                        SaveTemplateMatchProperties(matchCard);
+                        break;
+
+                    case ImgOcrTaskCard ocrCard:
+                        SaveOcrProperties(ocrCard);
+                        break;
+
+                    case ImgColorDetectTaskCard colorCard:
+                        SaveColorDetectProperties(colorCard);
+                        break;
+
+                    case ImgColorSegmentTaskCard segCard:
+                        SaveColorSegmentProperties(segCard);
+                        break;
+
+                    case ImgPreprocessTaskCard prepCard:
+                        SaveGenericImageSource(prepCard);
+                        if (GetBoolValue("EnableGrayscale", out bool eg)) prepCard.EnableGrayscale = eg;
+                        if (GetEnumValue<BinarizeMethod>("BinarizeMethod", out var bm)) prepCard.BinarizeMethod = bm;
+                        if (GetIntValue("BinarizeThreshold", out int bt)) prepCard.BinarizeThreshold = bt;
+                        if (GetEnumValue<MorphologyMethod>("MorphologyMethod", out var mm)) prepCard.MorphologyMethod = mm;
+                        if (GetIntValue("MorphologyKernelSize", out int mk)) prepCard.MorphologyKernelSize = mk;
+                        break;
+
+                    case ImgBlobAnalysisTaskCard blobCard:
+                        SaveGenericImageSource(blobCard);
+                        if (GetIntValue("RoiX", out int bRoiX)) blobCard.RoiX = bRoiX;
+                        if (GetIntValue("RoiY", out int bRoiY)) blobCard.RoiY = bRoiY;
+                        if (GetIntValue("RoiWidth", out int bRoiW)) blobCard.RoiWidth = bRoiW;
+                        if (GetIntValue("RoiHeight", out int bRoiH)) blobCard.RoiHeight = bRoiH;
+                        blobCard.MaskImagePath = _currentMaskPath;
+                        if (GetIntValue("MinArea", out int minA)) blobCard.MinArea = minA;
+                        if (GetIntValue("MaxArea", out int maxA)) blobCard.MaxArea = maxA;
+                        if (GetEnumValue<BlobSortMode>("SortMode", out var sm)) blobCard.SortMode = sm;
+                        if (GetIntValue("MaxBlobCount", out int mc)) blobCard.MaxBlobCount = mc;
+                        if (GetBoolValue("InvertBinary", out bool inv)) blobCard.InvertBinary = inv;
+                        break;
+
+                    case ImgResizeTaskCard resizeCard:
+                        SaveGenericImageSource(resizeCard);
+                        if (GetIntValue("TargetWidth", out int tw)) resizeCard.TargetWidth = tw;
+                        if (GetIntValue("TargetHeight", out int th)) resizeCard.TargetHeight = th;
+                        break;
+
+                    case ExpressionEvalTaskCard exprCard:
+                        SaveExpressionEvalProperties(exprCard);
+                        break;
+
+                    case BreakLoopTaskCard breakCard:
+                        SaveBreakLoopProperties(breakCard);
+                        break;
+
+                    case StringSubstringTaskCard substringCard:
+                        SaveStringSubstringProperties(substringCard);
+                        break;
+
+                    case TypeConvertTaskCard typeConvertCard:
+                        SaveTypeConvertProperties(typeConvertCard);
+                        break;
+
+                    case ArrayParseTaskCard arrayParseCard:
+                        SaveArrayParseProperties(arrayParseCard);
+                        break;
+                }
+
+                DialogResult = true;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(string.Format(TaskFlow.Resources.Strings.Prop_SaveFailed, ex.Message), "", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SaveIfElseProperties(IfElseBranchTaskCard card, string prefix = "")
+        {
+            string keyPrefix = string.IsNullOrEmpty(prefix) ? "" : prefix + "_";
+
+            if (_propertyControls.TryGetValue($"{keyPrefix}ConditionExpression", out var exprControl) && exprControl is TextBox exprBox)
+            {
+                card.ConditionExpression = exprBox.Text;
+            }
+        }
+
+        /// <summary>
+        /// 保存IfStart属性窗口中所有elif卡片的条件
+        /// </summary>
+        private void SaveElifProperties(IfElseBranchTaskCard ifStartCard)
+        {
+            if (!ifStartCard.BranchGroupId.HasValue) return;
+
+            var elifCards = _viewModel.TaskCards
+                .Where(t => t.BranchGroupId == ifStartCard.BranchGroupId && t.BranchRole == BranchRole.ElifStart)
+                .Cast<IfElseBranchTaskCard>()
+                .ToList();
+
+            for (int idx = 0; idx < elifCards.Count; idx++)
+            {
+                SaveIfElseProperties(elifCards[idx], $"Elif{idx}");
+            }
+        }
+
+        private void SaveClickProperties(WinClickTaskCard card)
+        {
+
+            // 合并保存 X/Y 坐标
+            if (GetStringValue("StartXInput", out string xInput))
+            {
+                xInput = xInput.Trim();
+                if (int.TryParse(xInput, out int directX))
+                {
+                    card.StartX = directX;
+                    card.StartXExpression = string.Empty;
+                    card.UseVariableCoordinates = false;
+                }
+                else
+                {
+                    card.StartXExpression = xInput;
+                    card.UseVariableCoordinates = true;
+                }
+            }
+            if (GetStringValue("StartYInput", out string yInput))
+            {
+                yInput = yInput.Trim();
+                if (int.TryParse(yInput, out int directY))
+                {
+                    card.StartY = directY;
+                    card.StartYExpression = string.Empty;
+                }
+                else
+                {
+                    card.StartYExpression = yInput;
+                    card.UseVariableCoordinates = true;
+                }
+            }
+            if (GetIntValue("EndX", out int endX)) card.EndX = endX;
+            if (GetIntValue("EndY", out int endY)) card.EndY = endY;
+            if (GetIntValue("SwipeDurationMs", out int swipeDur) && swipeDur >= 0)
+                card.SwipeDurationMs = swipeDur;
+
+            if (_propertyControls.TryGetValue("ClickType", out var clickControl) && clickControl is ComboBox clickCombo)
+            {
+                if (clickCombo.SelectedItem is ComboBoxItem item && item.Tag is ClickType clickType)
+                    card.ClickType = clickType;
+            }
+
+            // 多次点击属性
+            if (GetBoolValue("MultiClickEnabled", out bool multiEnabled))
+                card.MultiClickEnabled = multiEnabled;
+            if (GetIntValue("MultiClickCount", out int multiCount) && multiCount > 0)
+                card.MultiClickCount = multiCount;
+            if (GetIntValue("ClickIntervalMs", out int interval) && interval >= 0)
+                card.ClickIntervalMs = interval;
+
+            if (GetBoolValue("EnableOffScreenClick", out bool enableOffScreen))
+                card.EnableOffScreenClick = enableOffScreen;
+            if (GetStringValue("ProcessName", out string processName))
+                card.ProcessName = processName;
+        }
+
+        private void SaveAdbClickProperties(AdbClickTaskCard card)
+        {
+
+            // 合并保存 X/Y 坐标
+            if (GetStringValue("StartXInput", out string xInput2))
+            {
+                xInput2 = xInput2.Trim();
+                if (int.TryParse(xInput2, out int directX))
+                {
+                    card.StartX = directX;
+                    card.StartXExpression = string.Empty;
+                    card.UseVariableCoordinates = false;
+                }
+                else
+                {
+                    card.StartXExpression = xInput2;
+                    card.UseVariableCoordinates = true;
+                }
+            }
+            if (GetStringValue("StartYInput", out string yInput2))
+            {
+                yInput2 = yInput2.Trim();
+                if (int.TryParse(yInput2, out int directY))
+                {
+                    card.StartY = directY;
+                    card.StartYExpression = string.Empty;
+                }
+                else
+                {
+                    card.StartYExpression = yInput2;
+                    card.UseVariableCoordinates = true;
+                }
+            }
+            if (GetIntValue("EndX", out int endX)) card.EndX = endX;
+            if (GetIntValue("EndY", out int endY)) card.EndY = endY;
+            if (GetIntValue("SwipeDurationMs", out int duration)) card.SwipeDurationMs = duration;
+
+            if (_propertyControls.TryGetValue("ClickType", out var clickControl) && clickControl is ComboBox clickCombo)
+            {
+                if (clickCombo.SelectedItem is ComboBoxItem item && item.Tag is ClickType clickType)
+                    card.ClickType = clickType;
+            }
+
+            // 多次点击属性
+            if (GetBoolValue("MultiClickEnabled", out bool multiEnabled))
+                card.MultiClickEnabled = multiEnabled;
+            if (GetIntValue("MultiClickCount", out int multiCount) && multiCount > 0)
+                card.MultiClickCount = multiCount;
+            if (GetIntValue("ClickIntervalMs", out int interval) && interval >= 0)
+                card.ClickIntervalMs = interval;
+        }
+
+        private void SaveImageCropProperties(ImgCropTaskCard card)
+        {
+            if (GetBoolValue("UseSourceTaskImage", out bool useSrc))
+                card.UseSourceTaskImage = useSrc;
+
+            if (_propertyControls.TryGetValue("SourceTaskIdForImage", out var taskControl) && taskControl is ComboBox taskCombo)
+            {
+                if (taskCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForImage = taskId;
+                else
+                    card.SourceTaskIdForImage = null;
+            }
+
+            if (GetStringValue("ImageFilePath", out string path)) card.ImageFilePath = path;
+
+            // ROI 表达式保存
+            SaveRoiExpressionValue("RoiXInput", v => card.RoiX = v, e => card.RoiXExpression = e);
+            SaveRoiExpressionValue("RoiYInput", v => card.RoiY = v, e => card.RoiYExpression = e);
+            SaveRoiExpressionValue("RoiWidthInput", v => card.RoiWidth = v, e => card.RoiWidthExpression = e);
+            SaveRoiExpressionValue("RoiHeightInput", v => card.RoiHeight = v, e => card.RoiHeightExpression = e);
+        }
+
+        /// <summary>
+        /// 保存 ROI 表达式或直接数值
+        /// </summary>
+        private void SaveRoiExpressionValue(string controlKey, Action<int> setInt, Action<string> setExpr)
+        {
+            if (GetStringValue(controlKey, out string input))
+            {
+                input = input.Trim();
+                if (int.TryParse(input, out int directValue))
+                {
+                    setInt(directValue);
+                    setExpr(string.Empty);
+                }
+                else
+                {
+                    setExpr(input);
+                }
+            }
+        }
+
+        private void SaveTemplateMatchProperties(ImgTemplateMatchTaskCard card)
+        {
+            if (GetBoolValue("UseSourceTaskImage", out bool useSrc))
+                card.UseSourceTaskImage = useSrc;
+
+            if (_propertyControls.TryGetValue("SourceTaskIdForImage", out var taskControl) && taskControl is ComboBox taskCombo)
+            {
+                if (taskCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForImage = taskId;
+                else
+                    card.SourceTaskIdForImage = null;
+            }
+
+            if (GetStringValue("ImageFilePath", out string path)) card.ImageFilePath = path;
+            if (GetStringValue("TemplateImagePath", out string templatePath)) card.TemplateImagePath = templatePath;
+            if (GetDoubleValue("MatchThreshold", out double threshold)) card.MatchThreshold = threshold;
+            if (GetIntValue("MaxMatchCount", out int maxMatch)) card.MaxMatchCount = Math.Max(1, maxMatch);
+
+            // 保存ROI
+            if (GetIntValue("RoiX", out int roiX)) card.RoiX = roiX;
+            if (GetIntValue("RoiY", out int roiY)) card.RoiY = roiY;
+            if (GetIntValue("RoiWidth", out int roiW)) card.RoiWidth = roiW;
+            if (GetIntValue("RoiHeight", out int roiH)) card.RoiHeight = roiH;
+
+            // 保存掩膜路径
+            card.MaskImagePath = _currentMaskPath;
+        }
+
+        private void SaveOcrProperties(ImgOcrTaskCard card)
+        {
+            // 保存 OCR 引擎选择
+            if (_propertyControls.TryGetValue("OcrEngine", out var engineControl) && engineControl is ComboBox engineCombo)
+            {
+                if (engineCombo.SelectedItem is ComboBoxItem item && item.Tag is OcrEngine engine)
+                    card.OcrEngine = engine;
+            }
+
+            if (GetBoolValue("UseSourceTaskImage", out bool useSrc))
+                card.UseSourceTaskImage = useSrc;
+
+            if (_propertyControls.TryGetValue("SourceTaskIdForImage", out var taskControl) && taskControl is ComboBox taskCombo)
+            {
+                if (taskCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForImage = taskId;
+                else
+                    card.SourceTaskIdForImage = null;
+            }
+
+            if (GetStringValue("ImageFilePath", out string path)) card.ImageFilePath = path;
+            if (GetBoolValue("CheckContainsText", out bool check)) card.CheckContainsText = check;
+            if (GetStringValue("TargetText", out string target)) card.TargetText = target;
+
+            // 保存ROI
+            if (GetIntValue("RoiX", out int roiX)) card.RoiX = roiX;
+            if (GetIntValue("RoiY", out int roiY)) card.RoiY = roiY;
+            if (GetIntValue("RoiWidth", out int roiW)) card.RoiWidth = roiW;
+            if (GetIntValue("RoiHeight", out int roiH)) card.RoiHeight = roiH;
+
+            // 保存掩膜路径
+            card.MaskImagePath = _currentMaskPath;
+        }
+
+        private void AddImageSourcePropertyColor(ImgColorDetectTaskCard card)
+        {
+            var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var taskCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+            foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
+                taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            taskCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForImage.HasValue)
+                for (int i = 1; i < taskCombo.Items.Count; i++)
+                    if (((ComboBoxItem)taskCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForImage) { taskCombo.SelectedIndex = i; break; }
+
+            var fileLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageFilePath, Style = FindResource("PropertyLabel") as Style };
+            var fileGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var fileBox = new TextBox { Text = card.ImageFilePath ?? "", Style = FindResource("PropertyTextBox") as Style, Margin = new Thickness(0) };
+            Grid.SetColumn(fileBox, 0);
+            var browseBtn = new Button { Content = "...", Width = 32, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Stretch, Style = FindResource("ActionButton") as Style };
+            browseBtn.Click += (s, e) => { var dlg = new OpenFileDialog { Filter = TaskFlow.Resources.Strings.Filter_ImageFile }; if (dlg.ShowDialog() == true) fileBox.Text = dlg.FileName; };
+            Grid.SetColumn(browseBtn, 1);
+            fileGrid.Children.Add(fileBox); fileGrid.Children.Add(browseBtn);
+            _propertyControls["ImageFilePath"] = fileBox;
+
+            void UpdateVis(bool chk) { taskLabel.Visibility = taskCombo.Visibility = chk ? Visibility.Visible : Visibility.Collapsed; fileLabel.Visibility = fileGrid.Visibility = chk ? Visibility.Collapsed : Visibility.Visible; }
+            var cb = new CheckBox { Content = TaskFlow.Resources.Strings.Prop_UseSourceTaskImage, IsChecked = card.UseSourceTaskImage, Style = FindResource("PropertyCheckBox") as Style };
+            cb.Checked += (s, e) => UpdateVis(true); cb.Unchecked += (s, e) => UpdateVis(false);
+            PropertyPanel.Children.Add(cb); _propertyControls["UseSourceTaskImage"] = cb;
+            PropertyPanel.Children.Add(taskLabel); PropertyPanel.Children.Add(taskCombo); _propertyControls["SourceTaskIdForImage"] = taskCombo;
+            PropertyPanel.Children.Add(fileLabel); PropertyPanel.Children.Add(fileGrid);
+            UpdateVis(card.UseSourceTaskImage);
+
+            // ROI识别区域
+            AddRoiCompactProperties(card.RoiX, card.RoiY, card.RoiWidth, card.RoiHeight);
+            var selectRoiBtn = new Button { Content = TaskFlow.Resources.Strings.Prop_SelectRoiArea, Height = 32, Margin = new Thickness(0, 0, 0, 12), Style = FindResource("ActionButton") as Style };
+            selectRoiBtn.Click += (s, e) => SelectRoiGeneric(card.UseSourceTaskImage, card.SourceTaskIdForImage, card.ImageFilePath);
+            PropertyPanel.Children.Add(selectRoiBtn);
+        }
+
+        private void AddColorDetectProperties(ImgColorDetectTaskCard card)
+        {
+            AddHsvCompactProperties(card.HsvLowerH, card.HsvLowerS, card.HsvLowerV, card.HsvUpperH, card.HsvUpperS, card.HsvUpperV);
+
+            // 颜色吸笔按钮
+            var eyedropperBtn = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_ColorPicker,
+                Height = 32,
+                Margin = new Thickness(0, 4, 0, 4),
+                Style = FindResource("ActionButton") as Style
+            };
+            eyedropperBtn.Click += (s, e) => EyedropperPickColorDetect(card);
+            PropertyPanel.Children.Add(eyedropperBtn);
+        }
+
+        private void SaveColorDetectProperties(ImgColorDetectTaskCard card)
+        {
+            if (GetBoolValue("UseSourceTaskImage", out bool useSrc))
+                card.UseSourceTaskImage = useSrc;
+
+            if (_propertyControls.TryGetValue("SourceTaskIdForImage", out var taskControl) && taskControl is ComboBox taskCombo)
+            {
+                if (taskCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForImage = taskId;
+                else
+                    card.SourceTaskIdForImage = null;
+            }
+
+            if (GetStringValue("ImageFilePath", out string path)) card.ImageFilePath = path;
+            if (GetIntValue("HsvLowerH", out int lh)) card.HsvLowerH = lh;
+            if (GetIntValue("HsvLowerS", out int ls)) card.HsvLowerS = ls;
+            if (GetIntValue("HsvLowerV", out int lv)) card.HsvLowerV = lv;
+            if (GetIntValue("HsvUpperH", out int uh)) card.HsvUpperH = uh;
+            if (GetIntValue("HsvUpperS", out int us)) card.HsvUpperS = us;
+            if (GetIntValue("HsvUpperV", out int uv)) card.HsvUpperV = uv;
+            if (GetIntValue("RoiX", out int roiX)) card.RoiX = roiX;
+            if (GetIntValue("RoiY", out int roiY)) card.RoiY = roiY;
+            if (GetIntValue("RoiWidth", out int roiW)) card.RoiWidth = roiW;
+            if (GetIntValue("RoiHeight", out int roiH)) card.RoiHeight = roiH;
+        }
+
+        private void AddImageSourcePropertyColorSegment(ImgColorSegmentTaskCard card)
+        {
+            var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var taskCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+            foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
+                taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            taskCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForImage.HasValue)
+                for (int i = 1; i < taskCombo.Items.Count; i++)
+                    if (((ComboBoxItem)taskCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForImage) { taskCombo.SelectedIndex = i; break; }
+
+            var fileLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageFilePath, Style = FindResource("PropertyLabel") as Style };
+            var fileGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var fileBox = new TextBox { Text = card.ImageFilePath ?? "", Style = FindResource("PropertyTextBox") as Style, Margin = new Thickness(0) };
+            Grid.SetColumn(fileBox, 0);
+            var browseBtn = new Button { Content = "...", Width = 32, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Stretch, Style = FindResource("ActionButton") as Style };
+            browseBtn.Click += (s, e) => { var dlg = new OpenFileDialog { Filter = TaskFlow.Resources.Strings.Filter_ImageFile }; if (dlg.ShowDialog() == true) fileBox.Text = dlg.FileName; };
+            Grid.SetColumn(browseBtn, 1);
+            fileGrid.Children.Add(fileBox); fileGrid.Children.Add(browseBtn);
+            _propertyControls["ImageFilePath"] = fileBox;
+
+            void UpdateVis(bool chk) { taskLabel.Visibility = taskCombo.Visibility = chk ? Visibility.Visible : Visibility.Collapsed; fileLabel.Visibility = fileGrid.Visibility = chk ? Visibility.Collapsed : Visibility.Visible; }
+            var cb = new CheckBox { Content = TaskFlow.Resources.Strings.Prop_UseSourceTaskImage, IsChecked = card.UseSourceTaskImage, Style = FindResource("PropertyCheckBox") as Style };
+            cb.Checked += (s, e) => UpdateVis(true); cb.Unchecked += (s, e) => UpdateVis(false);
+            PropertyPanel.Children.Add(cb); _propertyControls["UseSourceTaskImage"] = cb;
+            PropertyPanel.Children.Add(taskLabel); PropertyPanel.Children.Add(taskCombo); _propertyControls["SourceTaskIdForImage"] = taskCombo;
+            PropertyPanel.Children.Add(fileLabel); PropertyPanel.Children.Add(fileGrid);
+            UpdateVis(card.UseSourceTaskImage);
+        }
+
+        private void AddColorSegmentProperties(ImgColorSegmentTaskCard card)
+        {
+            AddHsvCompactProperties(card.HsvLowerH, card.HsvLowerS, card.HsvLowerV, card.HsvUpperH, card.HsvUpperS, card.HsvUpperV);
+
+            // 颜色吸笔按钮
+            var eyedropperBtn = new Button
+            {
+                Content = "💧 颜色吸笔（从图像拾取HSV范围）",
+                Height = 32,
+                Margin = new Thickness(0, 4, 0, 4),
+                Style = FindResource("ActionButton") as Style
+            };
+            eyedropperBtn.Click += (s, e) => EyedropperPick(card);
+            PropertyPanel.Children.Add(eyedropperBtn);
+        }
+
+        /// <summary>
+        /// 颜色吸笔：从图像上拾取像素的 HSV 值，并设置为当前 HSV 范围的上下限 (±10)
+        /// </summary>
+        private void EyedropperPick(ImgColorSegmentTaskCard card)
+        {
+            // 获取源图像
+            Mat? sourceImage = null;
+            if (card.UseSourceTaskImage && card.SourceTaskIdForImage.HasValue)
+            {
+                var sourceTask = _viewModel.TaskCards.FirstOrDefault(t => t.Id == card.SourceTaskIdForImage.Value);
+                if (sourceTask?.OutputImage != null && !sourceTask.OutputImage.Empty())
+                    sourceImage = sourceTask.OutputImage.Clone();
+            }
+            if (sourceImage == null && !string.IsNullOrEmpty(card.ImageFilePath) && System.IO.File.Exists(card.ImageFilePath))
+                sourceImage = Cv2.ImRead(card.ImageFilePath);
+
+            if (sourceImage == null || sourceImage.Empty())
+            {
+                AnthropicMessageDialog.ShowInfo("", TaskFlow.Resources.Strings.Prop_SetImageFirst, this);
+                sourceImage?.Dispose();
+                return;
+            }
+
+            try
+            {
+                // 打开 ROI 选择窗口让用户点击像素
+                var picker = new ColorPickerWindow(sourceImage) { Owner = this };
+                if (picker.ShowDialog() == true)
+                {
+                    // 获取点击位置的 HSV 值
+                    int h = picker.PickedH, s = picker.PickedS, v = picker.PickedV;
+
+                    // 设置 HSV 上下限 (±10，约束在合法范围内)
+                    int lH = Math.Max(0, h - 10), uH = Math.Min(180, h + 10);
+                    int lS = Math.Max(0, s - 10), uS = Math.Min(255, s + 10);
+                    int lV = Math.Max(0, v - 10), uV = Math.Min(255, v + 10);
+
+                    // 回写到控件
+                    if (_propertyControls.TryGetValue("HsvLowerH", out var c1) && c1 is TextBox t1) t1.Text = lH.ToString();
+                    if (_propertyControls.TryGetValue("HsvUpperH", out var c2) && c2 is TextBox t2) t2.Text = uH.ToString();
+                    if (_propertyControls.TryGetValue("HsvLowerS", out var c3) && c3 is TextBox t3) t3.Text = lS.ToString();
+                    if (_propertyControls.TryGetValue("HsvUpperS", out var c4) && c4 is TextBox t4) t4.Text = uS.ToString();
+                    if (_propertyControls.TryGetValue("HsvLowerV", out var c5) && c5 is TextBox t5) t5.Text = lV.ToString();
+                    if (_propertyControls.TryGetValue("HsvUpperV", out var c6) && c6 is TextBox t6) t6.Text = uV.ToString();
+                }
+            }
+            finally
+            {
+                sourceImage.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 颜色吸笔：从图像上拾取像素的 HSV 值（颜色识别卡片专用）
+        /// </summary>
+        private void EyedropperPickColorDetect(ImgColorDetectTaskCard card)
+        {
+            Mat? sourceImage = null;
+            if (card.UseSourceTaskImage && card.SourceTaskIdForImage.HasValue)
+            {
+                var sourceTask = _viewModel.TaskCards.FirstOrDefault(t => t.Id == card.SourceTaskIdForImage.Value);
+                if (sourceTask?.OutputImage != null && !sourceTask.OutputImage.Empty())
+                    sourceImage = sourceTask.OutputImage.Clone();
+            }
+            if (sourceImage == null && !string.IsNullOrEmpty(card.ImageFilePath) && System.IO.File.Exists(card.ImageFilePath))
+                sourceImage = Cv2.ImRead(card.ImageFilePath);
+
+            if (sourceImage == null || sourceImage.Empty())
+            {
+                AnthropicMessageDialog.ShowInfo("", TaskFlow.Resources.Strings.Prop_SetImageFirst, this);
+                sourceImage?.Dispose();
+                return;
+            }
+
+            try
+            {
+                var picker = new ColorPickerWindow(sourceImage) { Owner = this };
+                if (picker.ShowDialog() == true)
+                {
+                    int h = picker.PickedH, s = picker.PickedS, v = picker.PickedV;
+                    int lH = Math.Max(0, h - 10), uH = Math.Min(180, h + 10);
+                    int lS = Math.Max(0, s - 10), uS = Math.Min(255, s + 10);
+                    int lV = Math.Max(0, v - 10), uV = Math.Min(255, v + 10);
+
+                    if (_propertyControls.TryGetValue("HsvLowerH", out var c1) && c1 is TextBox t1) t1.Text = lH.ToString();
+                    if (_propertyControls.TryGetValue("HsvUpperH", out var c2) && c2 is TextBox t2) t2.Text = uH.ToString();
+                    if (_propertyControls.TryGetValue("HsvLowerS", out var c3) && c3 is TextBox t3) t3.Text = lS.ToString();
+                    if (_propertyControls.TryGetValue("HsvUpperS", out var c4) && c4 is TextBox t4) t4.Text = uS.ToString();
+                    if (_propertyControls.TryGetValue("HsvLowerV", out var c5) && c5 is TextBox t5) t5.Text = lV.ToString();
+                    if (_propertyControls.TryGetValue("HsvUpperV", out var c6) && c6 is TextBox t6) t6.Text = uV.ToString();
+                }
+            }
+            finally
+            {
+                sourceImage.Dispose();
+            }
+        }
+
+        private void SaveColorSegmentProperties(ImgColorSegmentTaskCard card)
+        {
+            if (GetBoolValue("UseSourceTaskImage", out bool useSrc))
+                card.UseSourceTaskImage = useSrc;
+
+            if (_propertyControls.TryGetValue("SourceTaskIdForImage", out var taskControl) && taskControl is ComboBox taskCombo)
+            {
+                if (taskCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForImage = taskId;
+                else
+                    card.SourceTaskIdForImage = null;
+            }
+
+            if (GetStringValue("ImageFilePath", out string path)) card.ImageFilePath = path;
+            if (GetIntValue("HsvLowerH", out int lh)) card.HsvLowerH = lh;
+            if (GetIntValue("HsvLowerS", out int ls)) card.HsvLowerS = ls;
+            if (GetIntValue("HsvLowerV", out int lv)) card.HsvLowerV = lv;
+            if (GetIntValue("HsvUpperH", out int uh)) card.HsvUpperH = uh;
+            if (GetIntValue("HsvUpperS", out int us)) card.HsvUpperS = us;
+            if (GetIntValue("HsvUpperV", out int uv)) card.HsvUpperV = uv;
+        }
+
+        private void AddExpressionEvalProperties(ExpressionEvalTaskCard card)
+        {
+            var labelBlock = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_AssignExpr, Style = FindResource("PropertyLabel") as Style };
+            PropertyPanel.Children.Add(labelBlock);
+
+            // 提示文本
+            var hintBlock = new TextBlock
+            {
+                Text = TaskFlow.Resources.Strings.Prop_AssignHint,
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(140, 140, 160)),
+                Margin = new Thickness(0, 0, 0, 6),
+                TextWrapping = TextWrapping.Wrap
+            };
+            PropertyPanel.Children.Add(hintBlock);
+
+            // 多行输入框
+            var textBox = new TextBox
+            {
+                Text = card.Expression,
+                Style = FindResource("PropertyTextBox") as Style,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                MinHeight = 80,
+                MaxHeight = 200,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalContentAlignment = VerticalAlignment.Top
+            };
+            // 为赋值表达式输入框附加自动补全
+            AutoCompleteHelper.Attach(textBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+
+            PropertyPanel.Children.Add(textBox);
+            _propertyControls["Expression"] = textBox;
+        }
+
+        private void SaveExpressionEvalProperties(ExpressionEvalTaskCard card)
+        {
+            if (GetStringValue("Expression", out string expr))
+                card.Expression = expr;
+        }
+
+        /// <summary>
+        /// 添加中止循环属性（选择目标循环）
+        /// </summary>
+        private void AddBreakLoopProperties(BreakLoopTaskCard card)
+        {
+            var label = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TargetLoop, Style = FindResource("PropertyLabel") as Style };
+            var combo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectLoop, Tag = null });
+
+            // 列出所有 ForLoopStart 卡片
+            var loopTasks = _viewModel.TaskCards
+                .Where(t => t.BranchRole == BranchRole.ForLoopStart)
+                .ToList();
+
+            foreach (var loopTask in loopTasks)
+            {
+                combo.Items.Add(new ComboBoxItem { Content = $"#{loopTask.Order} {loopTask.Name}", Tag = loopTask.Id });
+            }
+
+            // 设置选中项
+            if (card.TargetLoopId.HasValue)
+            {
+                for (int i = 1; i < combo.Items.Count; i++)
+                {
+                    if (((ComboBoxItem)combo.Items[i]).Tag is Guid id && id == card.TargetLoopId)
+                    {
+                        combo.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                combo.SelectedIndex = 0;
+            }
+
+            PropertyPanel.Children.Add(label);
+            PropertyPanel.Children.Add(combo);
+            _propertyControls["TargetLoopId"] = combo;
+        }
+
+        private void SaveBreakLoopProperties(BreakLoopTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("TargetLoopId", out var control) && control is ComboBox combo)
+            {
+                if (combo.SelectedItem is ComboBoxItem item && item.Tag is Guid loopId)
+                {
+                    card.TargetLoopId = loopId;
+                }
+                else
+                {
+                    card.TargetLoopId = null;
+                }
+            }
+        }
+
+        private void AddStringSubstringProperties(StringSubstringTaskCard card)
+        {
+            // 文本来源任务
+            var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TextSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var taskCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+
+            foreach (var task in _viewModel.GetTextOutputTasks().Where(t => t.Id != _task.Id))
+            {
+                taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            }
+
+            taskCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForText.HasValue)
+            {
+                for (int i = 1; i < taskCombo.Items.Count; i++)
+                {
+                    if (((ComboBoxItem)taskCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForText)
+                    {
+                        taskCombo.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            PropertyPanel.Children.Add(taskLabel);
+            PropertyPanel.Children.Add(taskCombo);
+            _propertyControls["SourceTaskIdForText"] = taskCombo;
+
+            // 手动输入文本
+            AddTextProperty("InputText", TaskFlow.Resources.Strings.Prop_InputText, card.InputText);
+
+            // 起始位置模式
+            var modeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_StartMode, Style = FindResource("PropertyLabel") as Style };
+            var modeCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            modeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ManualMode, Tag = StartIndexMode.Manual });
+            modeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_FindCharMode, Tag = StartIndexMode.FindChar });
+            modeCombo.SelectedIndex = (int)card.StartMode;
+
+            PropertyPanel.Children.Add(modeLabel);
+            PropertyPanel.Children.Add(modeCombo);
+            _propertyControls["StartMode"] = modeCombo;
+
+            // 手动起始位置（仅手动指定模式显示）
+            var manualLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ManualStart, Style = FindResource("PropertyLabel") as Style };
+            var manualBox = new TextBox { Text = card.ManualStartIndex.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            PropertyPanel.Children.Add(manualLabel);
+            PropertyPanel.Children.Add(manualBox);
+            _propertyControls["ManualStartIndex"] = manualBox;
+
+            // 查找字符（仅查找字符模式显示）
+            var searchCharLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SearchChar, Style = FindResource("PropertyLabel") as Style };
+            var searchCharBox = new TextBox { Text = card.SearchChar ?? "", Style = FindResource("PropertyTextBox") as Style };
+            PropertyPanel.Children.Add(searchCharLabel);
+            PropertyPanel.Children.Add(searchCharBox);
+            _propertyControls["SearchChar"] = searchCharBox;
+
+            // 查找字符偏移量（仅查找字符模式显示）
+            var searchOffsetLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SearchOffset, Style = FindResource("PropertyLabel") as Style };
+            var searchOffsetBox = new TextBox { Text = card.SearchCharOffset.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            PropertyPanel.Children.Add(searchOffsetLabel);
+            PropertyPanel.Children.Add(searchOffsetBox);
+            _propertyControls["SearchCharOffset"] = searchOffsetBox;
+
+            // 截取长度
+            AddIntProperty("SubstringLength", TaskFlow.Resources.Strings.Prop_SubstringLength, card.SubstringLength);
+
+            // 根据模式显示/隐藏对应控件
+            void UpdateModeVisibility()
+            {
+                bool isManual = modeCombo.SelectedIndex == 0;
+                manualLabel.Visibility = isManual ? Visibility.Visible : Visibility.Collapsed;
+                manualBox.Visibility = isManual ? Visibility.Visible : Visibility.Collapsed;
+                searchCharLabel.Visibility = !isManual ? Visibility.Visible : Visibility.Collapsed;
+                searchCharBox.Visibility = !isManual ? Visibility.Visible : Visibility.Collapsed;
+                searchOffsetLabel.Visibility = !isManual ? Visibility.Visible : Visibility.Collapsed;
+                searchOffsetBox.Visibility = !isManual ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            UpdateModeVisibility();
+            modeCombo.SelectionChanged += (s, e) => UpdateModeVisibility();
+        }
+
+        private void SaveStringSubstringProperties(StringSubstringTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("SourceTaskIdForText", out var taskControl) && taskControl is ComboBox taskCombo)
+            {
+                if (taskCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForText = taskId;
+                else
+                    card.SourceTaskIdForText = null;
+            }
+
+            if (GetStringValue("InputText", out string inputText))
+                card.InputText = inputText;
+
+            if (_propertyControls.TryGetValue("StartMode", out var modeControl) && modeControl is ComboBox modeCombo)
+            {
+                if (modeCombo.SelectedItem is ComboBoxItem modeItem && modeItem.Tag is StartIndexMode mode)
+                    card.StartMode = mode;
+            }
+
+            if (GetIntValue("ManualStartIndex", out int startIndex))
+                card.ManualStartIndex = startIndex;
+
+            if (GetStringValue("SearchChar", out string searchChar))
+                card.SearchChar = searchChar;
+
+            if (GetIntValue("SearchCharOffset", out int offset))
+                card.SearchCharOffset = offset;
+
+            if (GetIntValue("SubstringLength", out int length))
+                card.SubstringLength = length;
+        }
+
+        private void AddTypeConvertProperties(TypeConvertTaskCard card)
+        {
+            // 文本来源任务
+            var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TextSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var taskCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+
+            foreach (var task in _viewModel.GetTextOutputTasks().Where(t => t.Id != _task.Id))
+            {
+                taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            }
+
+            taskCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForText.HasValue)
+            {
+                for (int i = 1; i < taskCombo.Items.Count; i++)
+                {
+                    if (((ComboBoxItem)taskCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForText)
+                    {
+                        taskCombo.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            PropertyPanel.Children.Add(taskLabel);
+            PropertyPanel.Children.Add(taskCombo);
+            _propertyControls["SourceTaskIdForText"] = taskCombo;
+
+            // 手动输入表达式
+            AddTextProperty("InputExpression", TaskFlow.Resources.Strings.Prop_InputExpr, card.InputExpression);
+        }
+
+        private void SaveTypeConvertProperties(TypeConvertTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("SourceTaskIdForText", out var taskControl) && taskControl is ComboBox taskCombo)
+            {
+                if (taskCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForText = taskId;
+                else
+                    card.SourceTaskIdForText = null;
+            }
+
+            if (GetStringValue("InputExpression", out string expr))
+                card.InputExpression = expr;
+        }
+
+        private void AddArrayParseProperties(ArrayParseTaskCard card)
+        {
+            // 数组类型选择
+            var typeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ArrayType, Style = FindResource("PropertyLabel") as Style };
+            var typeCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            typeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ArrayInt, Tag = ArrayDataType.Int });
+            typeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ArrayString, Tag = ArrayDataType.String });
+            typeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ArrayCoord, Tag = ArrayDataType.Coordinate });
+            typeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ArrayDouble, Tag = ArrayDataType.Double });
+            typeCombo.SelectedIndex = (int)card.ArrayDataType;
+
+            PropertyPanel.Children.Add(typeLabel);
+            PropertyPanel.Children.Add(typeCombo);
+            _propertyControls["ArrayDataType"] = typeCombo;
+
+            // 数组引用表达式
+            AddTextProperty("SourceExpression", TaskFlow.Resources.Strings.Prop_ArraySourceExpr, card.SourceExpression);
+
+            // 索引设置（合并为单一输入框）
+            // 显示逻辑：如果使用表达式索引，显示表达式；否则显示数字索引
+            string indexDisplay = card.UseExpressionIndex && !string.IsNullOrWhiteSpace(card.ParseIndexExpression)
+                ? card.ParseIndexExpression
+                : card.ParseIndex.ToString();
+            AddTextProperty("ParseIndexUnified", TaskFlow.Resources.Strings.Prop_OutputIndex, indexDisplay);
+        }
+
+        private void SaveLlmTranslateProperties(LlmTranslateTaskCard card)
+        {
+            if (GetStringValue("SourceTextExpression", out string sourceText))
+            {
+                card.SourceTextExpression = sourceText;
+            }
+            if (GetStringValue("TargetLanguage", out string targetLang))
+            {
+                card.TargetLanguage = targetLang;
+            }
+        }
+
+        /// <summary>
+        /// 保存多模态识图任务卡片属性
+        /// </summary>
+        private void SaveLlmVisionProperties(LlmVisionTaskCard card)
+        {
+            // 保存图像来源属性
+            SaveGenericImageSource(card);
+
+            // 保存提示词
+            if (GetStringValue("PromptExpression", out string prompt))
+            {
+                card.PromptExpression = prompt;
+            }
+        }
+
+        private void SaveArrayParseProperties(ArrayParseTaskCard card)
+        {
+            // 保存数组类型
+            if (_propertyControls.TryGetValue("ArrayDataType", out var typeControl) && typeControl is ComboBox typeCombo)
+            {
+                if (typeCombo.SelectedItem is ComboBoxItem typeItem && typeItem.Tag is ArrayDataType dataType)
+                    card.ArrayDataType = dataType;
+            }
+
+            // 保存引用表达式
+            if (GetStringValue("SourceExpression", out string srcExpr))
+                card.SourceExpression = srcExpr;
+
+            // 保存索引：智能判断是整数还是表达式
+            if (GetStringValue("ParseIndexUnified", out string idxInput))
+            {
+                idxInput = idxInput.Trim();
+                if (int.TryParse(idxInput, out int directIndex))
+                {
+                    // 纯数字，使用整数索引
+                    card.ParseIndex = directIndex;
+                    card.UseExpressionIndex = false;
+                    card.ParseIndexExpression = string.Empty;
+                }
+                else
+                {
+                    // 含 @变量或表达式
+                    card.UseExpressionIndex = true;
+                    card.ParseIndexExpression = idxInput;
+                }
+            }
+        }
+
+        private bool GetStringValue(string key, out string value)
+        {
+            value = string.Empty;
+            if (_propertyControls.TryGetValue(key, out var control) && control is TextBox textBox)
+            {
+                value = textBox.Text;
+                return true;
+            }
+            return false;
+        }
+
+        private bool GetIntValue(string key, out int value)
+        {
+            value = 0;
+            if (_propertyControls.TryGetValue(key, out var control) && control is TextBox textBox)
+            {
+                return int.TryParse(textBox.Text, out value);
+            }
+            return false;
+        }
+
+        private bool GetDoubleValue(string key, out double value)
+        {
+            value = 0;
+            if (_propertyControls.TryGetValue(key, out var control) && control is TextBox textBox)
+            {
+                return double.TryParse(textBox.Text, out value);
+            }
+            return false;
+        }
+
+        private bool GetBoolValue(string key, out bool value)
+        {
+            value = false;
+            if (_propertyControls.TryGetValue(key, out var control) && control is CheckBox checkBox)
+            {
+                value = checkBox.IsChecked ?? false;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 通用图像来源属性（适用于所有带 UseSourceTaskImage/SourceTaskIdForImage/ImageFilePath 的卡片）
+        /// </summary>
+        private void AddImageSourceProperty_Generic(bool useSource, Guid? sourceTaskId, string? imageFilePath)
+        {
+            // 图像来源任务下拉框
+            var taskLabel = new TextBlock { Text = "图像来源任务", Style = FindResource("PropertyLabel") as Style };
+            var taskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+
+            foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
+            {
+                taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            }
+
+            taskCombo.SelectedIndex = 0;
+            if (sourceTaskId.HasValue)
+            {
+                for (int i = 1; i < taskCombo.Items.Count; i++)
+                {
+                    if (((ComboBoxItem)taskCombo.Items[i]).Tag is Guid id && id == sourceTaskId)
+                    {
+                        taskCombo.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // 图像文件路径
+            var fileLabel = new TextBlock { Text = "图像文件路径", Style = FindResource("PropertyLabel") as Style };
+            var fileGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var fileBox = new TextBox { Text = imageFilePath ?? "", Style = FindResource("PropertyTextBox") as Style, Margin = new Thickness(0) };
+            Grid.SetColumn(fileBox, 0);
+            var browseBtn = new Button { Content = "...", Width = 32, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Stretch, Style = FindResource("ActionButton") as Style };
+            browseBtn.Click += (s, e) =>
+            {
+                var dlg = new OpenFileDialog { Filter = "图像文件|*.png;*.jpg;*.bmp" };
+                if (dlg.ShowDialog() == true) fileBox.Text = dlg.FileName;
+            };
+            Grid.SetColumn(browseBtn, 1);
+            fileGrid.Children.Add(fileBox);
+            fileGrid.Children.Add(browseBtn);
+            _propertyControls["ImageFilePath"] = fileBox;
+
+            // 根据勾选状态切换显示
+            void UpdateVisibility(bool isChecked)
+            {
+                var vis = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                taskLabel.Visibility = vis;
+                taskCombo.Visibility = vis;
+                fileLabel.Visibility = isChecked ? Visibility.Collapsed : Visibility.Visible;
+                fileGrid.Visibility = isChecked ? Visibility.Collapsed : Visibility.Visible;
+            }
+
+            // 复选框（默认勾选）
+            var checkBox = new CheckBox { Content = "使用其他任务输出的图像", IsChecked = useSource, Style = FindResource("PropertyCheckBox") as Style };
+            checkBox.Checked += (s, e) => UpdateVisibility(true);
+            checkBox.Unchecked += (s, e) => UpdateVisibility(false);
+            PropertyPanel.Children.Add(checkBox);
+            _propertyControls["UseSourceTaskImage"] = checkBox;
+
+            PropertyPanel.Children.Add(taskLabel);
+            PropertyPanel.Children.Add(taskCombo);
+            _propertyControls["SourceTaskIdForImage"] = taskCombo;
+
+            PropertyPanel.Children.Add(fileLabel);
+            PropertyPanel.Children.Add(fileGrid);
+
+            // 设置初始可见性
+            UpdateVisibility(useSource);
+        }
+
+        /// <summary>
+        /// 添加枚举下拉框属性
+        /// </summary>
+        private void AddEnumComboProperty<T>(string propertyName, string label, T currentValue, Dictionary<T, string> displayNames) where T : struct, Enum
+        {
+            var lbl = new TextBlock { Text = label, Style = FindResource("PropertyLabel") as Style };
+            var combo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+
+            int selectedIndex = 0;
+            int idx = 0;
+            foreach (var kvp in displayNames)
+            {
+                combo.Items.Add(new ComboBoxItem { Content = kvp.Value, Tag = kvp.Key });
+                if (kvp.Key.Equals(currentValue)) selectedIndex = idx;
+                idx++;
+            }
+            combo.SelectedIndex = selectedIndex;
+
+            PropertyPanel.Children.Add(lbl);
+            PropertyPanel.Children.Add(combo);
+            _propertyControls[propertyName] = combo;
+        }
+
+        /// <summary>
+        /// 保存通用图像来源属性
+        /// </summary>
+        private void SaveGenericImageSource(dynamic card)
+        {
+            if (GetBoolValue("UseSourceTaskImage", out bool useSrc))
+                card.UseSourceTaskImage = useSrc;
+
+            if (_propertyControls.TryGetValue("SourceTaskIdForImage", out var taskControl) && taskControl is ComboBox taskCombo)
+            {
+                if (taskCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForImage = taskId;
+                else
+                    card.SourceTaskIdForImage = null;
+            }
+
+            if (GetStringValue("ImageFilePath", out string path)) card.ImageFilePath = path;
+        }
+
+        /// <summary>
+        /// 从 ComboBox 中读取枚举值
+        /// </summary>
+        private bool GetEnumValue<T>(string propertyName, out T value) where T : struct, Enum
+        {
+            value = default;
+            if (_propertyControls.TryGetValue(propertyName, out var control) && control is ComboBox combo)
+            {
+                if (combo.SelectedItem is ComboBoxItem item && item.Tag is T enumVal)
+                {
+                    value = enumVal;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
+
+        #endregion
+
+        private void ApplyLocalization()
+        {
+            Title = Strings.UI_TaskProperty;
+            TitleText.Text = Strings.UI_EditProperties;
+            SubtitleText.Text = Strings.UI_Properties;
+            SaveButton.Content = Strings.UI_Save;
+            CancelButton.Content = Strings.UI_Cancel;
+        }
+    }
+}

@@ -1,0 +1,860 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute name="xml:space" use="optional" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- ========== 通用 / 对话框 ========== -->
+  <data name="Common_OK" xml:space="preserve"><value>确定</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>保存</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>删除</value></data>
+  <data name="Common_Rename" xml:space="preserve"><value>重命名</value></data>
+  <data name="Common_Help" xml:space="preserve"><value>帮助</value></data>
+  <data name="Common_Browse" xml:space="preserve"><value>浏览</value></data>
+  <data name="Common_Test" xml:space="preserve"><value>测试</value></data>
+  <data name="Common_Add" xml:space="preserve"><value>添加</value></data>
+  <data name="Common_Edit" xml:space="preserve"><value>编辑</value></data>
+  <data name="Common_Tip" xml:space="preserve"><value>提示</value></data>
+  <data name="Common_Error" xml:space="preserve"><value>错误</value></data>
+  <data name="Common_Warning" xml:space="preserve"><value>警告</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>确认</value></data>
+  <data name="Common_Yes" xml:space="preserve"><value>是</value></data>
+  <data name="Common_No" xml:space="preserve"><value>否</value></data>
+
+  <!-- ========== 任务类型名称 ========== -->
+  <data name="TaskType_IfStart" xml:space="preserve"><value>IF开始</value></data>
+  <data name="TaskType_IfEnd" xml:space="preserve"><value>IF结束</value></data>
+  <data name="TaskType_ElifStart" xml:space="preserve"><value>ELIF开始</value></data>
+  <data name="TaskType_ElseStart" xml:space="preserve"><value>ELSE开始</value></data>
+  <data name="TaskType_ElseEnd" xml:space="preserve"><value>分支结束</value></data>
+  <data name="TaskType_ForLoopStart" xml:space="preserve"><value>循环开始</value></data>
+  <data name="TaskType_ForLoopEnd" xml:space="preserve"><value>循环结束</value></data>
+  <data name="TaskType_EndTask" xml:space="preserve"><value>结束当前流程</value></data>
+  <data name="TaskType_EndAllFlows" xml:space="preserve"><value>结束全部流程</value></data>
+  <data name="TaskType_PauseTask" xml:space="preserve"><value>暂停全部任务</value></data>
+  <data name="TaskType_BreakLoop" xml:space="preserve"><value>中止循环</value></data>
+  <data name="TaskType_WinLaunchApp" xml:space="preserve"><value>启动应用</value></data>
+  <data name="TaskType_WinScreenshot" xml:space="preserve"><value>Win截屏工具</value></data>
+  <data name="TaskType_WinClick" xml:space="preserve"><value>Win模拟点击</value></data>
+  <data name="TaskType_WinCloseApp" xml:space="preserve"><value>Win关闭应用</value></data>
+  <data name="TaskType_WinUiAutomation" xml:space="preserve"><value>WinUI自动化</value></data>
+  <data name="TaskType_WinSimulateInput" xml:space="preserve"><value>Win模拟输入</value></data>
+  <data name="TaskType_WinSubtitle" xml:space="preserve"><value>Win字幕提示</value></data>
+  <data name="TaskType_AdbConnect" xml:space="preserve"><value>ADB连接</value></data>
+  <data name="TaskType_AdbLaunchApp" xml:space="preserve"><value>ADB启动应用</value></data>
+  <data name="TaskType_AdbScreenshot" xml:space="preserve"><value>ADB截屏工具</value></data>
+  <data name="TaskType_AdbClick" xml:space="preserve"><value>ADB模拟点击</value></data>
+  <data name="TaskType_AdbCloseApp" xml:space="preserve"><value>ADB关闭应用</value></data>
+  <data name="TaskType_AdbDisconnect" xml:space="preserve"><value>ADB断开设备</value></data>
+  <data name="TaskType_ImgCrop" xml:space="preserve"><value>图像裁剪</value></data>
+  <data name="TaskType_ImgTemplateMatch" xml:space="preserve"><value>模板匹配</value></data>
+  <data name="TaskType_ImgOcr" xml:space="preserve"><value>OCR识别</value></data>
+  <data name="TaskType_ImgColorDetect" xml:space="preserve"><value>颜色识别</value></data>
+  <data name="TaskType_ImgColorSegment" xml:space="preserve"><value>颜色分割</value></data>
+  <data name="TaskType_ImgPreprocess" xml:space="preserve"><value>图像预处理</value></data>
+  <data name="TaskType_ImgBlobAnalysis" xml:space="preserve"><value>Blob分析</value></data>
+  <data name="TaskType_ImgResize" xml:space="preserve"><value>图像缩放</value></data>
+  <data name="TaskType_ExpressionEval" xml:space="preserve"><value>表达式赋值</value></data>
+  <data name="TaskType_StringSubstring" xml:space="preserve"><value>字符串截取</value></data>
+  <data name="TaskType_TypeConvert" xml:space="preserve"><value>类型转换</value></data>
+  <data name="TaskType_ArrayParse" xml:space="preserve"><value>数组解析</value></data>
+  <data name="TaskType_GetTimestamp" xml:space="preserve"><value>获取当前时间</value></data>
+  <data name="TaskType_LlmTranslate" xml:space="preserve"><value>LLM翻译</value></data>
+  <data name="TaskType_LlmVision" xml:space="preserve"><value>多模态识图</value></data>
+
+  <!-- ========== 主窗口 ========== -->
+  <data name="Main_Title" xml:space="preserve"><value>TaskFlow</value></data>
+  <data name="Main_NewProject" xml:space="preserve"><value>新建</value></data>
+  <data name="Main_OpenProject" xml:space="preserve"><value>打开</value></data>
+  <data name="Main_SaveProject" xml:space="preserve"><value>保存</value></data>
+  <data name="Main_SaveAs" xml:space="preserve"><value>另存</value></data>
+  <data name="Main_Load" xml:space="preserve"><value>读取</value></data>
+  <data name="Main_Hide" xml:space="preserve"><value>隐藏</value></data>
+  <data name="Main_Settings" xml:space="preserve"><value>设置</value></data>
+  <data name="Main_Variables" xml:space="preserve"><value>变量</value></data>
+  <data name="Main_Flows" xml:space="preserve"><value>流程</value></data>
+  <data name="Main_Models" xml:space="preserve"><value>模型</value></data>
+  <data name="Main_RunOnce" xml:space="preserve"><value>单次运行</value></data>
+  <data name="Main_RunCurrent" xml:space="preserve"><value>运行当前</value></data>
+  <data name="Main_RunCurrentFlow" xml:space="preserve"><value>运行当前流程</value></data>
+  <data name="Main_RunAllFlows" xml:space="preserve"><value>运行全部流程</value></data>
+  <data name="Main_RunAll" xml:space="preserve"><value>运行全部</value></data>
+  <data name="Main_StopAll" xml:space="preserve"><value>停止全部</value></data>
+  <data name="Main_PauseAll" xml:space="preserve"><value>暂停全部</value></data>
+  <data name="Main_ImagePreview" xml:space="preserve"><value>图像预览</value></data>
+  <data name="Main_LiveView" xml:space="preserve"><value>实时显示</value></data>
+  <data name="Main_LogOutput" xml:space="preserve"><value>日志输出</value></data>
+  <data name="Main_ClearLog" xml:space="preserve"><value>清空日志</value></data>
+  <data name="Main_ExportLog" xml:space="preserve"><value>导出日志</value></data>
+  <data name="Main_RunLog" xml:space="preserve"><value>运行日志</value></data>
+  <data name="Main_OutputInfo" xml:space="preserve"><value>输出信息</value></data>
+  <data name="Main_SearchTask" xml:space="preserve"><value>查找任务</value></data>
+  <data name="Main_AddTask" xml:space="preserve"><value>添加任务</value></data>
+  <data name="Main_SaveImage" xml:space="preserve"><value>保存图片</value></data>
+  <data name="Main_ResetSize" xml:space="preserve"><value>恢复原大小</value></data>
+  <data name="Main_EmptyHint" xml:space="preserve"><value>右键点击添加任务卡片</value></data>
+  <data name="Main_NoTaskSelected" xml:space="preserve"><value>未选中任务卡片</value></data>
+  <data name="Main_Minimize" xml:space="preserve"><value>最小化</value></data>
+  <data name="Main_Maximize" xml:space="preserve"><value>最大化</value></data>
+  <data name="Main_Restore" xml:space="preserve"><value>还原</value></data>
+  <data name="Main_LiveStartHint" xml:space="preserve"><value>点击 ⚙ 设置按钮 → ▶ 开始</value></data>
+  <data name="Main_StartLive" xml:space="preserve"><value>开始实时显示</value></data>
+  <data name="Main_StopLive" xml:space="preserve"><value>停止实时显示</value></data>
+  <data name="Main_LiveSettings" xml:space="preserve"><value>设置进程</value></data>
+
+  <!-- ========== 右键菜单 ========== -->
+  <data name="Menu_AddTaskBelow" xml:space="preserve"><value>在下方添加任务</value></data>
+  <data name="Menu_Copy" xml:space="preserve"><value>复制</value></data>
+  <data name="Menu_Paste" xml:space="preserve"><value>粘贴</value></data>
+  <data name="Menu_Cut" xml:space="preserve"><value>剪切</value></data>
+  <data name="Menu_AddElifBranch" xml:space="preserve"><value>增加Elif分支</value></data>
+  <data name="Menu_ShowElse" xml:space="preserve"><value>显示Else</value></data>
+  <data name="Menu_HideElse" xml:space="preserve"><value>隐藏Else</value></data>
+  <data name="Menu_General" xml:space="preserve"><value>通用</value></data>
+  <data name="Menu_WinOps" xml:space="preserve"><value>Windows 操作</value></data>
+  <data name="Menu_AdbOps" xml:space="preserve"><value>ADB 操作</value></data>
+  <data name="Menu_ImgProc" xml:space="preserve"><value>图像处理</value></data>
+  <data name="Menu_DataProc" xml:space="preserve"><value>数据处理</value></data>
+  <data name="Menu_AiOps" xml:space="preserve"><value>AI 操作</value></data>
+  <data name="Menu_ControlFlow" xml:space="preserve"><value>控制流</value></data>
+  <data name="Menu_IfElseBranch" xml:space="preserve"><value>If-Else分支</value></data>
+  <data name="Menu_ForLoop" xml:space="preserve"><value>For循环</value></data>
+
+  <!-- ========== 设置对话框 ========== -->
+  <data name="Settings_Title" xml:space="preserve"><value>设置</value></data>
+  <data name="Settings_Management" xml:space="preserve"><value>设置管理</value></data>
+  <data name="Settings_Startup" xml:space="preserve"><value>启动设置</value></data>
+  <data name="Settings_AutoStart" xml:space="preserve"><value>开机自启动</value></data>
+  <data name="Settings_AutoLoadLast" xml:space="preserve"><value>启动时自动加载上次项目</value></data>
+  <data name="Settings_RunAllOnStartup" xml:space="preserve"><value>启动后立即运行全部流程</value></data>
+  <data name="Settings_HideOnStartup" xml:space="preserve"><value>启动后立即隐藏窗口</value></data>
+  <data name="Settings_Execution" xml:space="preserve"><value>执行设置</value></data>
+  <data name="Settings_FlowInterval" xml:space="preserve"><value>流程执行间隔 (毫秒):</value></data>
+  <data name="Settings_RepeatRunAll" xml:space="preserve"><value>重复循环执行全部流程</value></data>
+  <data name="Settings_RepeatInterval" xml:space="preserve"><value>重复执行间隔 (毫秒):</value></data>
+  <data name="Settings_KeepScreenOn" xml:space="preserve"><value>运行中保持屏幕不息屏</value></data>
+  <data name="Settings_Log" xml:space="preserve"><value>日志设置</value></data>
+  <data name="Settings_MaxLogLines" xml:space="preserve"><value>日志最大行数:</value></data>
+  <data name="Settings_AutoSaveLog" xml:space="preserve"><value>自动保存日志到文件</value></data>
+  <data name="Settings_OcrEngine" xml:space="preserve"><value>OCR 引擎设置</value></data>
+  <data name="Settings_OcrStatus" xml:space="preserve"><value>状态: ⚠ 未配置</value></data>
+  <data name="Settings_OcrStatusOk" xml:space="preserve"><value>状态: ✔ 已验证</value></data>
+  <data name="Settings_OcrExePath" xml:space="preserve"><value>OCR 可执行文件路径:</value></data>
+  <data name="Settings_OcrDirPath" xml:space="preserve"><value>微信运行时目录:</value></data>
+  <data name="Settings_AutoDetect" xml:space="preserve"><value>自动探测</value></data>
+  <data name="Settings_TestAvailability" xml:space="preserve"><value>测试可用性</value></data>
+  <data name="Settings_About" xml:space="preserve"><value>ℹ 关于</value></data>
+  <data name="Settings_Language" xml:space="preserve"><value>语言设置</value></data>
+  <data name="Settings_LanguageLabel" xml:space="preserve"><value>界面语言:</value></data>
+  <data name="Settings_RestartRequired" xml:space="preserve"><value>语言更改需要重启应用后生效。</value></data>
+
+  <!-- ========== 添加变量对话框 ========== -->
+  <data name="AddVar_Title" xml:space="preserve"><value>添加变量</value></data>
+  <data name="AddVar_Name" xml:space="preserve"><value>变量名称（不含@前缀）：</value></data>
+  <data name="AddVar_Type" xml:space="preserve"><value>变量类型：</value></data>
+  <data name="AddVar_InitialValue" xml:space="preserve"><value>初始值：</value></data>
+
+  <!-- ========== 重命名对话框 ========== -->
+  <data name="Rename_Title" xml:space="preserve"><value>重命名</value></data>
+  <data name="Rename_TaskName" xml:space="preserve"><value>任务名称</value></data>
+
+  <!-- ========== 流程管理 ========== -->
+  <data name="Flow_Title" xml:space="preserve"><value>流程管理</value></data>
+  <data name="Flow_AddFlow" xml:space="preserve"><value>添加流程</value></data>
+  <data name="Flow_Rename" xml:space="preserve"><value>重命名</value></data>
+  <data name="Flow_Delete" xml:space="preserve"><value>删除流程</value></data>
+
+  <!-- ========== 模型管理 ========== -->
+  <data name="Model_Title" xml:space="preserve"><value>LLM 模型管理</value></data>
+  <data name="Model_GlobalTitle" xml:space="preserve"><value>全局模型管理</value></data>
+  <data name="Model_Add" xml:space="preserve"><value>添加模型</value></data>
+  <data name="Model_Edit" xml:space="preserve"><value>修改模型</value></data>
+  <data name="Model_Delete" xml:space="preserve"><value>删除模型</value></data>
+  <data name="Model_TestConnection" xml:space="preserve"><value>测试连接</value></data>
+  <data name="Model_ResetStats" xml:space="preserve"><value>重置统计</value></data>
+  <data name="Model_DisplayName" xml:space="preserve"><value>显示名称</value></data>
+  <data name="Model_ApiEndpoint" xml:space="preserve"><value>API Endpoint</value></data>
+  <data name="Model_ApiKey" xml:space="preserve"><value>API Key</value></data>
+  <data name="Model_ModelName" xml:space="preserve"><value>实际模型名 (Model Name)</value></data>
+  <data name="Model_Timeout" xml:space="preserve"><value>超时时间 (秒)</value></data>
+
+  <!-- ========== 变量管理 ========== -->
+  <data name="VarMgr_Title" xml:space="preserve"><value>变量管理</value></data>
+  <data name="VarMgr_AddVariable" xml:space="preserve"><value>添加变量</value></data>
+  <data name="VarMgr_DeleteSelected" xml:space="preserve"><value>删除选中</value></data>
+
+  <!-- ========== 任务属性编辑器 ========== -->
+  <data name="TaskProp_Title" xml:space="preserve"><value>任务属性</value></data>
+  <data name="TaskProp_EditTitle" xml:space="preserve"><value>编辑任务属性</value></data>
+  <data name="TaskProp_TaskName" xml:space="preserve"><value>任务名称：</value></data>
+  <data name="TaskProp_ImageSource" xml:space="preserve"><value>使用其他任务输出的图像</value></data>
+  <data name="TaskProp_ImageSourceTask" xml:space="preserve"><value>图像来源任务:</value></data>
+  <data name="TaskProp_ImageFilePath" xml:space="preserve"><value>图像文件路径:</value></data>
+  <data name="TaskProp_SelectImage" xml:space="preserve"><value>选择图像</value></data>
+  <data name="TaskProp_RoiArea" xml:space="preserve"><value>ROI 区域</value></data>
+  <data name="TaskProp_RoiX" xml:space="preserve"><value>X坐标表达式</value></data>
+  <data name="TaskProp_RoiY" xml:space="preserve"><value>Y坐标表达式</value></data>
+  <data name="TaskProp_RoiWidth" xml:space="preserve"><value>宽度表达式</value></data>
+  <data name="TaskProp_RoiHeight" xml:space="preserve"><value>高度表达式</value></data>
+  <data name="TaskProp_SelectRoi" xml:space="preserve"><value>框选ROI区域</value></data>
+  <data name="TaskProp_Eyedropper" xml:space="preserve"><value>💧 颜色吸笔（从图像拾取HSV范围）</value></data>
+
+  <!-- ========== 实时显示 ========== -->
+  <data name="Live_SettingsTitle" xml:space="preserve"><value>实时显示设置</value></data>
+  <data name="Live_ProcessName" xml:space="preserve"><value>进程名称（不含 .exe 后缀）：</value></data>
+  <data name="Live_ProcessHint" xml:space="preserve"><value>示例：notepad、chrome、WeChat</value></data>
+  <data name="Live_Display" xml:space="preserve"><value>实时显示</value></data>
+  <data name="Live_DisplayWithName" xml:space="preserve"><value>{0} 实时显示</value></data>
+
+  <!-- ========== 消息提示 ========== -->
+  <data name="Msg_HelpNotFound" xml:space="preserve"><value>帮助文档不存在，请检查安装目录。</value></data>
+  <data name="Msg_SetInputImage" xml:space="preserve"><value>请先设置输入图像</value></data>
+  <data name="Msg_ConfirmDelete" xml:space="preserve"><value>确定要删除吗？</value></data>
+  <data name="Msg_CannotOpenHelp" xml:space="preserve"><value>无法打开帮助文档：{0}</value></data>
+  <data name="Msg_SavedSuccessfully" xml:space="preserve"><value>保存成功</value></data>
+  <data name="Msg_LanguageRestart" xml:space="preserve"><value>语言已更改，请重启应用使其生效。</value></data>
+  <data name="Msg_ConfirmDeleteBranchGroup" xml:space="preserve"><value>确定删除整个分支组吗？</value></data>
+  <data name="Msg_ConfirmDeleteTask" xml:space="preserve"><value>确定删除任务 "{0}" 吗？</value></data>
+  <data name="Msg_NoImageToSave" xml:space="preserve"><value>没有可保存的图像</value></data>
+  <data name="Msg_ImageSaved" xml:space="preserve"><value>图像已保存: {0}</value></data>
+  <data name="Msg_SaveFailed" xml:space="preserve"><value>保存失败: {0}</value></data>
+  <data name="Msg_NoLogToExport" xml:space="preserve"><value>当前没有日志内容可导出</value></data>
+  <data name="Msg_LogExported" xml:space="preserve"><value>日志已导出: {0}</value></data>
+  <data name="Msg_ExportFailed" xml:space="preserve"><value>导出失败: {0}</value></data>
+  <data name="Msg_LiveSetProcess" xml:space="preserve"><value>请先点击 ◉ 按钮设置要预览的进程名</value></data>
+  <data name="Msg_LiveCannotCapture" xml:space="preserve"><value>无法捕获窗口：{0}</value></data>
+  <data name="Msg_LiveSaved" xml:space="preserve"><value>实时预览图像已保存: {0}</value></data>
+
+  <!-- ========== 输出面板 ========== -->
+  <data name="Output_CardName" xml:space="preserve"><value>卡片名称</value></data>
+  <data name="Output_CardType" xml:space="preserve"><value>卡片类型</value></data>
+  <data name="Output_Status" xml:space="preserve"><value>执行状态</value></data>
+  <data name="Output_StatusIdle" xml:space="preserve"><value>未执行</value></data>
+  <data name="Output_StatusRunning" xml:space="preserve"><value>执行中</value></data>
+  <data name="Output_StatusSuccess" xml:space="preserve"><value>成功</value></data>
+  <data name="Output_StatusFailed" xml:space="preserve"><value>失败</value></data>
+  <data name="Output_Duration" xml:space="preserve"><value>运行耗时</value></data>
+  <data name="Output_Seconds" xml:space="preserve"><value>{0} 秒</value></data>
+  <data name="Output_Milliseconds" xml:space="preserve"><value>{0} 毫秒</value></data>
+  <data name="Output_Data" xml:space="preserve"><value>输出数据</value></data>
+  <data name="Output_NoData" xml:space="preserve"><value>暂无输出数据</value></data>
+  <data name="Output_Result" xml:space="preserve"><value>结果 (Result)</value></data>
+  <data name="Output_Text" xml:space="preserve"><value>文本 (Text)</value></data>
+  <data name="Output_Coords" xml:space="preserve"><value>坐标 (X, Y)</value></data>
+  <data name="Output_LoopIndex" xml:space="preserve"><value>循环索引</value></data>
+  <data name="Output_CurrentLoop" xml:space="preserve"><value>当前循环</value></data>
+  <data name="Output_MatchRatio" xml:space="preserve"><value>匹配率</value></data>
+  <data name="Output_MatchCount" xml:space="preserve"><value>匹配数量</value></data>
+  <data name="Output_BestMatchScore" xml:space="preserve"><value>最佳匹配分数</value></data>
+  <data name="Output_BestMatchCoords" xml:space="preserve"><value>最佳匹配坐标</value></data>
+  <data name="Output_ScoreArray" xml:space="preserve"><value>结果分数数组</value></data>
+  <data name="Output_CoordsArray" xml:space="preserve"><value>匹配坐标数组</value></data>
+  <data name="Output_BlobCount" xml:space="preserve"><value>Blob数量</value></data>
+  <data name="Output_FirstBlobCoords" xml:space="preserve"><value>首个Blob坐标</value></data>
+  <data name="Output_BlobCoordsArray" xml:space="preserve"><value>Blob坐标数组</value></data>
+  <data name="Output_BlobSizeArray" xml:space="preserve"><value>Blob尺寸数组</value></data>
+  <data name="Output_BlobAreaArray" xml:space="preserve"><value>Blob面积数组</value></data>
+  <data name="Output_ScaleRatio" xml:space="preserve"><value>缩放倍率</value></data>
+  <data name="Output_ConvertResult" xml:space="preserve"><value>转换结果 (Int)</value></data>
+  <data name="Output_ParseResultInt" xml:space="preserve"><value>解析结果 (Int)</value></data>
+  <data name="Output_ParseResultString" xml:space="preserve"><value>解析结果 (String)</value></data>
+  <data name="Output_ParseResultCoords" xml:space="preserve"><value>解析结果 (X,Y)</value></data>
+  <data name="Output_ParseResultDouble" xml:space="preserve"><value>解析结果 (Double)</value></data>
+  <data name="Output_CurrentTime" xml:space="preserve"><value>当前时间</value></data>
+  <data name="Output_ErrorMessage" xml:space="preserve"><value>错误信息</value></data>
+
+  <data name="Filter_PngImage" xml:space="preserve"><value>PNG图像|*.png</value></data>
+  <data name="Filter_JpegImage" xml:space="preserve"><value>JPEG图像|*.jpg</value></data>
+  <data name="Filter_BmpImage" xml:space="preserve"><value>BMP图像|*.bmp</value></data>
+  <data name="Filter_TextFile" xml:space="preserve"><value>文本文件|*.txt</value></data>
+  <data name="Filter_ExeFile" xml:space="preserve"><value>可执行文件|*.exe</value></data>
+
+  <!-- ========== 属性对话框标签 ========== -->
+  <data name="Prop_EditPrefix" xml:space="preserve"><value>编辑: {0}</value></data>
+  <data name="Prop_TaskName" xml:space="preserve"><value>任务名称</value></data>
+  <data name="Prop_LoopCount" xml:space="preserve"><value>循环次数 (数字 / @变量 / #任务引用)</value></data>
+  <data name="Prop_PauseDuration" xml:space="preserve"><value>暂停时长ms (数字 / @变量 / #任务引用)</value></data>
+  <data name="Prop_OutputFormat" xml:space="preserve"><value>输出格式</value></data>
+  <data name="Prop_TimeFmt_HMS" xml:space="preserve"><value>时分秒 (HHmmss)</value></data>
+  <data name="Prop_TimeFmt_DHMS" xml:space="preserve"><value>日时分秒 (ddHHmmss)</value></data>
+  <data name="Prop_TimeFmt_MDHMS" xml:space="preserve"><value>月日时分秒 (MMddHHmmss)</value></data>
+  <data name="Prop_TimeFmt_YMDHMS" xml:space="preserve"><value>年月日时分秒 (yyyyMMddHHmmss)</value></data>
+  <data name="Prop_ExePath" xml:space="preserve"><value>EXE路径</value></data>
+  <data name="Prop_Arguments" xml:space="preserve"><value>启动参数</value></data>
+  <data name="Prop_ProcessName" xml:space="preserve"><value>进程名称</value></data>
+  <data name="Prop_IncludeTitleBar" xml:space="preserve"><value>包含系统标题栏</value></data>
+  <data name="Prop_CropTopHeight" xml:space="preserve"><value>顶部额外裁剪高度(像素)</value></data>
+  <data name="Prop_ConvertGrayscale" xml:space="preserve"><value>转换为灰度图像</value></data>
+  <data name="Prop_DeviceIp" xml:space="preserve"><value>设备IP</value></data>
+  <data name="Prop_DevicePort" xml:space="preserve"><value>端口</value></data>
+  <data name="Prop_DeviceSerial" xml:space="preserve"><value>设备序列号</value></data>
+  <data name="Prop_PackageName" xml:space="preserve"><value>包名</value></data>
+  <data name="Prop_ActivityName" xml:space="preserve"><value>Activity名</value></data>
+  <data name="Prop_MatchThreshold" xml:space="preserve"><value>匹配阈值</value></data>
+  <data name="Prop_MaxMatchCount" xml:space="preserve"><value>最大匹配数量(1=单目标)</value></data>
+  <data name="Prop_TargetText" xml:space="preserve"><value>目标文本</value></data>
+  <data name="Prop_CheckContainsText" xml:space="preserve"><value>检查包含文本</value></data>
+  <data name="Prop_EnableGrayscale" xml:space="preserve"><value>启用灰度转换</value></data>
+  <data name="Prop_BinarizeMethod" xml:space="preserve"><value>二值化方式</value></data>
+  <data name="Prop_BinarizeNone" xml:space="preserve"><value>无</value></data>
+  <data name="Prop_BinarizeBinary" xml:space="preserve"><value>二值化 (Binary)</value></data>
+  <data name="Prop_BinarizeBinaryInv" xml:space="preserve"><value>反二值化 (BinaryInv)</value></data>
+  <data name="Prop_BinarizeOtsu" xml:space="preserve"><value>自动阈值 (Otsu)</value></data>
+  <data name="Prop_BinarizeTriangle" xml:space="preserve"><value>自动阈值 (Triangle)</value></data>
+  <data name="Prop_BinarizeThreshold" xml:space="preserve"><value>二值化阈值 (0-255)</value></data>
+  <data name="Prop_MorphMethod" xml:space="preserve"><value>形态学操作</value></data>
+  <data name="Prop_MorphNone" xml:space="preserve"><value>无</value></data>
+  <data name="Prop_MorphOpen" xml:space="preserve"><value>开运算 (去噪点)</value></data>
+  <data name="Prop_MorphClose" xml:space="preserve"><value>闭运算 (填孔洞)</value></data>
+  <data name="Prop_MorphDilate" xml:space="preserve"><value>膨胀</value></data>
+  <data name="Prop_MorphErode" xml:space="preserve"><value>腐蚀</value></data>
+  <data name="Prop_MorphKernelSize" xml:space="preserve"><value>形态学核大小</value></data>
+  <data name="Prop_RoiArea" xml:space="preserve"><value>ROI 区域</value></data>
+  <data name="Prop_HsvRange" xml:space="preserve"><value>HSV 范围</value></data>
+  <data name="Prop_SelectRoiMask" xml:space="preserve"><value>▭ 框选分析区域 / 绘制掩膜</value></data>
+  <data name="Prop_MinArea" xml:space="preserve"><value>面积最小值</value></data>
+  <data name="Prop_MaxArea" xml:space="preserve"><value>面积最大值</value></data>
+  <data name="Prop_SortMode" xml:space="preserve"><value>排序方式</value></data>
+  <data name="Prop_SortAreaDesc" xml:space="preserve"><value>面积降序</value></data>
+  <data name="Prop_SortAreaAsc" xml:space="preserve"><value>面积升序</value></data>
+  <data name="Prop_SortLeftToRight" xml:space="preserve"><value>从左到右</value></data>
+  <data name="Prop_SortTopToBottom" xml:space="preserve"><value>从上到下</value></data>
+  <data name="Prop_MaxBlobCount" xml:space="preserve"><value>最大Blob数量</value></data>
+  <data name="Prop_InvertBinary" xml:space="preserve"><value>检测暗色Blob（反转极性）</value></data>
+  <data name="Prop_TargetWidth" xml:space="preserve"><value>目标宽度</value></data>
+  <data name="Prop_TargetHeight" xml:space="preserve"><value>目标高度</value></data>
+  <data name="Prop_ConditionExpr" xml:space="preserve"><value>{0}条件表达式</value></data>
+  <data name="Prop_ElifCondition" xml:space="preserve"><value>▸ Elif {0} 条件 (#{1})</value></data>
+  <data name="Prop_XCoordExpr" xml:space="preserve"><value>X坐标表达式</value></data>
+  <data name="Prop_YCoordExpr" xml:space="preserve"><value>Y坐标表达式</value></data>
+  <data name="Prop_ClickType" xml:space="preserve"><value>点击类型</value></data>
+  <data name="Prop_ClickSingle" xml:space="preserve"><value>单击</value></data>
+  <data name="Prop_ClickDouble" xml:space="preserve"><value>双击</value></data>
+  <data name="Prop_ClickSwipe" xml:space="preserve"><value>滑动</value></data>
+  <data name="Prop_EndXExpr" xml:space="preserve"><value>终点X坐标表达式</value></data>
+  <data name="Prop_EndYExpr" xml:space="preserve"><value>终点Y坐标表达式</value></data>
+  <data name="Prop_SwipeDuration" xml:space="preserve"><value>滑动时长(毫秒)</value></data>
+  <data name="Prop_MultiClick" xml:space="preserve"><value>执行多次点击</value></data>
+  <data name="Prop_ClickCount" xml:space="preserve"><value>点击次数</value></data>
+  <data name="Prop_ClickInterval" xml:space="preserve"><value>点击间隔(毫秒)</value></data>
+  <data name="Prop_EnableOffscreen" xml:space="preserve"><value>启用离屏点击（向目标进程发送后台消息）</value></data>
+  <data name="Prop_SearchBy" xml:space="preserve"><value>查找方式</value></data>
+  <data name="Prop_SearchByName" xml:space="preserve"><value>按名称</value></data>
+  <data name="Prop_SearchByAutomationId" xml:space="preserve"><value>按 AutomationId</value></data>
+  <data name="Prop_ButtonName" xml:space="preserve"><value>按钮名称</value></data>
+  <data name="Prop_MatchMode" xml:space="preserve"><value>匹配方式</value></data>
+  <data name="Prop_MatchExact" xml:space="preserve"><value>精确匹配</value></data>
+  <data name="Prop_MatchContains" xml:space="preserve"><value>包含匹配</value></data>
+  <data name="Prop_MatchRegex" xml:space="preserve"><value>正则表达式</value></data>
+  <data name="Prop_ModifierKey" xml:space="preserve"><value>修饰键</value></data>
+  <data name="Prop_InputAction" xml:space="preserve"><value>输入动作</value></data>
+  <data name="Prop_ScrollDown" xml:space="preserve"><value>鼠标滚轮向下</value></data>
+  <data name="Prop_ScrollUp" xml:space="preserve"><value>鼠标滚轮向上</value></data>
+  <data name="Prop_KeyPress" xml:space="preserve"><value>键盘按键</value></data>
+  <data name="Prop_KeyName" xml:space="preserve"><value>按键名称 (如 A, ENTER)</value></data>
+  <data name="Prop_ScrollAmount" xml:space="preserve"><value>滚动量</value></data>
+  <data name="Prop_RepeatCount" xml:space="preserve"><value>重复次数</value></data>
+  <data name="Prop_RepeatInterval" xml:space="preserve"><value>重复间隔 (毫秒)</value></data>
+  <data name="Prop_SelectModel" xml:space="preserve"><value>选择模型</value></data>
+  <data name="Prop_SourceText" xml:space="preserve"><value>输入文字(支持表达式引用 / @变量 / #任务输出)</value></data>
+  <data name="Prop_TargetLanguage" xml:space="preserve"><value>目标语言 (如 中文, 英文)</value></data>
+  <data name="Prop_SystemPrompt" xml:space="preserve"><value>系统提示词 (System Prompt)</value></data>
+  <data name="Prop_Prompt" xml:space="preserve"><value>提示词(支持表达式引用 / @变量 / #任务输出)</value></data>
+  <data name="Prop_DisplayText" xml:space="preserve"><value>显示文本表达式</value></data>
+  <data name="Prop_SpecifyWindow" xml:space="preserve"><value>是否指定窗口</value></data>
+  <data name="Prop_SelectSubtitleRegion" xml:space="preserve"><value>📐 框选显示区域（自动截图并框选）</value></data>
+  <data name="Prop_FillProcessFirst" xml:space="preserve"><value>请先填写进程名称</value></data>
+  <data name="Prop_ScreenshotFailed" xml:space="preserve"><value>截图失败: {0}</value></data>
+  <data name="Prop_SelectSubtitleArea" xml:space="preserve"><value>框选字幕显示区域</value></data>
+  <data name="Prop_XYOffset" xml:space="preserve"><value>X / Y 偏移量</value></data>
+  <data name="Prop_SubtitleWidthHeight" xml:space="preserve"><value>字幕宽度 / 高度 (0=自动)</value></data>
+  <data name="Prop_FontSize" xml:space="preserve"><value>字体大小</value></data>
+  <data name="Prop_FontColor" xml:space="preserve"><value>字体颜色</value></data>
+  <data name="Prop_SelectColor" xml:space="preserve"><value>选择颜色</value></data>
+  <data name="Prop_BackgroundStyle" xml:space="preserve"><value>背景样式</value></data>
+  <data name="Prop_BgAcrylic" xml:space="preserve"><value>毛玻璃 (Acrylic)</value></data>
+  <data name="Prop_BgSolid" xml:space="preserve"><value>纯色背景</value></data>
+  <data name="Prop_BgTransparent" xml:space="preserve"><value>透明背景</value></data>
+  <data name="Prop_BgAutoSample" xml:space="preserve"><value>自动吸色</value></data>
+  <data name="Prop_BgColor" xml:space="preserve"><value>背景色(含透明度，如 #80FFFFFF)</value></data>
+  <data name="Prop_SelectBgColor" xml:space="preserve"><value>选择背景色</value></data>
+  <data name="Prop_Duration" xml:space="preserve"><value>显示时长 (ms, 0=常驻)</value></data>
+  <data name="Prop_WaitClose" xml:space="preserve"><value>等待字幕关闭后再继续执行</value></data>
+  <data name="Prop_RoiW" xml:space="preserve"><value>宽</value></data>
+  <data name="Prop_RoiH" xml:space="preserve"><value>高</value></data>
+  <data name="Prop_HsvLowerH" xml:space="preserve"><value>H下限(0-180):</value></data>
+  <data name="Prop_HsvUpperH" xml:space="preserve"><value>H上限(0-180):</value></data>
+  <data name="Prop_HsvLowerS" xml:space="preserve"><value>S 下限(0-255):</value></data>
+  <data name="Prop_HsvUpperS" xml:space="preserve"><value>S 上限(0-255):</value></data>
+  <data name="Prop_HsvLowerV" xml:space="preserve"><value>V下限(0-255):</value></data>
+  <data name="Prop_HsvUpperV" xml:space="preserve"><value>V上限(0-255):</value></data>
+  <data name="Prop_SetImageFirst" xml:space="preserve"><value>请先设置输入图像（选择图像来源任务或指定图像文件路径）</value></data>
+  <data name="Prop_MaskNotSet" xml:space="preserve"><value>未设置掩膜</value></data>
+  <data name="Prop_MaskSet" xml:space="preserve"><value>✔ 已设置掩膜</value></data>
+  <data name="Prop_XExpr" xml:space="preserve"><value>X坐标表达式</value></data>
+  <data name="Prop_YExpr" xml:space="preserve"><value>Y坐标表达式</value></data>
+  <data name="Prop_WidthExpr" xml:space="preserve"><value>宽度表达式</value></data>
+  <data name="Prop_HeightExpr" xml:space="preserve"><value>高度表达式</value></data>
+  <data name="Prop_SelectRoiArea" xml:space="preserve"><value>框选ROI区域</value></data>
+  <data name="Prop_TemplatePreview" xml:space="preserve"><value>当前模板图像预览</value></data>
+  <data name="Prop_SelectTemplate" xml:space="preserve"><value>框选模板区域</value></data>
+  <data name="Prop_SelectSearchRoiMask" xml:space="preserve"><value>▭ 框选搜索区域 / 绘制掩膜</value></data>
+  <data name="Prop_MaskPaint" xml:space="preserve"><value>🖌 掩膜画笔</value></data>
+  <data name="Prop_ClearMask" xml:space="preserve"><value>清除掩膜</value></data>
+  <data name="Prop_SaveFailed" xml:space="preserve"><value>保存失败: {0}</value></data>
+  <data name="Prop_ImageSourceTask" xml:space="preserve"><value>图像来源任务</value></data>
+  <data name="Prop_SelectTask" xml:space="preserve"><value>-- 选择任务 --</value></data>
+  <data name="Prop_ImageFilePath" xml:space="preserve"><value>图像文件路径</value></data>
+  <data name="Filter_ImageFile" xml:space="preserve"><value>图像文件|*.png;*.jpg;*.bmp</value></data>
+  <data name="Prop_UseSourceTaskImage" xml:space="preserve"><value>使用其他任务输出的图像</value></data>
+  <data name="Prop_ColorPicker" xml:space="preserve"><value>💧 颜色吸笔（从图像拾取HSV范围）</value></data>
+  <data name="Prop_AssignExpr" xml:space="preserve"><value>赋值表达式</value></data>
+  <data name="Prop_AssignHint" xml:space="preserve"><value>格式: @变量名 = 表达式
+多条语句以";"或换行分隔
+示例: @A = 1; @B = @A + 1</value></data>
+  <data name="Prop_TargetLoop" xml:space="preserve"><value>目标循环</value></data>
+  <data name="Prop_SelectLoop" xml:space="preserve"><value>-- 选择循环 --</value></data>
+  <data name="Prop_TextSourceTask" xml:space="preserve"><value>文本来源任务</value></data>
+  <data name="Prop_InputText" xml:space="preserve"><value>输入文本（无来源任务时使用）</value></data>
+  <data name="Prop_StartMode" xml:space="preserve"><value>起始位置模式</value></data>
+  <data name="Prop_ManualMode" xml:space="preserve"><value>手动指定</value></data>
+  <data name="Prop_FindCharMode" xml:space="preserve"><value>查找字符</value></data>
+  <data name="Prop_ManualStart" xml:space="preserve"><value>手动起始位置 (0-based)</value></data>
+  <data name="Prop_SearchChar" xml:space="preserve"><value>查找字符/字符串</value></data>
+  <data name="Prop_SearchOffset" xml:space="preserve"><value>查找偏移量</value></data>
+  <data name="Prop_SubstringLength" xml:space="preserve"><value>截取长度 (-1=到末尾)</value></data>
+  <data name="Prop_InputExpr" xml:space="preserve"><value>输入表达式 (支持 @变量名)</value></data>
+  <data name="Prop_ArrayType" xml:space="preserve"><value>数组变量类型</value></data>
+  <data name="Prop_ArrayInt" xml:space="preserve"><value>Int (整数)</value></data>
+  <data name="Prop_ArrayString" xml:space="preserve"><value>String (字符串)</value></data>
+  <data name="Prop_ArrayCoord" xml:space="preserve"><value>Coordinate (X/Y坐标)</value></data>
+  <data name="Prop_ArrayDouble" xml:space="preserve"><value>Double (浮点数)</value></data>
+  <data name="Prop_ArraySourceExpr" xml:space="preserve"><value>数组引用表达式 (如 #1 模板匹配.匹配坐标)</value></data>
+  <data name="Prop_OutputIndex" xml:space="preserve"><value>输出索引 (整数或@变量)</value></data>
+  <data name="Prop_OcrEngine" xml:space="preserve"><value>OCR 引擎</value></data>
+  <data name="Prop_PaddleOcr" xml:space="preserve"><value>PaddleOCR (内置)</value></data>
+  <data name="Prop_WeChatOcr" xml:space="preserve"><value>微信 OCR</value></data>
+  <data name="Prop_WeChatOcrTip" xml:space="preserve"><value>⚠ 微信 OCR 需要在设置中配置</value></data>
+
+  <data name="Dlg_Settings" xml:space="preserve"><value>设置</value></data>
+  <data name="Dlg_SettingsTitle" xml:space="preserve"><value>设置管理</value></data>
+  <data name="Dlg_StartupSettings" xml:space="preserve"><value>启动设置</value></data>
+  <data name="Dlg_AutoStart" xml:space="preserve"><value>开机自启动</value></data>
+  <data name="Dlg_AutoLoadLast" xml:space="preserve"><value>启动时自动加载上次项目</value></data>
+  <data name="Dlg_RunAllOnStartup" xml:space="preserve"><value>启动后立即运行全部流程</value></data>
+  <data name="Dlg_HideOnStartup" xml:space="preserve"><value>启动后立即隐藏窗口</value></data>
+  <data name="Dlg_ExecutionSettings" xml:space="preserve"><value>执行设置</value></data>
+  <data name="Dlg_FlowInterval" xml:space="preserve"><value>流程执行间隔 (毫秒):</value></data>
+  <data name="Dlg_RepeatRunAll" xml:space="preserve"><value>重复循环执行全部流程</value></data>
+  <data name="Dlg_RepeatInterval" xml:space="preserve"><value>重复执行间隔 (毫秒):</value></data>
+  <data name="Dlg_KeepScreenOn" xml:space="preserve"><value>运行中保持屏幕不息屏</value></data>
+  <data name="Dlg_LogSettings" xml:space="preserve"><value>日志设置</value></data>
+  <data name="Dlg_MaxLogLines" xml:space="preserve"><value>日志最大行数:</value></data>
+  <data name="Dlg_AutoSaveLog" xml:space="preserve"><value>自动保存日志到文件</value></data>
+  <data name="Dlg_OcrSettings" xml:space="preserve"><value>OCR 引擎设置</value></data>
+  <data name="Dlg_OcrStatusNotConfigured" xml:space="preserve"><value>状态: ⚠ 未配置</value></data>
+  <data name="Dlg_OcrStatusAvailable" xml:space="preserve"><value>状态: ✅ 可用</value></data>
+  <data name="Dlg_OcrStatusConfigured" xml:space="preserve"><value>状态: ⚠ 已配置，未验证</value></data>
+  <data name="Dlg_OcrStatusTesting" xml:space="preserve"><value>状态: 🔄 测试中...</value></data>
+  <data name="Dlg_OcrStatusUnavailable" xml:space="preserve"><value>状态: ❌ 不可用</value></data>
+  <data name="Dlg_OcrStatusError" xml:space="preserve"><value>状态: ❌ 测试出错</value></data>
+  <data name="Dlg_OcrExePath" xml:space="preserve"><value>OCR 可执行文件路径:</value></data>
+  <data name="Dlg_WeChatRuntimeDir" xml:space="preserve"><value>微信运行时目录:</value></data>
+  <data name="Dlg_Browse" xml:space="preserve"><value>浏览</value></data>
+  <data name="Dlg_AutoDetect" xml:space="preserve"><value>自动探测</value></data>
+  <data name="Dlg_TestAvailability" xml:space="preserve"><value>测试可用性</value></data>
+  <data name="Dlg_Testing" xml:space="preserve"><value>测试中...</value></data>
+  <data name="Dlg_Save" xml:space="preserve"><value>保存</value></data>
+  <data name="Dlg_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Dlg_OK" xml:space="preserve"><value>确定</value></data>
+  <data name="Dlg_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="Dlg_IntervalMustBeNonNeg" xml:space="preserve"><value>流程执行间隔必须为非负整数</value></data>
+  <data name="Dlg_LogLinesMustBe10" xml:space="preserve"><value>日志最大行数必须为不小于10的整数</value></data>
+  <data name="Dlg_RepeatIntervalMustBeNonNeg" xml:space="preserve"><value>重复执行间隔必须为非负整数</value></data>
+  <data name="Dlg_FormatError" xml:space="preserve"><value>格式错误</value></data>
+  <data name="Dlg_SelectOcrExeTitle" xml:space="preserve"><value>选择微信 OCR 可执行文件</value></data>
+  <data name="Dlg_OcrFileFilter" xml:space="preserve"><value>OCR文件|WeChatOCR.exe;wxocr.dll|所有文件|*.*</value></data>
+  <data name="Dlg_SelectWeChatDir" xml:space="preserve"><value>选择微信运行时目录</value></data>
+  <data name="Dlg_AutoDetectSuccess" xml:space="preserve"><value>自动探测成功</value></data>
+  <data name="Dlg_AutoDetectSuccessMsg" xml:space="preserve"><value>已自动探测到微信 OCR 路径：\n\nOCR文件: {0}\n运行时目录: {1}\n\n请点击"测试可用性"按钮验证。</value></data>
+  <data name="Dlg_AutoDetectFailed" xml:space="preserve"><value>自动探测失败，未找到微信 OCR 组件。\n\n请确认已安装微信，或手动指定路径。</value></data>
+  <data name="Dlg_AutoDetectPartialExe" xml:space="preserve"><value>已找到 OCR 文件: {0}\n但未找到微信运行时目录，请手动指定。</value></data>
+  <data name="Dlg_AutoDetectPartialDir" xml:space="preserve"><value>已找到运行时目录: {0}\n但未找到 OCR 可执行文件，请手动指定。</value></data>
+  <data name="Dlg_ConfigureOcrFirst" xml:space="preserve"><value>请先配置 OCR 可执行文件路径和微信运行时目录。</value></data>
+  <data name="Dlg_Hint" xml:space="preserve"><value>提示</value></data>
+  <data name="Dlg_TestSuccess" xml:space="preserve"><value>测试成功</value></data>
+  <data name="Dlg_TestFailed" xml:space="preserve"><value>测试失败</value></data>
+  <data name="Dlg_Error" xml:space="preserve"><value>错误</value></data>
+  <data name="Dlg_TestError" xml:space="preserve"><value>测试出错: {0}</value></data>
+  <data name="Dlg_AddVariable" xml:space="preserve"><value>添加变量</value></data>
+  <data name="Dlg_VarNameLabel" xml:space="preserve"><value>变量名称（不含@前缀）：</value></data>
+  <data name="Dlg_VarTypeLabel" xml:space="preserve"><value>变量类型：</value></data>
+  <data name="Dlg_VarInitValue" xml:space="preserve"><value>初始值：</value></data>
+  <data name="Dlg_NameEmpty" xml:space="preserve"><value>名称为空</value></data>
+  <data name="Dlg_EnterVarName" xml:space="preserve"><value>请输入变量名称。</value></data>
+  <data name="Dlg_IntFormatError" xml:space="preserve"><value>Int 类型初始值必须为整数。</value></data>
+  <data name="Dlg_DoubleFormatError" xml:space="preserve"><value>Double 类型初始值必须为数字。</value></data>
+  <data name="Dlg_BoolFormatError" xml:space="preserve"><value>Bool 类型初始值必须为 True 或 False。</value></data>
+  <data name="Dlg_Rename" xml:space="preserve"><value>重命名</value></data>
+  <data name="Dlg_TaskNameLabel" xml:space="preserve"><value>任务名称</value></data>
+  <data name="Dlg_EnterValidName" xml:space="preserve"><value>请输入有效的名称。</value></data>
+  <data name="Dlg_SearchTask" xml:space="preserve"><value>查找任务</value></data>
+  <data name="Dlg_EnterIdOrName" xml:space="preserve"><value>输入编号或名称</value></data>
+  <data name="Dlg_Search" xml:space="preserve"><value>查找</value></data>
+  <data name="Dlg_EnterIdOrNamePrompt" xml:space="preserve"><value>请输入编号或名称</value></data>
+  <data name="Dlg_NotFound" xml:space="preserve"><value>未找到匹配 "{0}" 的任务</value></data>
+  <data name="Dlg_ModelManager" xml:space="preserve"><value>LLM 模型管理</value></data>
+  <data name="Dlg_GlobalModelManager" xml:space="preserve"><value>全局模型管理</value></data>
+  <data name="Dlg_DisplayName" xml:space="preserve"><value>显示名称</value></data>
+  <data name="Dlg_TokenStats" xml:space="preserve"><value>Token 统计</value></data>
+  <data name="Dlg_AddModel" xml:space="preserve"><value>添加模型</value></data>
+  <data name="Dlg_EditModel" xml:space="preserve"><value>修改模型</value></data>
+  <data name="Dlg_DeleteModel" xml:space="preserve"><value>删除模型</value></data>
+  <data name="Dlg_TestConnection" xml:space="preserve"><value>测试连接</value></data>
+  <data name="Dlg_ResetStats" xml:space="preserve"><value>重置统计</value></data>
+  <data name="Dlg_DeleteConfirm" xml:space="preserve"><value>删除确认</value></data>
+  <data name="Dlg_ConfirmDeleteModel" xml:space="preserve"><value>确定要删除模型 '{0}' 吗？</value></data>
+  <data name="Dlg_ResetConfirm" xml:space="preserve"><value>重置确认</value></data>
+  <data name="Dlg_ConfirmResetStats" xml:space="preserve"><value>是否重置模型 '{0}' 的 Token 消耗统计数据？</value></data>
+  <data name="Dlg_ApiEmptyError" xml:space="preserve"><value>该配置的 API Endpoint 或 Model Name 为空，无法测试。</value></data>
+  <data name="Dlg_ConnSuccess" xml:space="preserve"><value>连接成功！\nHTTP 状态码: {0}\n响应预览: {1}</value></data>
+  <data name="Dlg_ConnFailed" xml:space="preserve"><value>连接失败。HTTP 状态码: {0}\n返回内容:\n{1}</value></data>
+  <data name="Dlg_ConnException" xml:space="preserve"><value>连接发生异常:\n{0}</value></data>
+  <data name="Dlg_ModelEdit" xml:space="preserve"><value>编辑模型</value></data>
+  <data name="Dlg_ActualModelName" xml:space="preserve"><value>实际模型名 (Model Name)</value></data>
+  <data name="Dlg_Timeout" xml:space="preserve"><value>超时时间 (秒)</value></data>
+  <data name="Dlg_DisplayNameEmpty" xml:space="preserve"><value>显示名称不能为空。</value></data>
+  <data name="Dlg_FlowManager" xml:space="preserve"><value>流程管理</value></data>
+  <data name="Dlg_AddFlow" xml:space="preserve"><value>添加流程</value></data>
+  <data name="Dlg_DeleteFlow" xml:space="preserve"><value>删除流程</value></data>
+  <data name="Dlg_RenameFlow" xml:space="preserve"><value>重命名流程</value></data>
+  <data name="Dlg_EnterNewName" xml:space="preserve"><value>请输入新名称:</value></data>
+  <data name="Dlg_CannotDelete" xml:space="preserve"><value>无法删除</value></data>
+  <data name="Dlg_KeepOneFlow" xml:space="preserve"><value>至少需要保留一个流程页。</value></data>
+  <data name="Dlg_ConfirmDeleteFlow" xml:space="preserve"><value>确定删除流程 "{0}" 吗？该流程内的所有任务将被删除。</value></data>
+  <data name="Dlg_FlowPrefix" xml:space="preserve"><value>流程{0}</value></data>
+  <data name="Dlg_VariableManager" xml:space="preserve"><value>变量管理</value></data>
+  <data name="Dlg_GlobalVariableManager" xml:space="preserve"><value>全局变量管理</value></data>
+  <data name="Dlg_VarName" xml:space="preserve"><value>变量名</value></data>
+  <data name="Dlg_VarType" xml:space="preserve"><value>类型</value></data>
+  <data name="Dlg_VarCurrentValue" xml:space="preserve"><value>当前值</value></data>
+  <data name="Dlg_Add" xml:space="preserve"><value>添加</value></data>
+  <data name="Dlg_Delete" xml:space="preserve"><value>删除</value></data>
+  <data name="Dlg_NameConflict" xml:space="preserve"><value>命名冲突</value></data>
+  <data name="Dlg_VarNameExists" xml:space="preserve"><value>变量名已存在或为空，请使用其他名称。</value></data>
+  <data name="Dlg_NewNameExists" xml:space="preserve"><value>新名称已存在或为空，请使用其他名称。</value></data>
+  <data name="Dlg_NoVarSelected" xml:space="preserve"><value>未选择变量</value></data>
+  <data name="Dlg_SelectVarFirst" xml:space="preserve"><value>请先在列表中选中一个变量。</value></data>
+  <data name="Dlg_ConfirmDeleteVar" xml:space="preserve"><value>确定删除变量 "@{0}" 吗？此操作无法撤销。</value></data>
+  <data name="Dlg_IntValueError" xml:space="preserve"><value>Int 类型的值必须为整数</value></data>
+  <data name="Dlg_DoubleValueError" xml:space="preserve"><value>Double 类型的值必须为数字</value></data>
+  <data name="Dlg_BoolValueError" xml:space="preserve"><value>Bool 类型的值必须为 True 或 False</value></data>
+  <data name="Dlg_Add_Title" xml:space="preserve"><value>添加</value></data>
+  <data name="Dlg_Edit_Title" xml:space="preserve"><value>编辑</value></data>
+  <data name="Dlg_ModelTitle" xml:space="preserve"><value>{0}模型</value></data>
+
+  <data name="Svc_Cancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="Svc_ApiTimeout" xml:space="preserve"><value>API 超时</value></data>
+  <data name="Svc_ApiException" xml:space="preserve"><value>调用 API 时异常: {0}</value></data>
+  <data name="Svc_ParseIndexFailed" xml:space="preserve"><value>索引表达式解析失败: '{0}' => '{1}'</value></data>
+  <data name="Svc_ParseException" xml:space="preserve"><value>表达式异常: {0}</value></data>
+  <data name="Svc_ExprNotSet" xml:space="preserve"><value>未设置表达式</value></data>
+  <data name="Svc_ExprFormatError" xml:space="preserve"><value>引用表达式格式错误: '{0}'。正确格式: #N 属性.属性</value></data>
+  <data name="Svc_TaskNotFound" xml:space="preserve"><value>找不到编号为 {0} 的任务卡片</value></data>
+  <data name="Svc_TaskNameMismatch" xml:space="preserve"><value>编号 {0} 的卡片不匹配: 期望 "{1}"，实际 "{2}"</value></data>
+  <data name="Svc_UnsupportedProperty" xml:space="preserve"><value>不支持的属性: {0}。支持: 分数, 匹配坐标</value></data>
+  <data name="Svc_TypeMismatch" xml:space="preserve"><value>类型不匹配: '{0}' 需要 {1} 类型，当前的表 {2}</value></data>
+  <data name="Svc_IndexOutOfRange" xml:space="preserve"><value>索引 {0} 超出范围，数组长度为 {1}</value></data>
+  <data name="Svc_Score" xml:space="preserve"><value>分数</value></data>
+  <data name="Svc_Coordinate" xml:space="preserve"><value>匹配坐标</value></data>
+  <data name="Svc_UnsupportedSourceType" xml:space="preserve"><value>数据源类型不支持: {0}</value></data>
+  <data name="Svc_AxisExprFailed" xml:space="preserve"><value>{0}表达式解析失败: {1} => {2}</value></data>
+  <data name="Svc_AxisExprException" xml:space="preserve"><value>{0}表达式异常: {1}</value></data>
+  <data name="Svc_OcrNotConfigured" xml:space="preserve"><value>微信 OCR 未配置或未通过验证。</value></data>
+  <data name="Svc_ImageEmpty" xml:space="preserve"><value>输入图片为空。</value></data>
+  <data name="Svc_OcrInitFailed" xml:space="preserve"><value>微信 OCR 初始化失败。</value></data>
+  <data name="Svc_DllNotFound" xml:space="preserve"><value>未找到 wcocr.dll，请确认文件在应用程序目录下。</value></data>
+  <data name="Svc_OcrException" xml:space="preserve"><value>微信 OCR 错误: {0}</value></data>
+  <data name="Svc_TestSuccess" xml:space="preserve"><value>测试成功！识别到: {0}</value></data>
+  <data name="Svc_TestFailedNoResult" xml:space="preserve"><value>测试失败：微信 OCR 未返回结果。</value></data>
+  <data name="Svc_TestFailedDll" xml:space="preserve"><value>测试失败：未找到 wcocr.dll。</value></data>
+  <data name="Svc_TestFailedException" xml:space="preserve"><value>测试失败: {0}</value></data>
+  <data name="VM_WindowTitle" xml:space="preserve"><value>TaskFlow 自动化</value></data>
+  <data name="VM_FlowDefault" xml:space="preserve"><value>流程{0}</value></data>
+  <data name="VM_AddFlowLog" xml:space="preserve"><value>已添加流程页: {0}</value></data>
+  <data name="VM_KeepOneFlow" xml:space="preserve"><value>至少保留一个流程页</value></data>
+  <data name="VM_ConfirmDeleteFlow" xml:space="preserve"><value>确定删除流程页 "{0}" 吗？</value></data>
+  <data name="VM_DeleteConfirm" xml:space="preserve"><value>确认删除</value></data>
+  <data name="VM_DeleteFlowLog" xml:space="preserve"><value>已删除流程页: {0}</value></data>
+  <data name="VM_NewProject" xml:space="preserve"><value>========== 新建项目 ==========</value></data>
+  <data name="VM_SavedTo" xml:space="preserve"><value>已保存到: {0}</value></data>
+  <data name="VM_SaveFailed" xml:space="preserve"><value>保存失败: {0}</value></data>
+  <data name="VM_Error" xml:space="preserve"><value>错误</value></data>
+  <data name="VM_JsonFilter" xml:space="preserve"><value>JSON文件|*.json</value></data>
+  <data name="VM_LoadFailed" xml:space="preserve"><value>加载失败: {0}</value></data>
+  <data name="VM_Loaded" xml:space="preserve"><value>已加载: {0}</value></data>
+  <data name="VM_AutoLoaded" xml:space="preserve"><value>自动加载上次项目: {0}</value></data>
+  <data name="VM_AutoLoadFailed" xml:space="preserve"><value>自动加载失败: {0}</value></data>
+  <data name="VM_RunAllLog" xml:space="preserve"><value>========== 全部执行完毕 ==========</value></data>
+  <data name="VM_RepeatRound" xml:space="preserve"><value>========== 第 {0} 轮循环执行全部 ==========</value></data>
+  <data name="VM_StartRunAll" xml:space="preserve"><value>========== 开始执行全部流程 ==========</value></data>
+  <data name="VM_StartFlowTab" xml:space="preserve"><value>--- 开始执行流程页: {0} ({1}/{2}) ---</value></data>
+  <data name="VM_FlowTabDone" xml:space="preserve"><value>--- 流程页 {0} 执行完毕 ---</value></data>
+  <data name="VM_WaitInterval" xml:space="preserve"><value>--- 等待 {0}ms ---</value></data>
+  <data name="VM_RepeatWait" xml:space="preserve"><value>--- 重复执行间隔: 等待 {0}ms ---</value></data>
+  <data name="VM_ExecutionCancelled" xml:space="preserve"><value>已被取消</value></data>
+  <data name="VM_ExecutionError" xml:space="preserve"><value>执行出错: {0}</value></data>
+  <data name="VM_StartBranch" xml:space="preserve"><value>========== 开始执行流程分支: {0} 个任务卡片 ==========</value></data>
+  <data name="VM_StartSingle" xml:space="preserve"><value>========== 开始执行: {0} ==========</value></data>
+  <data name="VM_StopExecution" xml:space="preserve"><value>========== 停止执行 ==========</value></data>
+  <data name="VM_AddedTask" xml:space="preserve"><value>已添加: {0}</value></data>
+  <data name="VM_AddedIfElse" xml:space="preserve"><value>已添加If-Else分支</value></data>
+  <data name="VM_AddedElif" xml:space="preserve"><value>已添加Elif分支</value></data>
+  <data name="VM_AddedForLoop" xml:space="preserve"><value>已添加For循环</value></data>
+  <data name="VM_DeletedElif" xml:space="preserve"><value>删除Elif分支: {0} 个任务卡片</value></data>
+  <data name="VM_DeletedBranch" xml:space="preserve"><value>删除分支及其内容: {0} 个任务卡片</value></data>
+  <data name="VM_DeletedBranchAll" xml:space="preserve"><value>删除分支及其内容: {0} 个任务卡片</value></data>
+  <data name="VM_Deleted" xml:space="preserve"><value>已删除: {0}</value></data>
+  <data name="VM_BranchNoSingleDelete" xml:space="preserve"><value>分支任务卡片不支持单独删除</value></data>
+  <data name="VM_Duplicated" xml:space="preserve"><value>已复制: {0}</value></data>
+  <data name="VM_DuplicateFailed" xml:space="preserve"><value>复制失败: {0}</value></data>
+  <data name="VM_ClipboardEmpty" xml:space="preserve"><value>剪贴板为空，请先复制任务卡片</value></data>
+  <data name="VM_Pasted" xml:space="preserve"><value>已粘贴: {0}</value></data>
+  <data name="VM_PasteFailed" xml:space="preserve"><value>粘贴失败: {0}</value></data>
+  <data name="VM_CurrentTab" xml:space="preserve"><value>当前页</value></data>
+  <data name="VM_StartCurrentTab" xml:space="preserve"><value>========== 开始执行当前页: {0} ==========</value></data>
+  <data name="VM_CurrentTabDone" xml:space="preserve"><value>========== 当前页执行完毕: {0} ==========</value></data>
+  <data name="VM_LogModelReply" xml:space="preserve"><value>模型回复: {0}</value></data>
+  <data name="Expr_UnsupportedProperty" xml:space="preserve"><value>不支持的属性: {0}</value></data>
+  <data name="Expr_CannotParse" xml:space="preserve"><value>无法解析表达式: {0}</value></data>
+  <data name="Expr_UnsupportedOp" xml:space="preserve"><value>不支持的运算符: {0}</value></data>
+  <data name="Expr_UnsupportedNumOp" xml:space="preserve"><value>数值不支持该运算符: {0}</value></data>
+  <data name="Expr_UnsupportedStrOp" xml:space="preserve"><value>字符串不支持该运算符: {0}</value></data>
+  <data name="AC_OutputText" xml:space="preserve"><value>输出文本</value></data>
+  <data name="AC_XCoord" xml:space="preserve"><value>X坐标</value></data>
+  <data name="AC_YCoord" xml:space="preserve"><value>Y坐标</value></data>
+  <data name="AC_ExecResult" xml:space="preserve"><value>执行结果</value></data>
+  <data name="AC_LoopCounter" xml:space="preserve"><value>循环计数</value></data>
+  <data name="AC_CurrentTime" xml:space="preserve"><value>当前时间</value></data>
+  <data name="AC_BlobCount" xml:space="preserve"><value>Blob数量</value></data>
+  <data name="AC_ScaleFactor" xml:space="preserve"><value>缩放比例</value></data>
+  <data name="AC_MatchScore" xml:space="preserve"><value>匹配分数</value></data>
+  <data name="Json_FileNotFound" xml:space="preserve"><value>文件不存在: {0}</value></data>
+  <data name="Json_DefaultFlowName" xml:space="preserve"><value>流程</value></data>
+  <data name="Win32_Found" xml:space="preserve"><value>已找到: {0}</value></data>
+  <data name="Win32_NotFound" xml:space="preserve"><value>未找到</value></data>
+
+  <data name="Svc_ButtonNotSupported" xml:space="preserve"><value>按钮不支持的操作</value></data>
+  <data name="Svc_UIAutoFailed" xml:space="preserve"><value>UI自动化失败: {0}</value></data>
+  <data name="Svc_ScrollUp" xml:space="preserve"><value>上滚({0})</value></data>
+  <data name="Svc_ScrollDown" xml:space="preserve"><value>下滚({0})</value></data>
+  <data name="Svc_KeyPress" xml:space="preserve"><value>按键({0})</value></data>
+  <data name="Svc_Unknown" xml:space="preserve"><value>未知</value></data>
+  <data name="Svc_WinSimFailed" xml:space="preserve"><value>Win模拟失败</value></data>
+  <data name="Svc_PromptTextEmpty" xml:space="preserve"><value>提示文本为空。</value></data>
+  <data name="Svc_CannotGetSourceImg" xml:space="preserve"><value>无法获取源图片。</value></data>
+  <data name="Svc_CannotGetTemplateImg" xml:space="preserve"><value>无法获取模板图片。</value></data>
+  <data name="Svc_OcrFailed" xml:space="preserve"><value>OCR识别失败</value></data>
+  <data name="Svc_ColorSegFailed" xml:space="preserve"><value>颜色分割失败</value></data>
+  <data name="Svc_TargetSizeMustBePositive" xml:space="preserve"><value>目标宽和高度必须大于0</value></data>
+  <data name="Svc_TextEmpty" xml:space="preserve"><value>文本为空</value></data>
+  <data name="Svc_StringEmpty" xml:space="preserve"><value>字符串为空</value></data>
+  <data name="Svc_CharNotFound" xml:space="preserve"><value>未找到字符: {0}</value></data>
+  <data name="Svc_StartIndexOutOfRange" xml:space="preserve"><value>起始位置 {0} 超出字符范围 (0-{1})</value></data>
+  <data name="Svc_SubstrFailed" xml:space="preserve"><value>字符截取失败: {0}</value></data>
+  <data name="Svc_InputEmptyCheckExpr" xml:space="preserve"><value>输入为空，请检查源表达式</value></data>
+  <data name="Svc_NoConvertibleChars" xml:space="preserve"><value>"{0}" 中没有可转换的数字字符</value></data>
+  <data name="Svc_ConvertFailed" xml:space="preserve"><value>无法将 "{0}" 转换为整数: "{1}"</value></data>
+  <data name="Svc_ConvertException" xml:space="preserve"><value>类型转换失败: {0}</value></data>
+  <data name="Svc_ExprEmpty" xml:space="preserve"><value>表达式为空</value></data>
+  <data name="Svc_InvalidAssignment" xml:space="preserve"><value>无效的赋值语句: {0}\n格式应为: @变量名 = 表达式</value></data>
+  <data name="Svc_VarNotExist" xml:space="preserve"><value>变量 @{0} 不存在，请检查变量列表</value></data>
+  <data name="Svc_ExprEvalFailed" xml:space="preserve"><value>表达式解析失败: {0}</value></data>
+  <data name="Svc_ModelNotSelected" xml:space="preserve"><value>未选择模型。</value></data>
+  <data name="Svc_ModelDeleted" xml:space="preserve"><value>所选模型不存在或已被删除。</value></data>
+  <data name="Svc_PromptExprException" xml:space="preserve"><value>提示文本表达式异常: {0}</value></data>
+  <data name="Svc_PromptEmpty" xml:space="preserve"><value>提示文本为空。</value></data>
+  <data name="Svc_ApiFailed" xml:space="preserve"><value>API 调用失败: {0} - {1}</value></data>
+  <data name="Svc_ApiResultEmpty" xml:space="preserve"><value>API 返回结果为空或格式不正确</value></data>
+  <data name="Svc_CannotGetImgForVision" xml:space="preserve"><value>无法获取源图片或图片文件路径。</value></data>
+  <data name="Svc_VisionPromptExprException" xml:space="preserve"><value>视觉提示表达式异常: {0}</value></data>
+  <data name="Svc_VisionPromptEmpty" xml:space="preserve"><value>视觉提示为空。</value></data>
+  <data name="Svc_AdbClickFailed" xml:space="preserve"><value>ADB点击失败</value></data>
+  <data name="Svc_AdbUnknownAction" xml:space="preserve"><value>未知操作</value></data>
+  <data name="Svc_RoiWidth" xml:space="preserve"><value>ROI 宽</value></data>
+  <data name="Svc_RoiHeight" xml:space="preserve"><value>ROI 高</value></data>
+
+  <data name="Win_Position" xml:space="preserve"><value>位置: ({0}, {1})  H:{2} S:{3} V:{4}</value></data>
+  <data name="Win_ColorPicked" xml:space="preserve"><value>✔ 已拾取  H:{0} S:{1} V:{2}  (位置: {3}, {4})</value></data>
+  <data name="Win_PickColorFirst" xml:space="preserve"><value>请先点击图像拾取颜色</value></data>
+  <data name="Win_CannotCaptureScreen" xml:space="preserve"><value>无法截取图像: {0}</value></data>
+  <data name="Win_InitRoiStatus" xml:space="preserve"><value>初始ROI区: ({0}, {1}) {2}×{3} — 可直接拖动或重新绘制</value></data>
+  <data name="Win_RectRoiHint" xml:space="preserve"><value>矩形ROI：在图像上按住左键拖拽绘制矩形</value></data>
+  <data name="Win_AffineRoiHint" xml:space="preserve"><value>仿射ROI：在图像上点击4个角点，右键撤销</value></data>
+  <data name="Win_CircleRoiHint" xml:space="preserve"><value>圆形ROI：在图像上按住左键拖拽绘制圆形</value></data>
+  <data name="Win_SelectRoiTypeHint" xml:space="preserve"><value>请选择ROI类型后绘制，使用掩膜按钮进行遮蔽</value></data>
+  <data name="Win_EraserMode" xml:space="preserve"><value>橡皮擦模式：恢复涂抹区域。右键切换</value></data>
+  <data name="Win_PaintMode" xml:space="preserve"><value>画笔模式：涂抹遮蔽区域。右键切换为橡皮擦</value></data>
+  <data name="Win_EraserModeShort" xml:space="preserve"><value>橡皮擦模式：恢复</value></data>
+  <data name="Win_PaintModeShort" xml:space="preserve"><value>画笔模式：涂抹遮蔽区域</value></data>
+  <data name="Win_SelectRoiFirst" xml:space="preserve"><value>请先选择ROI区域</value></data>
+  <data name="Win_MaskSaved" xml:space="preserve"><value>✔ 已设掩膜</value></data>
+  <data name="Win_NoMask" xml:space="preserve"><value>未设掩膜</value></data>
+  <data name="Win_RectRoiDrawing" xml:space="preserve"><value>矩形ROI: ({0}, {1}) {2}×{3}</value></data>
+  <data name="Win_CircleRoiDrawing" xml:space="preserve"><value>圆形ROI: 圆心({0}, {1}) 半径{2}</value></data>
+  <data name="Win_RectRoiConfirmed" xml:space="preserve"><value>矩形ROI 已确认: ({0}, {1}) {2}×{3} — 完成！</value></data>
+  <data name="Win_CircleRoiConfirmed" xml:space="preserve"><value>圆形ROI 已确认: ({0}, {1}) {2}×{3} — 完成！</value></data>
+  <data name="Win_AffineRoiMarked" xml:space="preserve"><value>仿射ROI: 已标记 {0}/4 个角点</value></data>
+  <data name="Win_AffineRoiConfirmed" xml:space="preserve"><value>仿射ROI 已确认: ({0}, {1}) {2}×{3} — 完成！</value></data>
+  <data name="Win_TooSmallRedraw" xml:space="preserve"><value>区域太小，请重新绘制</value></data>
+  <data name="Win_SaveMaskFailed" xml:space="preserve"><value>保存掩膜失败: {0}</value></data>
+  <data name="Win_Executing" xml:space="preserve"><value>执行中...</value></data>
+  <data name="Win_WaitingExec" xml:space="preserve"><value>等待执行...</value></data>
+  <data name="Win_DrawRoiOnImage" xml:space="preserve"><value>请先在图像上绘制ROI区域。</value></data>
+  <data name="Win_RoiInvalid" xml:space="preserve"><value>ROI无效，请重新绘制。</value></data>
+  <data name="Win_TemplateSaved" xml:space="preserve"><value>模板已保存: {0}</value></data>
+  <data name="Win_SaveTemplateFailed" xml:space="preserve"><value>保存模板失败: {0}</value></data>
+  <data name="Win_TemplateRoiHint" xml:space="preserve"><value>请选择ROI类型后，在图像上绘制</value></data>
+  <data name="Win_TemplateRoiConfirmed" xml:space="preserve"><value>矩形ROI 已确认: ({0}, {1}) {2}×{3} — 完成！保存模板</value></data>
+  <data name="Win_TemplateCircleConfirmed" xml:space="preserve"><value>圆形ROI 已确认: ({0}, {1}) {2}×{3} — 完成！保存模板</value></data>
+  <data name="Win_TemplateAffineConfirmed" xml:space="preserve"><value>仿射ROI 已确认: ({0}, {1}) {2}×{3} — 完成！保存模板</value></data>
+  <data name="Win_TemplateDoneHint" xml:space="preserve"><value>完毕 — 请选择ROI类型后绘制</value></data>
+
+  <data name="UI_Settings" xml:space="preserve"><value>设置</value></data>
+  <data name="UI_SettingsManagement" xml:space="preserve"><value>设置管理</value></data>
+  <data name="UI_Startup" xml:space="preserve"><value>启动</value></data>
+  <data name="UI_AutoStart" xml:space="preserve"><value>开机自启</value></data>
+  <data name="UI_AutoLoadLast" xml:space="preserve"><value>启动时自动加载上次项目</value></data>
+  <data name="UI_RunAllOnStartup" xml:space="preserve"><value>启动后自动运行全部</value></data>
+  <data name="UI_HideOnStartup" xml:space="preserve"><value>启动后隐藏窗口</value></data>
+  <data name="UI_Execution" xml:space="preserve"><value>执行</value></data>
+  <data name="UI_FlowInterval" xml:space="preserve"><value>流程间隔 (ms)</value></data>
+  <data name="UI_RepeatExecution" xml:space="preserve"><value>重复执行</value></data>
+  <data name="UI_RepeatCount" xml:space="preserve"><value>重复次数</value></data>
+  <data name="UI_RepeatInterval" xml:space="preserve"><value>重复间隔 (ms)</value></data>
+  <data name="UI_LogOutput" xml:space="preserve"><value>日志与输出</value></data>
+  <data name="UI_ShowOverlay" xml:space="preserve"><value>运行时显示悬浮窗</value></data>
+  <data name="UI_AutoScrollLog" xml:space="preserve"><value>自动滚动日志</value></data>
+  <data name="UI_MaxLogLines" xml:space="preserve"><value>最大日志行数</value></data>
+  <data name="UI_Language" xml:space="preserve"><value>语言</value></data>
+  <data name="UI_LanguageLabel" xml:space="preserve"><value>界面语言</value></data>
+  <data name="UI_LangRestartHint" xml:space="preserve"><value>切换语言后需要重启应用</value></data>
+  <data name="UI_WeChatOcr" xml:space="preserve"><value>微信 OCR</value></data>
+  <data name="UI_OcrExePath" xml:space="preserve"><value>OCR 文件路径</value></data>
+  <data name="UI_OcrDirPath" xml:space="preserve"><value>运行时目录</value></data>
+  <data name="UI_AutoDetect" xml:space="preserve"><value>自动探测</value></data>
+  <data name="UI_TestOcr" xml:space="preserve"><value>测试可用性</value></data>
+  <data name="UI_About" xml:space="preserve"><value>关于</value></data>
+  <data name="UI_Version" xml:space="preserve"><value>版本</value></data>
+  <data name="UI_Save" xml:space="preserve"><value>保存</value></data>
+  <data name="UI_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="UI_OK" xml:space="preserve"><value>确定</value></data>
+  <data name="UI_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="UI_Add" xml:space="preserve"><value>添加</value></data>
+  <data name="UI_Rename" xml:space="preserve"><value>重命名</value></data>
+  <data name="UI_Delete" xml:space="preserve"><value>删除</value></data>
+  <data name="UI_Search" xml:space="preserve"><value>查找</value></data>
+  <data name="UI_Reset" xml:space="preserve"><value>重置</value></data>
+  <data name="UI_Complete" xml:space="preserve"><value>完成</value></data>
+  <data name="UI_AddVariable" xml:space="preserve"><value>添加变量</value></data>
+  <data name="UI_VarName" xml:space="preserve"><value>名称（@前缀自动添加）：</value></data>
+  <data name="UI_VarType" xml:space="preserve"><value>类型：</value></data>
+  <data name="UI_VarInitValue" xml:space="preserve"><value>初始值：</value></data>
+  <data name="UI_RenameTitle" xml:space="preserve"><value>重命名</value></data>
+  <data name="UI_NewName" xml:space="preserve"><value>新名称</value></data>
+  <data name="UI_SearchTask" xml:space="preserve"><value>查找</value></data>
+  <data name="UI_SearchKeyword" xml:space="preserve"><value>任务名称或关键词</value></data>
+  <data name="UI_FlowManager" xml:space="preserve"><value>流程管理</value></data>
+  <data name="UI_FlowManagerTitle" xml:space="preserve"><value>流程管理</value></data>
+  <data name="UI_VariableManager" xml:space="preserve"><value>变量管理</value></data>
+  <data name="UI_GlobalVars" xml:space="preserve"><value>全局变量</value></data>
+  <data name="UI_VarColumnName" xml:space="preserve"><value>名称</value></data>
+  <data name="UI_VarColumnType" xml:space="preserve"><value>类型</value></data>
+  <data name="UI_VarColumnValue" xml:space="preserve"><value>当前值</value></data>
+  <data name="UI_ModelManager" xml:space="preserve"><value>LLM 模型管理</value></data>
+  <data name="UI_AllModels" xml:space="preserve"><value>全部模型管理</value></data>
+  <data name="UI_ModelDisplayName" xml:space="preserve"><value>显示名称</value></data>
+  <data name="UI_ModelTokenStats" xml:space="preserve"><value>Token 统计</value></data>
+  <data name="UI_AddModel" xml:space="preserve"><value>添加模型</value></data>
+  <data name="UI_EditModel" xml:space="preserve"><value>修改模型</value></data>
+  <data name="UI_DeleteModel" xml:space="preserve"><value>删除模型</value></data>
+  <data name="UI_TestModel" xml:space="preserve"><value>测试</value></data>
+  <data name="UI_ResetTokens" xml:space="preserve"><value>重置Token</value></data>
+  <data name="UI_ModelEditTitle" xml:space="preserve"><value>编辑模型</value></data>
+  <data name="UI_DisplayName" xml:space="preserve"><value>显示名称</value></data>
+  <data name="UI_ModelApiHint" xml:space="preserve"><value>例如：https://api.openai.com/v1/chat/completions</value></data>
+  <data name="UI_ModelName" xml:space="preserve"><value>实际模型 (Model Name)</value></data>
+  <data name="UI_ModelNameHint" xml:space="preserve"><value>例如：gpt-4o, gpt-3.5-turbo</value></data>
+  <data name="UI_TimeoutSec" xml:space="preserve"><value>超时时间 (秒)</value></data>
+  <data name="UI_TaskProperty" xml:space="preserve"><value>属性</value></data>
+  <data name="UI_EditProperties" xml:space="preserve"><value>编辑属性</value></data>
+  <data name="UI_Properties" xml:space="preserve"><value>属性</value></data>
+  <data name="UI_ColorPicker" xml:space="preserve"><value>颜色吸笔 - 点击图像拾取颜色</value></data>
+  <data name="UI_ColorPickerHint" xml:space="preserve"><value>👆 点击图像上的位置拾取颜色的HSV值，用于自动化</value></data>
+  <data name="UI_ClickToPickColor" xml:space="preserve"><value>点击图像拾取颜色</value></data>
+  <data name="UI_MaskPaint" xml:space="preserve"><value>掩膜绘制</value></data>
+  <data name="UI_Brush" xml:space="preserve"><value>🖌 画笔</value></data>
+  <data name="UI_Eraser" xml:space="preserve"><value>🧹 橡皮擦</value></data>
+  <data name="UI_BrushSize" xml:space="preserve"><value>画笔大小:</value></data>
+  <data name="UI_MaskAll" xml:space="preserve"><value>遮蔽全部</value></data>
+  <data name="UI_ClearAll" xml:space="preserve"><value>清除全部</value></data>
+  <data name="UI_MaskHint" xml:space="preserve"><value>左键涂抹遮蔽区域，右键切换画笔/橡皮擦</value></data>
+  <data name="UI_RoiSelection" xml:space="preserve"><value>框选ROI区域</value></data>
+  <data name="UI_RectRoi" xml:space="preserve"><value>▢ 矩形ROI</value></data>
+  <data name="UI_AffineRoi" xml:space="preserve"><value>◇ 仿射ROI</value></data>
+  <data name="UI_CircleRoi" xml:space="preserve"><value>○ 圆形ROI</value></data>
+  <data name="UI_ClearRoi" xml:space="preserve"><value>清除ROI</value></data>
+  <data name="UI_MaskLabel" xml:space="preserve"><value>掩膜:</value></data>
+  <data name="UI_TemplateTraining" xml:space="preserve"><value>模板训练</value></data>
+  <data name="UI_Overlay_SwitchFlow" xml:space="preserve"><value>切换到下一个流程</value></data>
+  <data name="UI_Overlay_RunAll" xml:space="preserve"><value>运行全部流程</value></data>
+  <data name="UI_Overlay_RunCurrent" xml:space="preserve"><value>运行当前流程</value></data>
+  <data name="UI_Overlay_Stop" xml:space="preserve"><value>停止执行</value></data>
+  <data name="UI_Overlay_ShowMain" xml:space="preserve"><value>显示主窗口</value></data>
+  <data name="UI_Overlay_Prev" xml:space="preserve"><value>上一个</value></data>
+  <data name="UI_Overlay_Current" xml:space="preserve"><value>当前</value></data>
+  <data name="UI_Overlay_Next" xml:space="preserve"><value>下一个</value></data>
+  <data name="UI_MainTooltipRun" xml:space="preserve"><value>运行</value></data>
+  <data name="UI_MainTooltipSearch" xml:space="preserve"><value>搜索</value></data>
+  <data name="UI_MainTooltipStartOverlay" xml:space="preserve"><value>开启实时悬浮窗</value></data>
+  <data name="UI_MainTooltipStopOverlay" xml:space="preserve"><value>停止实时悬浮窗</value></data>
+  <data name="UI_TokenFormat" xml:space="preserve"><value>总计 {0:N0} (入:{1:N0} 出:{2:N0})</value></data>
+  <data name="UI_HelpNotFound" xml:space="preserve">
+    <value>帮助文档不存在，请检查安装目录。</value>
+  </data>
+  <data name="Dlg_LangChangedMsg" xml:space="preserve">
+    <value>语言已更改，请重启应用以使更改生效。</value>
+  </data>
+  <data name="UI_Confirm" xml:space="preserve"><value>确认</value></data>
+</root>

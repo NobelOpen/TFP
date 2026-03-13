@@ -1,0 +1,64 @@
+﻿<Window x:Class="TaskFlow.Views.Dialogs.ColorPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="颜色吸笔 - 点击图像拾取颜色" 
+        Height="600" Width="800"
+        WindowStartupLocation="CenterOwner"
+        Background="#faf9f5"
+        ResizeMode="CanResizeWithGrip">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 提示 -->
+        <TextBlock x:Name="TxtColorHint" Text="👆 点击图像上的位置拾取颜色的HSV值将自动填充" 
+                   Foreground="#6b6a65" FontSize="13" Margin="12,8" HorizontalAlignment="Center"/>
+
+        <!-- 图像区域 -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                      Background="#f0efe8">
+            <Canvas x:Name="ImageCanvas" MouseLeftButtonDown="ImageCanvas_MouseLeftButtonDown"
+                    MouseMove="ImageCanvas_MouseMove" Cursor="Cross">
+                <Image x:Name="SourceImage" Stretch="None"/>
+            </Canvas>
+        </ScrollViewer>
+
+        <!-- 底部信息栏 -->
+        <Border Grid.Row="2" Background="White" Padding="12,8" BorderBrush="#e8e6dc" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Border x:Name="ColorPreview" Width="32" Height="32" 
+                        BorderBrush="#e8e6dc" BorderThickness="1" CornerRadius="6"
+                        Margin="0,0,12,0"/>
+                <TextBlock x:Name="InfoText" Text="请点击图像拾取颜色" 
+                           Foreground="#141413" FontSize="14" VerticalAlignment="Center"
+                           Margin="0,0,16,0"/>
+                <Button x:Name="BtnOK" Content="确定" Click="OK_Click" IsDefault="True"
+                        Background="#d97757" Foreground="White" Padding="20,6"
+                        BorderThickness="0" Cursor="Hand" Margin="0,0,8,0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <Button x:Name="BtnCancel" Content="取消" Click="Cancel_Click" IsCancel="True"
+                        Background="#f0efe8" Foreground="#141413" Padding="20,6"
+                        BorderThickness="0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

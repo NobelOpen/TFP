@@ -1,0 +1,374 @@
+<Window x:Class="TaskFlow.Views.Dialogs.SettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="设置"
+        Width="480" Height="520"
+        WindowStartupLocation="CenterOwner"
+        Background="#faf9f5"
+        FontFamily="{StaticResource FontBody}"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- 标签样式 -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#d97757"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontTitle}"/>
+            <Setter Property="Margin" Value="0,12,0,6"/>
+        </Style>
+        <Style x:Key="SettingLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SettingCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="CheckBorder" Width="16" Height="16"
+                                    Background="White" BorderBrush="#e8e6dc"
+                                    BorderThickness="1" CornerRadius="4" Margin="0,0,6,0"
+                                    VerticalAlignment="Center">
+                                <Path x:Name="CheckMark" Data="M2,5 L5,8 10,2"
+                                      Stroke="White" StrokeThickness="2"
+                                      Visibility="Collapsed"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckBorder" Property="Background" Value="#d97757"/>
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#d97757"/>
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#c8c6be"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SettingTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="BorderBrush" Value="#e8e6dc"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Width" Value="120"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 统一圆角下拉框样式（与整体软件设计风格一致） -->
+        <Style x:Key="SettingComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="BorderBrush" Value="#e8e6dc"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="#141413"/>
+                        <Setter Property="Padding" Value="8,5"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter Property="Background" Value="#f0efe8"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Focusable="false" ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Border" Background="White"
+                                                BorderBrush="#e8e6dc" BorderThickness="1" CornerRadius="6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition/>
+                                                    <ColumnDefinition Width="24"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Path Grid.Column="1" Data="M0,0 L4,4 8,0" Stroke="#6b6a65" StrokeThickness="1.5"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="#c8c6be"/>
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="#d97757"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter x:Name="ContentSite"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                              Margin="10,5,28,5" VerticalAlignment="Center"
+                                              HorizontalAlignment="Left" IsHitTestVisible="False"/>
+                            <Popup x:Name="Popup" Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True" Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Grid x:Name="DropDown" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}" SnapsToDevicePixels="True">
+                                    <Border x:Name="DropDownBorder" Background="White" BorderBrush="#e8e6dc" BorderThickness="1" CornerRadius="6" Margin="0,2,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#20000000" BlurRadius="8" ShadowDepth="2" Direction="270"/>
+                                        </Border.Effect>
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 细圆柱滚动条样式（与主窗口一致） -->
+        <SolidColorBrush x:Key="ScrollBar.Static.Background" Color="#f0efe8"/>
+        <SolidColorBrush x:Key="ScrollBar.Static.Border" Color="Transparent"/>
+        <SolidColorBrush x:Key="ScrollBar.Static.Thumb" Color="#c8c6be"/>
+        <SolidColorBrush x:Key="ScrollBar.MouseOver.Thumb" Color="#b0aea5"/>
+        <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="#8a8880"/>
+
+        <Style x:Key="DarkScrollThumbStyle" TargetType="Thumb">
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border CornerRadius="4" 
+                                Background="{TemplateBinding Background}"
+                                Margin="2" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="{StaticResource ScrollBar.Static.Background}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource ScrollBar.Static.Border}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="MinWidth" Value="10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid x:Name="Bg" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                            <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
+                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="true">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="false"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="false"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource DarkScrollThumbStyle}" Background="{StaticResource ScrollBar.Static.Thumb}" x:Name="Thumb"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.MouseOver.Thumb}"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="true" SourceName="Thumb">
+                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.Pressed.Thumb}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Border Padding="20">
+        <StackPanel>
+            <!-- 大标题 -->
+            <TextBlock x:Name="TxtTitle" Text="设置管理" 
+                       Foreground="#d97757" 
+                       FontSize="16" 
+                       FontWeight="SemiBold"
+                       FontFamily="{StaticResource FontTitle}"
+                       Margin="0,0,0,12"/>
+
+            <!-- 启动设置 -->
+            <TextBlock x:Name="TxtStartupSection" Text="启动设置" Style="{StaticResource SectionHeader}"/>
+            <CheckBox x:Name="ChkAutoStart" Content="开机自启动" Style="{StaticResource SettingCheckBox}"/>
+            <CheckBox x:Name="ChkAutoLoadLast" Content="启动时自动加载上次项目" Style="{StaticResource SettingCheckBox}"/>
+            <CheckBox x:Name="ChkRunAllOnStartup" Content="启动后立即运行全部流程" Style="{StaticResource SettingCheckBox}"/>
+            <CheckBox x:Name="ChkHideOnStartup" Content="启动后立即隐藏窗口" Style="{StaticResource SettingCheckBox}"/>
+
+            <!-- 执行设置 -->
+            <TextBlock x:Name="TxtExecSection" Text="执行设置" Style="{StaticResource SectionHeader}"/>
+            <DockPanel Margin="0,4">
+                <TextBlock x:Name="TxtFlowIntervalLabel" Text="流程执行间隔 (毫秒):" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
+                <TextBox x:Name="TxtFlowInterval" Style="{StaticResource SettingTextBox}"/>
+            </DockPanel>
+            <CheckBox x:Name="ChkRepeatRunAll" Content="重复循环执行全部流程" Style="{StaticResource SettingCheckBox}"/>
+            <DockPanel Margin="0,4">
+                <TextBlock x:Name="TxtRepeatIntervalLabel" Text="重复执行间隔 (毫秒):" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
+                <TextBox x:Name="TxtRepeatInterval" Style="{StaticResource SettingTextBox}"/>
+            </DockPanel>
+            <CheckBox x:Name="ChkKeepScreenOn" Content="运行中保持屏幕不息屏" Style="{StaticResource SettingCheckBox}"/>
+
+            <!-- 日志设置 -->
+            <TextBlock x:Name="TxtLogSection" Text="日志设置" Style="{StaticResource SectionHeader}"/>
+            <DockPanel Margin="0,4">
+                <TextBlock x:Name="TxtMaxLogLinesLabel" Text="日志最大行数:" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
+                <TextBox x:Name="TxtMaxLogLines" Style="{StaticResource SettingTextBox}"/>
+            </DockPanel>
+            <CheckBox x:Name="ChkAutoSaveLog" Content="自动保存日志到文件" Style="{StaticResource SettingCheckBox}"/>
+
+            <!-- OCR引擎设置 -->
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,6">
+                <TextBlock x:Name="TxtOcrSection" Text="OCR 引擎设置" Style="{StaticResource SectionHeader}" Margin="0"/>
+                <TextBlock x:Name="TxtOcrStatus" Text="状态: ⚠ 未配置" Foreground="#b0aea5" FontSize="12" 
+                           VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </StackPanel>
+            <TextBlock x:Name="TxtOcrExeLabel" Text="OCR 可执行文件路径:" Style="{StaticResource SettingLabel}" Margin="0,4,0,2"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBox x:Name="TxtOcrExePath" Style="{StaticResource SettingTextBox}" Width="340"/>
+                <Button x:Name="BtnBrowseOcrExe" Content="浏览"
+                        Click="BrowseOcrExe_Click" Margin="6,0,0,0" Padding="8,4" Cursor="Hand"
+                        Background="#e8e6dc" BorderThickness="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+            <TextBlock x:Name="TxtOcrDirLabel" Text="微信运行时目录:" Style="{StaticResource SettingLabel}" Margin="0,4,0,2"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBox x:Name="TxtOcrDirPath" Style="{StaticResource SettingTextBox}" Width="340"/>
+                <Button x:Name="BtnBrowseOcrDir" Content="浏览"
+                        Click="BrowseOcrDir_Click" Margin="6,0,0,0" Padding="8,4" Cursor="Hand"
+                        Background="#e8e6dc" BorderThickness="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                <Button x:Name="BtnAutoDetect" Content="自动探测" Click="AutoDetect_Click"
+                        Background="#e8e6dc" Foreground="#141413" Padding="12,6" BorderThickness="0" Cursor="Hand" Margin="0,0,8,0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <Button x:Name="BtnTestOcr" Content="测试可用性" Click="TestOcr_Click"
+                        Background="#4A90D9" Foreground="White" Padding="12,6" BorderThickness="0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+
+            <!-- 语言设置 -->
+            <TextBlock x:Name="TxtLangSection" Text="语言设置 / Language" Style="{StaticResource SectionHeader}"/>
+            <DockPanel Margin="0,4">
+                <TextBlock x:Name="TxtLangLabel" Text="Interface language / 界面语言:" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
+                <ComboBox x:Name="CmbLanguage" Width="160" HorizontalAlignment="Left" SelectedIndex="0"
+                          Style="{StaticResource SettingComboBox}">
+                    <ComboBoxItem Content="English" Tag="en"/>
+                    <ComboBoxItem Content="中文" Tag="zh-CN"/>
+                </ComboBox>
+            </DockPanel>
+            <TextBlock x:Name="TxtLangHint" Text="* Restart required after language change" Foreground="#b0aea5" FontSize="11" Margin="0,2,0,0"/>
+
+            <!-- 关于 -->
+            <TextBlock x:Name="TxtAboutSection" Text="ℹ About / 关于" Style="{StaticResource SectionHeader}"/>
+            <TextBlock x:Name="TxtVersion" Foreground="#b0aea5" FontSize="13" Margin="0,2"/>
+
+            <!-- 按钮 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button x:Name="BtnSave" Content="保存" Click="Save_Click" IsDefault="True"
+                        Width="80" Height="32" Margin="0,0,8,0"
+                        Background="#d97757" Foreground="White" 
+                        BorderThickness="0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#e08868"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <Button x:Name="BtnCancel" Content="取消" Click="Cancel_Click" IsCancel="True"
+                        Width="80" Height="32"
+                        Background="#141413" Foreground="#faf9f5" 
+                        BorderThickness="0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#2a2a28"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+    </ScrollViewer>
+</Window>
