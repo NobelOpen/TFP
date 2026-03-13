@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Windows;
 using TaskFlow.Resources;
 using System.Windows.Input;
@@ -29,6 +29,15 @@ namespace TaskFlow.Views.Dialogs
             var workArea = SystemParameters.WorkArea;
             Left = workArea.Right - Width - 16;
             Top = workArea.Top + 16;
+
+            this.MouseEnter += (s, e) => { this.Opacity = 1.0; };
+            this.MouseLeave += (s, e) => 
+            { 
+                if (_viewModel.IsRunning)
+                {
+                    this.Opacity = 0.5;
+                }
+            };
 
             // 监听 ViewModel 属性变化
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
@@ -103,6 +112,11 @@ namespace TaskFlow.Views.Dialogs
                 RunAllIcon.Foreground = new SolidColorBrush(Color.FromRgb(176, 174, 165));
                 RunCurrentIcon.Foreground = new SolidColorBrush(Color.FromRgb(176, 174, 165));
                 StopIcon.Foreground = new SolidColorBrush(Color.FromRgb(161, 38, 13));  // #a1260d
+
+                if (!IsMouseOver)
+                {
+                    this.Opacity = 0.5;
+                }
             }
             else
             {
@@ -111,6 +125,8 @@ namespace TaskFlow.Views.Dialogs
                 RunAllIcon.Foreground = new SolidColorBrush(Color.FromRgb(56, 138, 52));    // #388a34
                 RunCurrentIcon.Foreground = new SolidColorBrush(Color.FromRgb(42, 161, 152)); // #2aa198
                 StopIcon.Foreground = new SolidColorBrush(Color.FromRgb(176, 174, 165));      // 灰色
+
+                this.Opacity = 1.0;
             }
         }
 

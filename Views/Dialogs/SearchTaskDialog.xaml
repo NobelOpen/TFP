@@ -1,4 +1,4 @@
-﻿<Window x:Class="TaskFlow.Views.Dialogs.SearchTaskDialog"
+<Window x:Class="TaskFlow.Views.Dialogs.SearchTaskDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="查找任务" 
@@ -74,12 +74,25 @@
         <TextBlock x:Name="TxtSearchLabel" Grid.Row="0" Text="输入编号或名称" Foreground="#6b6a65" FontSize="12" Margin="0,0,0,6"/>
         
         <TextBox x:Name="SearchTextBox" Grid.Row="1"
-                 Height="32" FontSize="14"
+                 MinHeight="36" FontSize="14"
                  Background="White" Foreground="#141413"
-                 BorderBrush="#e8e6dc" Padding="8,4"
+                 BorderBrush="#e8e6dc" BorderThickness="1"
+                 Padding="8,8"
                  VerticalContentAlignment="Center"
                  TextChanged="SearchTextBox_TextChanged"
-                 PreviewKeyDown="SearchTextBox_PreviewKeyDown"/>
+                 PreviewKeyDown="SearchTextBox_PreviewKeyDown">
+            <TextBox.Template>
+                <ControlTemplate TargetType="TextBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                    </Border>
+                </ControlTemplate>
+            </TextBox.Template>
+        </TextBox>
 
         <!-- 补全建议列表 -->
         <ListBox x:Name="SuggestionList" Grid.Row="2"

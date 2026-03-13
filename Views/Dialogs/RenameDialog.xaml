@@ -73,10 +73,10 @@
         
         <TextBox x:Name="NameTextBox" 
                  Grid.Row="1"
-                 Height="32" FontSize="14"
+                 MinHeight="36" FontSize="14"
                  Background="White" Foreground="#141413"
                  BorderBrush="#e8e6dc" BorderThickness="1"
-                 Padding="8,4"
+                 Padding="8,8"
                  VerticalContentAlignment="Center">
             <TextBox.Template>
                 <ControlTemplate TargetType="TextBox">

@@ -64,14 +64,14 @@
   <data name="TaskType_EndAllFlows" xml:space="preserve"><value>End All Flows</value></data>
   <data name="TaskType_PauseTask" xml:space="preserve"><value>Pause All Tasks</value></data>
   <data name="TaskType_BreakLoop" xml:space="preserve"><value>Break Loop</value></data>
-  <data name="TaskType_WinLaunchApp" xml:space="preserve"><value>Launch App</value></data>
+  <data name="TaskType_WinLaunchApp" xml:space="preserve"><value>Win Launch App</value></data>
   <data name="TaskType_WinScreenshot" xml:space="preserve"><value>Win Screenshot Tool</value></data>
   <data name="TaskType_WinClick" xml:space="preserve"><value>Win Simulate Click</value></data>
   <data name="TaskType_WinCloseApp" xml:space="preserve"><value>Win Close App</value></data>
   <data name="TaskType_WinUiAutomation" xml:space="preserve"><value>WinUI Automation</value></data>
   <data name="TaskType_WinSimulateInput" xml:space="preserve"><value>Win Simulate Input</value></data>
   <data name="TaskType_WinSubtitle" xml:space="preserve"><value>Win Subtitle Prompt</value></data>
-  <data name="TaskType_AdbConnect" xml:space="preserve"><value>ADB Connect</value></data>
+  <data name="TaskType_AdbConnect" xml:space="preserve"><value>ADB Connect Device</value></data>
   <data name="TaskType_AdbLaunchApp" xml:space="preserve"><value>ADB Launch App</value></data>
   <data name="TaskType_AdbScreenshot" xml:space="preserve"><value>ADB Screenshot Tool</value></data>
   <data name="TaskType_AdbClick" xml:space="preserve"><value>ADB Simulate Click</value></data>

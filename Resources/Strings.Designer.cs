@@ -82,14 +82,14 @@ namespace TaskFlow.Resources {
         public static string TaskType_EndAllFlows => ResourceManager.GetString("TaskType_EndAllFlows", resourceCulture) ?? "End All Flows";
         public static string TaskType_PauseTask => ResourceManager.GetString("TaskType_PauseTask", resourceCulture) ?? "Pause All Tasks";
         public static string TaskType_BreakLoop => ResourceManager.GetString("TaskType_BreakLoop", resourceCulture) ?? "Break Loop";
-        public static string TaskType_WinLaunchApp => ResourceManager.GetString("TaskType_WinLaunchApp", resourceCulture) ?? "Launch App";
+        public static string TaskType_WinLaunchApp => ResourceManager.GetString("TaskType_WinLaunchApp", resourceCulture) ?? "Win Launch App";
         public static string TaskType_WinScreenshot => ResourceManager.GetString("TaskType_WinScreenshot", resourceCulture) ?? "Win Screenshot Tool";
         public static string TaskType_WinClick => ResourceManager.GetString("TaskType_WinClick", resourceCulture) ?? "Win Simulate Click";
         public static string TaskType_WinCloseApp => ResourceManager.GetString("TaskType_WinCloseApp", resourceCulture) ?? "Win Close App";
         public static string TaskType_WinUiAutomation => ResourceManager.GetString("TaskType_WinUiAutomation", resourceCulture) ?? "WinUI Automation";
         public static string TaskType_WinSimulateInput => ResourceManager.GetString("TaskType_WinSimulateInput", resourceCulture) ?? "Win Simulate Input";
         public static string TaskType_WinSubtitle => ResourceManager.GetString("TaskType_WinSubtitle", resourceCulture) ?? "Win Subtitle Prompt";
-        public static string TaskType_AdbConnect => ResourceManager.GetString("TaskType_AdbConnect", resourceCulture) ?? "ADB Connect";
+        public static string TaskType_AdbConnect => ResourceManager.GetString("TaskType_AdbConnect", resourceCulture) ?? "ADB Connect Device";
         public static string TaskType_AdbLaunchApp => ResourceManager.GetString("TaskType_AdbLaunchApp", resourceCulture) ?? "ADB Launch App";
         public static string TaskType_AdbScreenshot => ResourceManager.GetString("TaskType_AdbScreenshot", resourceCulture) ?? "ADB Screenshot Tool";
         public static string TaskType_AdbClick => ResourceManager.GetString("TaskType_AdbClick", resourceCulture) ?? "ADB Simulate Click";

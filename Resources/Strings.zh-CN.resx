@@ -64,14 +64,14 @@
   <data name="TaskType_EndAllFlows" xml:space="preserve"><value>结束全部流程</value></data>
   <data name="TaskType_PauseTask" xml:space="preserve"><value>暂停全部任务</value></data>
   <data name="TaskType_BreakLoop" xml:space="preserve"><value>中止循环</value></data>
-  <data name="TaskType_WinLaunchApp" xml:space="preserve"><value>启动应用</value></data>
+  <data name="TaskType_WinLaunchApp" xml:space="preserve"><value>Win启动应用</value></data>
   <data name="TaskType_WinScreenshot" xml:space="preserve"><value>Win截屏工具</value></data>
   <data name="TaskType_WinClick" xml:space="preserve"><value>Win模拟点击</value></data>
   <data name="TaskType_WinCloseApp" xml:space="preserve"><value>Win关闭应用</value></data>
   <data name="TaskType_WinUiAutomation" xml:space="preserve"><value>WinUI自动化</value></data>
   <data name="TaskType_WinSimulateInput" xml:space="preserve"><value>Win模拟输入</value></data>
   <data name="TaskType_WinSubtitle" xml:space="preserve"><value>Win字幕提示</value></data>
-  <data name="TaskType_AdbConnect" xml:space="preserve"><value>ADB连接</value></data>
+  <data name="TaskType_AdbConnect" xml:space="preserve"><value>ADB连接设备</value></data>
   <data name="TaskType_AdbLaunchApp" xml:space="preserve"><value>ADB启动应用</value></data>
   <data name="TaskType_AdbScreenshot" xml:space="preserve"><value>ADB截屏工具</value></data>
   <data name="TaskType_AdbClick" xml:space="preserve"><value>ADB模拟点击</value></data>
