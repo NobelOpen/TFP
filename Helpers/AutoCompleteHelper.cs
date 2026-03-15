@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -273,6 +273,32 @@ namespace TaskFlow.Helpers
             // 图像缩放输出缩放倍率
             if (task.TaskType == TaskType.ImgResize)
                 outputs.Add(new TaskOutput("缩放倍率", "缩放倍率"));
+
+            // 数组生成输出：数组当前容量、保存文件路径
+            if (task.TaskType == TaskType.ArrayBuilder)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_ArrayCapacity, "数组当前容量"));
+                outputs.Add(new TaskOutput(Strings.AC_SaveFilePath, "保存文件路径"));
+            }
+
+            // LLM文件翻译输出：已翻译文件路径
+            if (task.TaskType == TaskType.LlmFileTranslate)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_TranslatedFilePath, "已翻译文件路径"));
+            }
+
+            // 读取文件输出：数组元素数量
+            if (task.TaskType == TaskType.FileRead)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_FileReadArrayCount, "数组元素数量"));
+            }
+
+            // 匹配查找输出：匹配索引、匹配值
+            if (task.TaskType == TaskType.ArraySearch)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_MatchIndex, "匹配索引"));
+                outputs.Add(new TaskOutput(Strings.AC_MatchValue, "匹配值"));
+            }
 
             return outputs;
         }

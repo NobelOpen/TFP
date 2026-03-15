@@ -1026,6 +1026,265 @@ namespace TaskFlow.Services
         }
 
         #endregion
+
+        #region FileRead / EventListener / ArraySearch 执行器
+
+        /// <summary>
+        /// 读取文件，按分隔符分割成数组并缓存
+        /// </summary>
+        private async Task<bool> ExecuteFileReadAsync(
+            FileReadTaskCard task, IList<TaskCardBase> allTasks, CancellationToken ct)
+        {
+            try
+            {
+                // 解析文件路径表达式
+                string filePath = task.FilePathExpression;
+                if (!string.IsNullOrWhiteSpace(filePath))
+                {
+                    filePath = _variableStore.ResolveVariableReferences(filePath);
+                    filePath = ExpressionEvaluator.ResolveExpression(filePath, allTasks, _variableStore);
+                    filePath = filePath.Trim('"');
+                }
+
+                if (string.IsNullOrWhiteSpace(filePath) || !System.IO.File.Exists(filePath))
+                {
+                    task.ErrorMessage = $"文件不存在: {filePath}";
+                    return false;
+                }
+
+                // 检查缓存：路径不变时跳过 IO
+                if (_fileReadData.TryGetValue(task.Id, out var cached) && cached.Path == filePath)
+                {
+                    task.OutputArrayCount = cached.Data.Count;
+                    Log($"[{DateTime.Now:HH:mm:ss}] 读取文件: 使用缓存，{cached.Data.Count} 条数据");
+                    return true;
+                }
+
+                // 读取文件
+                string content = await System.IO.File.ReadAllTextAsync(filePath, System.Text.Encoding.UTF8, ct);
+
+                // 解析分隔符（处理转义字符）
+                string delimiter = task.Delimiter;
+                delimiter = delimiter.Replace("\\n", "\n").Replace("\\t", "\t").Replace("\\r", "\r");
+
+                // 分割
+                var data = string.IsNullOrEmpty(delimiter)
+                    ? new List<string> { content }
+                    : content.Split(new[] { delimiter }, StringSplitOptions.None).ToList();
+
+                // 移除末尾空元素
+                while (data.Count > 0 && string.IsNullOrEmpty(data[^1]))
+                    data.RemoveAt(data.Count - 1);
+
+                // 缓存
+                _fileReadData[task.Id] = (filePath, data);
+                task.OutputArrayCount = data.Count;
+
+                Log($"[{DateTime.Now:HH:mm:ss}] 读取文件: {filePath}, {data.Count} 条数据");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 事件监听：使用 GetAsyncKeyState 轮询，等待指定输入事件
+        /// </summary>
+        private async Task<bool> ExecuteEventListenerAsync(
+            EventListenerTaskCard task, CancellationToken ct)
+        {
+            try
+            {
+                // 映射事件类型到虚拟键码
+                int vkCode = task.EventType switch
+                {
+                    "MouseLeft" => 0x01,   // VK_LBUTTON
+                    "MouseRight" => 0x02,  // VK_RBUTTON
+                    "Enter" => 0x0D,       // VK_RETURN
+                    "Space" => 0x20,       // VK_SPACE
+                    _ => 0x01              // 默认鼠标左键
+                };
+
+                Log($"[{DateTime.Now:HH:mm:ss}] 事件监听: 等待 {task.EventType} 事件...");
+
+                // 先等待按键释放（避免上次点击残留）
+                while (IsKeyDown(vkCode))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    await Task.Delay(20, ct);
+                }
+
+                // 持续轮询，等待按键按下
+                while (!IsKeyDown(vkCode))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    await Task.Delay(30, ct);
+                }
+
+                Log($"[{DateTime.Now:HH:mm:ss}] 事件监听: {task.EventType} 已触发");
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                task.ErrorMessage = "任务已取消";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = ex.Message;
+                return false;
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+
+        private static bool IsKeyDown(int vkCode)
+        {
+            return (GetAsyncKeyState(vkCode) & 0x8000) != 0;
+        }
+
+        /// <summary>
+        /// 匹配查找：在数组中搜索文本
+        /// </summary>
+        private bool ExecuteArraySearch(
+            ArraySearchTaskCard task, IList<TaskCardBase> allTasks)
+        {
+            try
+            {
+                // 解析搜索文本
+                string searchText = task.SearchExpression;
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    searchText = _variableStore.ResolveVariableReferences(searchText);
+                    searchText = ExpressionEvaluator.ResolveExpression(searchText, allTasks, _variableStore);
+                    searchText = searchText.Trim('"');
+                }
+
+                // 通过 SourceTaskIdForArray 定位数组来源任务
+                List<string>? dataList = null;
+                if (task.SourceTaskIdForArray.HasValue)
+                {
+                    var refTask = allTasks.FirstOrDefault(t => t.Id == task.SourceTaskIdForArray.Value);
+                    if (refTask is FileReadTaskCard)
+                    {
+                        if (_fileReadData.TryGetValue(refTask.Id, out var cached))
+                            dataList = cached.Data;
+                    }
+                    else if (refTask is ArrayBuilderTaskCard)
+                    {
+                        if (_arrayBuilderData.TryGetValue(refTask.Id, out var abData))
+                            dataList = abData;
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(task.ArraySourceExpression))
+                {
+                    // 向后兼容：旧的表达式解析逻辑
+                    string arrayRef = _variableStore.ResolveVariableReferences(task.ArraySourceExpression);
+                    var refMatch = System.Text.RegularExpressions.Regex.Match(arrayRef, @"#(\d+)");
+                    if (refMatch.Success)
+                    {
+                        int order = int.Parse(refMatch.Groups[1].Value);
+                        var refTask = allTasks.FirstOrDefault(t => t.Order == order);
+                        if (refTask is FileReadTaskCard)
+                        {
+                            if (_fileReadData.TryGetValue(refTask.Id, out var cached))
+                                dataList = cached.Data;
+                        }
+                        else if (refTask is ArrayBuilderTaskCard)
+                        {
+                            if (_arrayBuilderData.TryGetValue(refTask.Id, out var abData))
+                                dataList = abData;
+                        }
+                    }
+                }
+
+                if (dataList == null || dataList.Count == 0)
+                {
+                    task.OutputMatchIndex = -1;
+                    task.OutputMatchValue = null;
+                    task.ErrorMessage = "引用的数组为空或不存在";
+                    return false;
+                }
+
+                // 根据匹配模式查找
+                int matchIndex = -1;
+                switch (task.MatchMode)
+                {
+                    case "Exact":
+                        matchIndex = dataList.FindIndex(s => s == searchText);
+                        break;
+
+                    case "Contains":
+                        matchIndex = dataList.FindIndex(s =>
+                            s.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                            searchText.Contains(s, StringComparison.OrdinalIgnoreCase));
+                        break;
+
+                    case "Best":
+                        // 最佳匹配：计算 LCS 相似度
+                        double bestScore = 0;
+                        for (int i = 0; i < dataList.Count; i++)
+                        {
+                            double score = CalculateSimilarity(searchText, dataList[i]);
+                            if (score > bestScore)
+                            {
+                                bestScore = score;
+                                matchIndex = i;
+                            }
+                        }
+                        // 相似度阈值
+                        if (bestScore < 0.5) matchIndex = -1;
+                        break;
+
+                    default:
+                        matchIndex = dataList.FindIndex(s =>
+                            s.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+                        break;
+                }
+
+                task.OutputMatchIndex = matchIndex;
+                task.OutputMatchValue = matchIndex >= 0 ? dataList[matchIndex] : null;
+                task.OutputResult = matchIndex >= 0;
+
+                Log($"[{DateTime.Now:HH:mm:ss}] 匹配查找: 模式={task.MatchMode}, 结果索引={matchIndex}");
+                return matchIndex >= 0;
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 计算两个字符串的 LCS（最长公共子序列）相似度
+        /// </summary>
+        private static double CalculateSimilarity(string a, string b)
+        {
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return 0;
+            int maxLen = Math.Max(a.Length, b.Length);
+            if (maxLen == 0) return 1;
+
+            // LCS 动态规划
+            int[,] dp = new int[a.Length + 1, b.Length + 1];
+            for (int i = 1; i <= a.Length; i++)
+            {
+                for (int j = 1; j <= b.Length; j++)
+                {
+                    dp[i, j] = a[i - 1] == b[j - 1]
+                        ? dp[i - 1, j - 1] + 1
+                        : Math.Max(dp[i - 1, j], dp[i, j - 1]);
+                }
+            }
+
+            return (double)dp[a.Length, b.Length] / maxLen;
+        }
+
+        #endregion
     }
 }
 

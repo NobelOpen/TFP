@@ -13,6 +13,7 @@ namespace TaskFlow.Views.Dialogs
     public partial class TaskOverlayWindow : Window
     {
         private readonly MainViewModel _viewModel;
+        private readonly System.Windows.Media.Animation.DoubleAnimation _spinAnimation;
 
         /// <summary>
         /// 请求显示主窗口的事件
@@ -25,17 +26,22 @@ namespace TaskFlow.Views.Dialogs
             ApplyLocalization();
             _viewModel = viewModel;
 
+            _spinAnimation = new System.Windows.Media.Animation.DoubleAnimation(0, 360, new Duration(TimeSpan.FromSeconds(1.5)))
+            {
+                RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever
+            };
+
             // 初始位置：屏幕右上角
             var workArea = SystemParameters.WorkArea;
             Left = workArea.Right - Width - 16;
             Top = workArea.Top + 16;
 
-            this.MouseEnter += (s, e) => { this.Opacity = 1.0; };
+            this.MouseEnter += (s, e) => { TaskAreaContainer.Opacity = 1.0; };
             this.MouseLeave += (s, e) => 
             { 
                 if (_viewModel.IsRunning)
                 {
-                    this.Opacity = 0.5;
+                    TaskAreaContainer.Opacity = 0.5;
                 }
             };
 
@@ -50,6 +56,7 @@ namespace TaskFlow.Views.Dialogs
         private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName is nameof(MainViewModel.CurrentRunningTask) or
+                nameof(MainViewModel.CurrentTaskBreadcrumb) or
                 nameof(MainViewModel.PreviousTask) or
                 nameof(MainViewModel.NextTask) or
                 nameof(MainViewModel.IsRunning))
@@ -73,10 +80,21 @@ namespace TaskFlow.Views.Dialogs
             if (_viewModel.CurrentRunningTask != null)
             {
                 CurrentTaskText.Text = $"#{_viewModel.CurrentRunningTask.Order} {_viewModel.CurrentRunningTask.Name}";
+                
+                if (!string.IsNullOrEmpty(_viewModel.CurrentTaskBreadcrumb))
+                {
+                    CurrentTaskBreadcrumb.Text = _viewModel.CurrentTaskBreadcrumb;
+                    CurrentTaskBreadcrumb.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    CurrentTaskBreadcrumb.Visibility = Visibility.Collapsed;
+                }
             }
             else
             {
                 CurrentTaskText.Text = _viewModel.IsRunning ? Strings.Win_Executing : Strings.Win_WaitingExec;
+                CurrentTaskBreadcrumb.Visibility = Visibility.Collapsed;
             }
 
             // 上一个任务
@@ -115,8 +133,11 @@ namespace TaskFlow.Views.Dialogs
 
                 if (!IsMouseOver)
                 {
-                    this.Opacity = 0.5;
+                    TaskAreaContainer.Opacity = 0.5;
                 }
+
+                SwitchFlowBtn.IsHitTestVisible = false;
+                SwitchFlowRotateTransform.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, _spinAnimation);
             }
             else
             {
@@ -126,7 +147,11 @@ namespace TaskFlow.Views.Dialogs
                 RunCurrentIcon.Foreground = new SolidColorBrush(Color.FromRgb(42, 161, 152)); // #2aa198
                 StopIcon.Foreground = new SolidColorBrush(Color.FromRgb(176, 174, 165));      // 灰色
 
-                this.Opacity = 1.0;
+                TaskAreaContainer.Opacity = 1.0;
+
+                SwitchFlowBtn.IsHitTestVisible = true;
+                SwitchFlowRotateTransform.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
+                SwitchFlowRotateTransform.Angle = 0;
             }
         }
 

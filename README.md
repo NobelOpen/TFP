@@ -1,4 +1,4 @@
-﻿# TaskFlow Pro (TFP)
+# TaskFlow Pro (TFP)
 
 [English](#english) | [简体中文](#简体中文)
 
@@ -17,6 +17,7 @@
 - **Simulate Input** — Keyboard strokes and mouse wheel scrolling, supporting modifier key combinations
 - **UI Automation** — Find and interact with UI elements based on AutomationId or Control Name
 - **Subtitle Overlay** — Overlay subtitles on target windows with support for frosted glass, solid color, transparent, or auto-color-sampling backgrounds
+- **Win Event Listener** — Pause execution and wait for specific mouse or keyboard events (e.g., Left Click, Enter)
 
 #### 📱 ADB Mobile Control
 - Connect/Disconnect ADB devices
@@ -37,6 +38,7 @@
 #### 🤖 AI Capabilities
 - **LLM Translation** — Call Large Language Models for intelligent text translation
 - **Multimodal Vision** — Send images + prompts to LLMs to achieve visual understanding and judgment
+- **LLM File Translation** — Read text files and perform batch translation with automatic segmentation and context awareness
 
 #### 🔀 Control Flow
 - **If / Elif / Else Branches** — Conditional execution supporting expression evaluation
@@ -45,7 +47,7 @@
 - **Expression Evaluation** — Dynamic variable calculations (e.g., @A = @B + 1)
 
 #### 📊 Data Processing
-- String substring, type conversion, array parsing, and timestamp acquisition
+- String substring, type conversion, timestamp acquisition, file reading, array generation, array parsing, and array searching
 - Global variable system (referenced via @Variable) and inter-task data passing (#TaskReference)
 
 #### 🌐 Multilingual
@@ -124,6 +126,7 @@ This project is for educational and personal use only.
 - **模拟输入** — 键盘按键、鼠标滚轮，支持修饰键组合
 - **UI 自动化** — 基于 AutomationId 或控件名称查找并操作 UI 元素
 - **字幕叠层** — 在目标窗口上叠加字幕，支持毛玻璃/纯色/透明/自动吸色背景
+- **Win 事件监听** — 暂停流程，等待指定的鼠标或键盘事件触发（如左键单击、回车键等）
 
 #### 📱 ADB 移动设备控制
 - 连接/断开 ADB 设备
@@ -144,6 +147,7 @@ This project is for educational and personal use only.
 #### 🤖 AI 能力
 - **LLM 翻译** — 调用大语言模型进行智能翻译
 - **多模态识图** — 将图像 + 提示词发送给 LLM，实现视觉理解与判断
+- **LLM 文件翻译** — 读取文本文件并进行批量智能分段翻译，保持行数和上下文一致
 
 #### 🔀 控制流
 - **If / Elif / Else 条件分支** — 支持表达式条件判断
@@ -152,7 +156,7 @@ This project is for educational and personal use only.
 - **表达式赋值** — 动态变量运算（如 @A = @B + 1）
 
 #### 📊 数据处理
-- 字符串截取、类型转换、数组解析、时间戳获取
+- 字符串截取、类型转换、时间戳获取、读取文件、数组解析、数组生成与匹配查找
 - 全局变量系统（@变量 引用），任务间数据传递（#任务引用）
 
 #### 🌐 多语言

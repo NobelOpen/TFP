@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -82,6 +82,12 @@ namespace TaskFlow.ViewModels
         /// </summary>
         [ObservableProperty]
         private TaskCardBase? _currentRunningTask;
+
+        /// <summary>
+        /// 当前任务的面包屑上下文路径
+        /// </summary>
+        [ObservableProperty]
+        private string? _currentTaskBreadcrumb;
 
         /// <summary>
         /// 上一个已执行的任务卡片
@@ -906,6 +912,11 @@ namespace TaskFlow.ViewModels
                 TaskType.GetTimestamp => new GetTimestampTaskCard(),
                 TaskType.LlmTranslate => new LlmTranslateTaskCard(),
                 TaskType.LlmVision => new LlmVisionTaskCard(),
+                TaskType.ArrayBuilder => new ArrayBuilderTaskCard(),
+                TaskType.LlmFileTranslate => new LlmFileTranslateTaskCard(),
+                TaskType.FileRead => new FileReadTaskCard(),
+                TaskType.EventListener => new EventListenerTaskCard(),
+                TaskType.ArraySearch => new ArraySearchTaskCard(),
                 _ => throw new ArgumentException($"Unsupported task type: {taskType}")
             };
         }
@@ -940,6 +951,14 @@ namespace TaskFlow.ViewModels
         public IEnumerable<TaskCardBase> GetTextOutputTasks()
         {
             return TaskCards.Where(t => t.OutputsText);
+        }
+
+        /// <summary>
+        /// 获取输出字符串数组的任务列表
+        /// </summary>
+        public IEnumerable<TaskCardBase> GetStringArrayOutputTasks()
+        {
+            return TaskCards.Where(t => t.OutputsStringArray);
         }
 
         #endregion

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using TaskFlow.Resources;
 using System.Collections.Generic;
@@ -275,6 +275,8 @@ namespace TaskFlow.Helpers
                 TaskType.GetTimestamp => new GetTimestampTaskCard(),
                 TaskType.LlmTranslate => new LlmTranslateTaskCard(),
                 TaskType.LlmVision => new LlmVisionTaskCard(),
+                TaskType.ArrayBuilder => new ArrayBuilderTaskCard(),
+                TaskType.LlmFileTranslate => new LlmFileTranslateTaskCard(),
                 _ => throw new NotSupportedException($"Unknown task type: {taskType}")
             };
 

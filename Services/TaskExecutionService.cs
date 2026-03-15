@@ -42,6 +42,12 @@ namespace TaskFlow.Services
         private CancellationTokenSource? _cts;
         private bool _isRunning;
 
+        /// <summary>ArrayBuilder 运行时数据存储，Key=卡片Id</summary>
+        internal static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, List<string>> _arrayBuilderData = new();
+
+        /// <summary>FileRead 运行时数据缓存，Key=卡片Id，Value=(路径, 数据)</summary>
+        internal static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (string Path, List<string> Data)> _fileReadData = new();
+
         public event EventHandler<TaskCardBase>? TaskStarted;
         public event EventHandler<TaskCardBase>? TaskCompleted;
         public event EventHandler? AllTasksCompleted;
@@ -85,6 +91,9 @@ namespace TaskFlow.Services
                 {
                     task.Reset();
                 }
+                // 清空运行时数据
+                _arrayBuilderData.Clear();
+                _fileReadData.Clear();
 
                 int skipToIndex = 0;
                 var loopStack = new Stack<(int StartIndex, ForLoopTaskCard Card, int CurrentIteration)>();
@@ -99,6 +108,10 @@ namespace TaskFlow.Services
                     if (i < skipToIndex) continue;
 
                     var task = tasks[i];
+
+                    // 重新计算当前的面包屑
+                    task.BreadcrumbText = BuildBreadcrumbString(tasks, task, loopStack, branchConditions);
+
                     await ExecuteTaskAsync(task, allTasksForLookup ?? tasks, _cts.Token);
 
                     // 处理控制流
@@ -316,6 +329,49 @@ namespace TaskFlow.Services
             }
         }
 
+        private string? BuildBreadcrumbString(
+            IList<TaskCardBase> tasks,
+            TaskCardBase currentTask, 
+            Stack<(int StartIndex, ForLoopTaskCard Card, int CurrentIteration)> loopStack,
+            Dictionary<Guid, bool> branchConditions)
+        {
+            var breadcrumbs = new List<string>();
+
+            // 1. 如果存在活跃循环，收集所有的外部循环信息
+            // 由于 Stack 是 LIFO，我们转换数组逆序遍历（最早入栈的在外层）
+            var loops = loopStack.ToArray();
+            for (int j = loops.Length - 1; j >= 0; j--)
+            {
+                var loop = loops[j];
+                breadcrumbs.Add($"🔄 {loop.Card.Name} ({loop.CurrentIteration + 1}/{loop.Card.LoopCount})");
+            }
+
+            // 2. 检查当前节点是否包裹在任何 If/Else 分支内
+            // 简单的做法是查看当前节点的 Parent 分支 ID（或者通过任务链中的标记）
+            // 在我们的平铺结构中，只要节点有一个 BranchGroupId，并且这不是一个结束节点，
+            // 实际上我们可以只显示所处的当前分支名称
+            if (currentTask.BranchGroupId.HasValue && 
+                currentTask.TaskType != TaskType.IfEnd &&
+                currentTask.TaskType != TaskType.ElseEnd &&
+                currentTask.TaskType != TaskType.ForLoopEnd)
+            {
+                // 可以沿着 BranchGroupId 向上找到该分支的头部节点名称，但简化起见，我们显示当前任务被归属的 Branch Group。
+                // 我们去 tasks 里找同一个 BranchGroupId 最早入栈（IfStart 或 ElifStart）的卡片名称
+                var branchHeader = tasks.FirstOrDefault(t => t.BranchGroupId == currentTask.BranchGroupId && 
+                    (t.TaskType == TaskType.IfStart || t.TaskType == TaskType.ElifStart || t.TaskType == TaskType.ElseStart));
+                
+                if (branchHeader != null && branchHeader != currentTask)
+                {
+                    // 仅当自己不是头部节点时说明它是分支的内容
+                    breadcrumbs.Add($"🔀 {branchHeader.Name}");
+                }
+            }
+
+            if (breadcrumbs.Count == 0) return null;
+
+            return string.Join(" > ", breadcrumbs);
+        }
+
         public async Task ExecuteTaskAsync(TaskCardBase task, IList<TaskCardBase> allTasks, CancellationToken cancellationToken)
         {
             // 释放旧的输出图像，避免循环体内多次迭代累积内存
@@ -386,6 +442,21 @@ namespace TaskFlow.Services
 
                     // AI多模态识图
                     TaskType.LlmVision => await ExecuteLlmVisionAsync((LlmVisionTaskCard)task, allTasks, cancellationToken),
+
+                    // 数组生成
+                    TaskType.ArrayBuilder => await ExecuteArrayBuilderAsync((ArrayBuilderTaskCard)task, allTasks, cancellationToken),
+
+                    // LLM文件翻译
+                    TaskType.LlmFileTranslate => await ExecuteLlmFileTranslateAsync((LlmFileTranslateTaskCard)task, allTasks, cancellationToken),
+
+                    // 文件读取
+                    TaskType.FileRead => await ExecuteFileReadAsync((FileReadTaskCard)task, allTasks, cancellationToken),
+
+                    // 事件监听
+                    TaskType.EventListener => await ExecuteEventListenerAsync((EventListenerTaskCard)task, cancellationToken),
+
+                    // 匹配查找
+                    TaskType.ArraySearch => ExecuteArraySearch((ArraySearchTaskCard)task, allTasks),
 
                     _ => false
                 };

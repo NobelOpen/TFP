@@ -296,6 +296,16 @@ namespace TaskFlow.Views.Dialogs
             Close();
         }
 
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            }
+            catch { }
+            e.Handled = true;
+        }
+
         /// <summary>
         /// 设置/取消开机自启动（写入注册表）
         /// </summary>

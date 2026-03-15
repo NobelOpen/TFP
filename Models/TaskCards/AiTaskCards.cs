@@ -63,4 +63,48 @@ namespace TaskFlow.Models.TaskCards
             Name = "多模态识图";
         }
     }
+
+    /// <summary>
+    /// LLM文件翻译任务卡片 - 从文件读取待翻译文本，批量翻译后写入输出文件
+    /// </summary>
+    public partial class LlmFileTranslateTaskCard : TaskCardBase
+    {
+        /// <summary>选择的模型 ID</summary>
+        [ObservableProperty]
+        private string _modelId = "";
+
+        /// <summary>输入文件路径（支持 @变量）</summary>
+        [ObservableProperty]
+        private string _inputFilePath = "";
+
+        /// <summary>翻译结果输出文件路径（支持 @变量）</summary>
+        [ObservableProperty]
+        private string _outputFilePath = "";
+
+        /// <summary>目标语言</summary>
+        [ObservableProperty]
+        private string _targetLanguage = "简体中文";
+
+        /// <summary>系统提示词</summary>
+        [ObservableProperty]
+        private string _systemPrompt = "你是一位专业的视觉小说翻译家。以下是按顺序排列的游戏对话文本，请逐行翻译成{目标语言}。要求：\n1. 保持行数完全一致，每行输出对应翻译\n2. 注意前后文语境，保持角色口吻一致\n3. 保留角色名部分不翻译\n4. 只输出翻译结果，不要编号、不要解释";
+
+        /// <summary>每批最大字符数（用于自动分段）</summary>
+        [ObservableProperty]
+        private int _maxCharsPerBatch = 8000;
+
+        /// <summary>
+        /// 输出：已翻译文件路径
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string? _outputTranslatedFilePath;
+
+        public override TaskType TaskType => TaskType.LlmFileTranslate;
+
+        public LlmFileTranslateTaskCard()
+        {
+            Name = "LLM文件翻译";
+        }
+    }
 }

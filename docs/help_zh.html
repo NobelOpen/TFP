@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -347,10 +347,14 @@
     <li><a href="#StringSubstring">字符串截取</a></li>
     <li><a href="#TypeConvert">类型转换</a></li>
     <li><a href="#ArrayParse">数组解析</a></li>
+    <li><a href="#ArrayBuilder">数组生成</a></li>
+    <li><a href="#FileRead">读取文件</a></li>
+    <li><a href="#ArraySearch">匹配查找</a></li>
 
     <li class="toc-category">AI 操作</li>
     <li><a href="#LlmTranslate">LLM翻译</a></li>
     <li><a href="#LlmVision">多模态识图</a></li>
+    <li><a href="#LlmFileTranslate">LLM文件翻译</a></li>
 
     <li class="toc-category">控制流</li>
     <li><a href="#IfElse">If-Else分支</a></li>
@@ -366,28 +370,31 @@
   <h3>主窗口工具栏</h3>
   <p>主窗口顶部的工具栏包含了应用所有的核心控制功能：</p>
   <dl class="props">
-    <dt>📄 新建 / 📂 打开 / 💾 保存 / 📝 另存为</dt>
+    <dt> 新建 /  打开 /  保存 /  另存为</dt>
     <dd>管理工程文件 (.json)。包含所有的流程、卡片、局部变量以及界面布局状态。</dd>
-    <dt>👁‍🗨 隐藏主窗口</dt>
+    <dt>🔽 隐藏主窗口</dt>
     <dd>点击后彻底隐藏软件主窗口，并在屏幕上弹出一个精简的<strong>实时任务悬浮窗</strong>。<strong>如何彻底恢复：</strong>您也可以在 Windows 桌面右下角的<strong>系统托盘区</strong>找到 TaskFlow 图标，双击图标即可重新显示主窗口。</dd>
     <dt>🪟 实时任务悬浮窗</dt>
     <dd>隐藏主窗口后出现的迷你悬浮卡片。此悬浮窗会<strong>始终置顶</strong>显示，适合在挂机时随时监控任务进度：<br>
-    • <strong>控制区</strong>：支持快速切换流程 (↻)、运行当前流程 (▶)、运行全部 (▶▶)、停止执行 (⏹) 以及一键恢复显示主窗口 (◉)。<br>
-    • <strong>进度区</strong>：实时高亮显示当前正在执行的任务卡片名称，并淡化显示上一步与下一步卡片名称，让流程进度一目了然。
+    • <strong>自由拖拽</strong>：按住窗口背景的任意位置即可将其轻松拖拽至屏幕的任意角落。<br>
+    • <strong>双击恢复</strong>：在窗口背景空白处双击鼠标左键，即可一键恢复显示主窗口。<br>
+    • <strong>智能透明度</strong>：当任务正在运行时，鼠标移出悬浮窗范围，任务区域会自动变为半透明（50%透明度），避免过度遮挡屏幕视线；鼠标悬停时则恢复不透明。<br>
+    • <strong>控制区</strong>：支持快速切换流程 (↻)、运行当前流程 (▶)、运行全部 (▶▶)、停止执行 (⏹) 以及恢复主窗口 (◉)。运行中切换按钮会无限旋转，且停止图标颜色加深以示提醒。<br>
+    • <strong>进度与上下文</strong>：实时高亮显示当前执行的任务，并在需要时显示其所在层级上下文（如位于哪个 For 循环或 If 分支内）。同时淡化显示上一步与下一步任务名称，让流程进度一目了然。
     </dd>
     <dt>⚙ 设置</dt>
     <dd>打开系统设置窗口（快捷键 F12）。</dd>
-    <dt>｛｝ 变量</dt>
+    <dt>📦 变量</dt>
     <dd>打开变量管理窗口。用于配置当前工程内的全局变量，和所选流程的局部变量。</dd>
-    <dt>🔀 流程</dt>
+    <dt>📑 流程</dt>
     <dd>打开流程管理窗口。可创建、重命名、删除不同的任务流程（Flow）。</dd>
-    <dt>🤖 模型</dt>
+    <dt>📱 模型</dt>
     <dd>打开模型管理窗口。配置用于文本翻译、多模态识图的 LLM 接口参数。</dd>
-    <dt>▶ 单步运行 / ▶▶ 运行当前 / ⏭ 运行全部</dt>
+    <dt>▷ 单步运行 / 运行当前 / 运行全部</dt>
     <dd><strong>单步运行：</strong>仅运行当前选中的那张卡片一次（便于调试）；<br><strong>运行当前：</strong>运行当前激活的流程页签内的所有任务；<br><strong>运行全部：</strong>按顺序依次运行所有流程页签内的任务。</dd>
     <dt>⏹ 停止全部</dt>
     <dd>强制中断当前正在运行的所有流程。</dd>
-    <dt>🖼 图像预览 / 👁 实时预览 / 📋 日志输出</dt>
+    <dt> 图像预览 /  实时预览 /  日志输出</dt>
     <dd>控制底部或侧边不同面板的显示与隐藏。</dd>
   </dl>
 </div>
@@ -407,7 +414,7 @@
 
 <div class="card-doc" id="FlowMgr">
   <h3>流程管理</h3>
-  <p>点击工具栏 <strong>🔀 流程</strong> 按钮打开。TaskFlow 允许在一个工程里创建多条流程（即主界面左侧的垂直页签），以拆分复杂的逻辑。</p>
+  <p>点击工具栏 <strong>� 流程</strong> 按钮打开。TaskFlow 允许在一个工程里创建多条流程（即主界面左侧的垂直页签），以拆分复杂的逻辑。</p>
   <dl class="props">
     <dt>基础操作</dt>
     <dd>可以添加新流程、重命名、删除。请注意：删除流程将会一并删除该流程内的<strong>所有任务卡片及其下属的局部变量</strong>，此操作不可撤销。</dd>
@@ -453,7 +460,7 @@
     <dd>暂停的毫秒数，支持表达式。例如 <code>1000</code> 表示暂停1秒。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅控制流程暂停）</div>
   </div>
 </div>
@@ -466,7 +473,7 @@
     <dd>C# 日期格式，如 <code>yyyy-MM-dd HH:mm:ss</code>、<code>yyyyMMdd</code>。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.当前时间</code> — 当前时间（int 类型时间戳，格式由输出格式决定）</div>
   </div>
 </div>
@@ -475,7 +482,7 @@
   <h3>结束当前流程 <span class="badge badge-general">通用</span></h3>
   <p>立即终止当前流程的执行，不影响其他流程。</p>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅控制流程终止）</div>
   </div>
 </div>
@@ -484,7 +491,7 @@
   <h3>结束全部流程 <span class="badge badge-general">通用</span></h3>
   <p>立即终止所有流程的执行。</p>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅控制流程终止）</div>
   </div>
 </div>
@@ -502,13 +509,13 @@
     <dd>可选，传递给应用程序的命令行参数。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">应用路径 <code>C:\Program Files\Google\Chrome\Application\chrome.exe</code></div>
     <div class="example-item">启动参数 <code>https://www.google.com</code> → 启动 Chrome 并直接打开该网址</div>
     <div class="example-item">启动参数 <code>--incognito https://www.google.com</code> → 以无痕模式打开网址</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅启动应用程序）</div>
   </div>
 </div>
@@ -527,7 +534,7 @@
     <dd>勾选后截屏结果自动转为灰度图。灰度图可减少数据量、提高模板匹配和 OCR 的处理速度与准确率，并降低颜色干扰。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 截取的窗口图像（彩色或灰度）</div>
   </div>
 </div>
@@ -546,13 +553,13 @@
     <dd>勾选后通过 PostMessage 向目标进程发送后台消息，无需窗口在前台显示。需指定目标进程名称。适用于窗口被遮挡或最小化的场景。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">固定坐标点击：X = <code>100</code>，Y = <code>200</code></div>
     <div class="example-item">引用模板匹配输出坐标：X = <code>{{#3.x}}</code>，Y = <code>{{#3.y}}</code>（#3 为模板匹配卡片序号）</div>
     <div class="example-item">偏移点击：X = <code>{{#3.x + 50}}</code>，Y = <code>{{#3.y - 10}}</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.x</code> — 实际点击的 X 坐标</div>
     <div class="output-item"><code>#N.y</code> — 实际点击的 Y 坐标</div>
   </div>
@@ -566,7 +573,7 @@
     <dd>要关闭的进程名。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅关闭应用）</div>
   </div>
 </div>
@@ -583,14 +590,14 @@
     <dd>精确匹配 / 包含匹配 / 正则表达式。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">按名称查找按钮：查找方式 = <code>Name</code>，匹配模式 = <code>包含匹配</code>，搜索内容 = <code>确定</code></div>
     <div class="example-item">按 AutomationId 精确定位：查找方式 = <code>AutomationId</code>，匹配模式 = <code>精确匹配</code>，搜索内容 = <code>btnSubmit</code></div>
     <div class="example-item">正则表达式匹配：匹配模式 = <code>正则表达式</code>，搜索内容 = <code>^(确定|保存)$</code>（匹配名称为“确定”或“保存”的按钮）</div>
     <div class="example-item">正则通配符：<code>btn.*Submit</code>（匹配以 btn 开头、Submit 结尾的名称）、<code>\d+</code>（匹配含数字的名称）</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.text</code> — 元素的文本内容（如适用）</div>
   </div>
 </div>
@@ -613,13 +620,13 @@
     <dd>每次重复之间的等待时间，默认 <code>50</code>ms。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">Ctrl+S 保存：修饰键 = <code>Ctrl</code>，输入动作 = <code>键盘按键</code>，按键名称 = <code>S</code></div>
     <div class="example-item">页面下滚 5 次：输入动作 = <code>鼠标滚轮向下</code>，重复次数 = <code>5</code>，间隔 = <code>200</code></div>
     <div class="example-item">按 Enter 确认：修饰键 = <code>无</code>，按键名称 = <code>ENTER</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.text</code> — 实际执行的操作描述</div>
   </div>
 </div>
@@ -652,19 +659,32 @@
     <dd>勾选后流程会等待字幕显示时长结束后才继续执行下一个任务。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">显示静态文字：字幕内容 = <code>正在处理中...</code></div>
     <div class="example-item">显示翻译结果：字幕内容 = <code>{{#5.text}}</code>（#5 为 LLM 翻译卡片序号）</div>
     <div class="example-item">拼接多个变量：字幕内容 = <code>原文: {{#3.text}} → 翻译: {{#5.text}}</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅显示字幕覆盖层）</div>
   </div>
 </div>
 
 <!-- ==================== ADB 操作 ==================== -->
 <div class="category-title">ADB 操作</div>
+
+<div class="card-doc" id="EventListener">
+  <h3>Win 事件监听 <span class="badge badge-win">Windows</span></h3>
+  <p>持续监听指定的键盘或鼠标事件，例如按下某个快捷键时执行后续任务。</p>
+  <dl class="props">
+    <dt>监听的事件</dt>
+    <dd>选择要监听的按键或鼠标动作。</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">输出</div>
+    <div class="output-item"><code>#N.result</code> — 监听到事件时返回 true</div>
+  </div>
+</div>
 
 <div class="card-doc" id="AdbConnect">
   <h3>ADB连接设备 <span class="badge badge-adb">ADB</span></h3>
@@ -676,7 +696,7 @@
     <dd>设备的 ADB 端口，默认 <code>5555</code>。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅建立连接）</div>
   </div>
 </div>
@@ -693,7 +713,7 @@
     <dd>可选，指定启动的 Activity。留空则启动默认 Activity。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅启动应用）</div>
   </div>
 </div>
@@ -708,7 +728,7 @@
     <dd>勾选后截屏结果自动转为灰度图，提高后续处理速度。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 设备屏幕截图</div>
   </div>
 </div>
@@ -725,7 +745,7 @@
     <dd>滑动操作的持续时间（毫秒），默认 300ms。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.x</code> — 实际点击的 X 坐标</div>
     <div class="output-item"><code>#N.y</code> — 实际点击的 Y 坐标</div>
   </div>
@@ -739,7 +759,7 @@
     <dd>要关闭的应用包名。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅停止应用）</div>
   </div>
 </div>
@@ -748,7 +768,7 @@
   <h3>ADB断开设备 <span class="badge badge-adb">ADB</span></h3>
   <p>断开与 Android 设备的 ADB 连接。</p>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅断开连接）</div>
   </div>
 </div>
@@ -766,7 +786,7 @@
     <dd>裁剪矩形的左上角坐标和尺寸，支持表达式。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 裁剪后的图像</div>
   </div>
 </div>
@@ -785,13 +805,13 @@
     <dd>1 = 单目标匹配；>1 = 多目标匹配。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">查找按钮位置：阈值 = <code>0.85</code>，配合 If 判断 <code>#N.result</code> 是否找到，找到后用 Win模拟点击 点击 <code>#N.x</code>, <code>#N.y</code></div>
     <div class="example-item">多目标匹配：最大匹配数量 = <code>5</code>，结果可通过 <code>OutputMatchResults</code> 数组获取每个位置</div>
     <div class="example-item">阈值建议：相同图标 <code>0.9~0.95</code>，相似元素 <code>0.75~0.85</code>，模糊匹配 <code>0.6~0.75</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 标注了匹配位置的结果图像</div>
     <div class="output-item"><code>#N.result</code> — 是否匹配成功（true/false）</div>
     <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — 最佳匹配位置的中心坐标（单目标时）</div>
@@ -819,13 +839,13 @@
     <dd>可选，限定识别的图像区域，先裁剪再识别。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">基本 OCR：截屏 → 裁剪感兴趣区域 → OCR → 得到 <code>#N.text</code></div>
     <div class="example-item">带检查：勾选「检查包含文字」，目标文字 = <code>成功</code>，If 分支判断 <code>#N.result</code></div>
     <div class="example-item">提高准确性：先用图像预处理（灰度 + 二值化）再 OCR</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.text</code> — OCR 识别出的全部文本</div>
     <div class="output-item"><code>#N.result</code> — 是否包含指定文字（启用检查时）</div>
   </div>
@@ -843,13 +863,13 @@
     <dd>可选，限定检测的图像区域。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">检测红色区域：H 下限 = <code>0</code> 上限 = <code>10</code>，S 下限 = <code>100</code> 上限 = <code>255</code>，V 下限 = <code>100</code> 上限 = <code>255</code></div>
     <div class="example-item">检测绿色区域：H 下限 = <code>35</code> 上限 = <code>85</code></div>
     <div class="example-item">HSV 色相参考：红 <code>0~10/170~180</code>，橙 <code>10~25</code>，黄 <code>25~35</code>，绿 <code>35~85</code>，蓝 <code>85~125</code>，紫 <code>125~170</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 颜色检测结果的可视化图像</div>
     <div class="output-item"><code>#N.result</code> — 颜色匹配是否达标（true/false）</div>
     <div class="output-item"><code>OutputMeanH/S/V</code> — 区域内平均 HSV 值</div>
@@ -865,7 +885,7 @@
     <dd>保留像素的 HSV 颜色范围。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 颜色分割后的图像（仅保留匹配区域）</div>
   </div>
 </div>
@@ -888,7 +908,7 @@
     <dd>形态学操作的核尺寸，默认 3。较大的核效果更明显。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 预处理后的图像</div>
   </div>
 </div>
@@ -913,13 +933,13 @@
     <dd>可选，限定分析的图像区域，先裁剪再分析。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">典型流程：截屏 → 颜色分割/二值化 → Blob 分析 → 获取目标位置</div>
     <div class="example-item">过滤小噪点：最小面积 = <code>500</code>，忽略面积过小的 Blob</div>
     <div class="example-item">找最大目标：排序方式 = <code>面积降序</code>，最大返回数量 = <code>1</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 标注了 Blob 位置的结果图像</div>
     <div class="output-item"><code>#N.result</code> — 是否检测到 Blob（true/false）</div>
     <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — 第一个 Blob 的中心坐标</div>
@@ -936,7 +956,7 @@
     <dd>缩放后的图像尺寸（像素）。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.image</code> — 缩放后的图像</div>
     <div class="output-item"><code>OutputScaleRatio</code> — 实际缩放倍率</div>
   </div>
@@ -953,14 +973,14 @@
     <dd>支持 <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code> 运算，以及 <code>></code> <code><</code> <code>==</code> <code>!=</code> 比较。可引用其他卡片输出，如 <code>#1.text</code>、<code>#2.x</code>。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">数学计算：<code>#1.x * 2 + 100</code> → 将坐标翻倍后偏移 100</div>
     <div class="example-item">字符串比较：<code>#3.text == "成功"</code> → 判断 OCR 结果是否为指定文字</div>
     <div class="example-item">数值比较：<code>#2.x > 500</code> → 判断坐标是否在右半区域</div>
     <div class="example-item">组合条件：<code>#1.result == true</code> → 配合 If 分支使用</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.text</code> — 表达式计算结果（字符串）</div>
     <div class="output-item"><code>#N.result</code> — 布尔结果（当表达式为比较运算时）</div>
   </div>
@@ -984,7 +1004,7 @@
     <dd>要截取的字符数，-1 表示截取到末尾。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.text</code> — 截取后的子字符串</div>
   </div>
 </div>
@@ -999,7 +1019,7 @@
     <dd>要转换的文本，支持 <code>@变量</code> 和 <code>#任务引用</code>。</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.文本</code> — 转换后的值（字符串形式）</div>
     <div class="output-item"><code>#N.转换结果</code> — 转换后的整数值</div>
   </div>
@@ -1015,18 +1035,75 @@
     <dd>要提取的元素索引（0 开始），支持表达式。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">从 Blob 结果提取第 2 个坐标：数组类型 = <code>坐标</code>，索引 = <code>1</code></div>
     <div class="example-item">动态索引：索引 = <code>{{#5.loopIndex}}</code>（在 For 循环中依次提取每个元素）</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.text</code> — 提取的元素值（字符串形式）</div>
     <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — 坐标值（坐标类型数组时）</div>
   </div>
 </div>
 
 <!-- ==================== AI 操作 ==================== -->
+<div class="card-doc" id="ArrayBuilder">
+  <h3>数组生成 <span class="badge badge-data">数据</span></h3>
+  <p>动态构建和管理一个字符串数组，支持向数组中追加数据并可选导出到文件。</p>
+  <dl class="props">
+    <dt>追加数据</dt>
+    <dd>要追加的数据（支持 <code>#N</code> / <code>@变量</code> 引用）。</dd>
+    <dt>插入索引</dt>
+    <dd>插入位置的表达式，<code>-1</code> 表示自动追加到末尾。</dd>
+    <dt>自动导出路径</dt>
+    <dd>流程结束时自动导出数组的文件路径（留空则不导出）。</dd>
+    <dt>清空数组开关</dt>
+    <dd>值为 true 时清空数组的表达式。</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">输出</div>
+    <div class="output-item"><code>#N.result</code> — 操作是否成功（true/false）</div>
+    <div class="output-item"><code>OutputArrayCount</code> — 数组当前的元素数量</div>
+    <div class="output-item"><code>OutputStringArray</code> — 生成的字符串数组</div>
+  </div>
+</div>
+
+<div class="card-doc" id="FileRead">
+  <h3>读取文件 <span class="badge badge-data">数据</span></h3>
+  <p>读取文件并按分隔符分割成数组，缓存到内存供后续使用。</p>
+  <dl class="props">
+    <dt>文件路径表达式</dt>
+    <dd>要读取的文件路径。</dd>
+    <dt>分隔符</dt>
+    <dd>用于分割文件内容的字符（默认 <code>\n</code>）。</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">输出</div>
+    <div class="output-item"><code>#N.result</code> — 文件是否成功读取（true/false）</div>
+    <div class="output-item"><code>OutputArrayCount</code> — 数组当前的元素数量</div>
+    <div class="output-item"><code>OutputStringArray</code> — 读取到的字符串数组</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ArraySearch">
+  <h3>匹配查找 <span class="badge badge-data">数据</span></h3>
+  <p>在数组中搜索指定的文本，支持多种匹配模式。</p>
+  <dl class="props">
+    <dt>数组来源任务</dt>
+    <dd>下拉选择提供数组的任务（如“读取文件”或“数组生成”卡片）。</dd>
+    <dt>查找表达式</dt>
+    <dd>要搜索的文本内容。</dd>
+    <dt>匹配模式</dt>
+    <dd><code>Exact</code> (精确匹配), <code>Contains</code> (包含匹配), <code>Best</code> (最佳匹配)。</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">输出</div>
+    <div class="output-item"><code>#N.result</code> — 是否匹配成功（true/false）</div>
+    <div class="output-item"><code>OutputMatchIndex</code> — 匹配到的索引（<code>-1</code> 表示未找到）</div>
+    <div class="output-item"><code>OutputMatchValue</code> — 匹配到的值</div>
+  </div>
+</div>
+
 <div class="category-title">AI 操作</div>
 
 <div class="card-doc" id="LlmTranslate">
@@ -1043,12 +1120,12 @@
     <dd>自定义的翻译指令，可修改以调整翻译风格。支持 <code>{目标语言}</code> 占位符。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">翻译 OCR 结果：源文本 = <code>{{#4.text}}</code>，目标语言 = <code>中文</code>（#4 为 OCR 卡片）</div>
     <div class="example-item">实时翻译流程：截屏 → 裁剪字幕区 → OCR → LLM翻译 → 字幕显示</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.text</code> — 翻译后的文本</div>
   </div>
 </div>
@@ -1067,19 +1144,42 @@
     <dd>引用前序截屏或图像处理卡片的输出。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">图像描述：提示词 = <code>请描述图像中的主要内容</code></div>
     <div class="example-item">判断状态：提示词 = <code>图中按钮是否可用？只回答"是"或"否"</code>，配合 If 分支判断</div>
     <div class="example-item">提取信息：提示词 = <code>提取图中所有数字，用逗号分隔</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.text</code> — 模型分析结果文本</div>
     <div class="output-item"><code>#N.result</code> — 分析是否成功（true/false）</div>
   </div>
 </div>
 
 <!-- ==================== 控制流 ==================== -->
+<div class="card-doc" id="LlmFileTranslate">
+  <h3>LLM文件翻译 <span class="badge badge-ai">AI</span></h3>
+  <p>从文件读取待翻译文本，智能分段批量翻译后写入输出文件。</p>
+  <dl class="props">
+    <dt>翻译模型</dt>
+    <dd>在模型管理中配置的 LLM 模型。</dd>
+    <dt>输入文件路径</dt>
+    <dd>待翻译文件路径（支持变量）。</dd>
+    <dt>输出文件路径</dt>
+    <dd>翻译结果保存路径（支持变量）。</dd>
+    <dt>目标语言</dt>
+    <dd>翻译目标语言，默认“简体中文”。</dd>
+    <dt>系统提示词</dt>
+    <dd>自定义翻译规则。翻译时会保持行数一致，且保留角色名等。</dd>
+    <dt>每批最大字符数</dt>
+    <dd>单次请求分段的最大字符数，用于超大文件自动切块。</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">输出</div>
+    <div class="output-item"><code>OutputTranslatedFilePath</code> — 已翻译文件的输出路径</div>
+  </div>
+</div>
+
 <div class="category-title">控制流</div>
 
 <div class="card-doc" id="IfElse">
@@ -1092,13 +1192,13 @@
     <dd>返回布尔值的表达式，如 <code>#1.result == true</code>。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">判断模板匹配结果：条件来源 = <code>TaskResult</code>，引用模板匹配卡片 → 匹配成功执行 If 分支，失败走 Else</div>
     <div class="example-item">手动条件：条件来源 = <code>ManualInput</code>，表达式 = <code>#3.text == "确认"</code></div>
     <div class="example-item">多条件分支：If + Elif + Else 实现三路以上分支判断</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无直接输出（控制执行路径）</div>
   </div>
   <p style="margin-top:8px"><strong>提示：</strong>右键点击 IF 开始卡片可以增加 Elif 分支或显示/隐藏 Else 分支。折叠按钮（▶）可以折叠整个分支块。</p>
@@ -1112,13 +1212,13 @@
     <dd>要执行的总次数，支持表达式。</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 示例</div>
+    <div class="example-title"> 示例</div>
     <div class="example-item">固定次数循环：循环次数 = <code>10</code> → 重复执行 10 次</div>
     <div class="example-item">遍历 Blob 结果：循环次数 = <code>{{#5.blobCount}}</code>，循环体内用数组解析 + 索引 <code>{{#N.loopIndex}}</code> 逐个处理</div>
     <div class="example-item">配合 Break：在循环体内用 If 判断条件，满足时中止循环</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item"><code>#N.loopIndex</code> — 当前循环索引（从 0 开始）</div>
   </div>
   <p style="margin-top:8px"><strong>提示：</strong>在循环体内可使用 <code>#N.loopIndex</code> 引用当前循环索引（N 为循环开始卡片的序号）。</p>
@@ -1128,7 +1228,7 @@
   <h3>中止循环 <span class="badge badge-flow">控制流</span></h3>
   <p>立即跳出最近的 For 循环，继续执行循环后面的任务。通常与 If 条件配合使用。</p>
   <div class="output-section">
-    <div class="output-title">📤 输出</div>
+    <div class="output-title"> 输出</div>
     <div class="output-item">无输出（仅控制循环跳出）</div>
   </div>
 </div>

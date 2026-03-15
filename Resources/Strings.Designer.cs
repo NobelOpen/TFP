@@ -110,6 +110,8 @@ namespace TaskFlow.Resources {
         public static string TaskType_GetTimestamp => ResourceManager.GetString("TaskType_GetTimestamp", resourceCulture) ?? "Get Current Time";
         public static string TaskType_LlmTranslate => ResourceManager.GetString("TaskType_LlmTranslate", resourceCulture) ?? "LLM Translate";
         public static string TaskType_LlmVision => ResourceManager.GetString("TaskType_LlmVision", resourceCulture) ?? "Multimodal Vision";
+        public static string TaskType_ArrayBuilder => ResourceManager.GetString("TaskType_ArrayBuilder", resourceCulture) ?? "Array Builder";
+        public static string TaskType_LlmFileTranslate => ResourceManager.GetString("TaskType_LlmFileTranslate", resourceCulture) ?? "LLM File Translate";
 
         // ========== MainWindow ==========
         public static string Main_Title => ResourceManager.GetString("Main_Title", resourceCulture) ?? "TaskFlow";
@@ -446,6 +448,7 @@ namespace TaskFlow.Resources {
         public static string Prop_SaveFailed => ResourceManager.GetString("Prop_SaveFailed", resourceCulture) ?? "Save failed: {0}";
         public static string Prop_ImageSourceTask => ResourceManager.GetString("Prop_ImageSourceTask", resourceCulture) ?? "Image Source Task";
         public static string Prop_SelectTask => ResourceManager.GetString("Prop_SelectTask", resourceCulture) ?? "-- Select Task --";
+        public static string Prop_ArraySourceTask => ResourceManager.GetString("Prop_ArraySourceTask", resourceCulture) ?? "Array Source Task";
         public static string Prop_ImageFilePath => ResourceManager.GetString("Prop_ImageFilePath", resourceCulture) ?? "Image File Path";
         public static string Filter_ImageFile => ResourceManager.GetString("Filter_ImageFile", resourceCulture) ?? "Image Files|*.png;*.jpg;*.bmp";
         public static string Prop_UseSourceTaskImage => ResourceManager.GetString("Prop_UseSourceTaskImage", resourceCulture) ?? "Use output image from another task";
@@ -475,6 +478,14 @@ namespace TaskFlow.Resources {
         public static string Prop_PaddleOcr => ResourceManager.GetString("Prop_PaddleOcr", resourceCulture) ?? "PaddleOCR (Built-in)";
         public static string Prop_WeChatOcr => ResourceManager.GetString("Prop_WeChatOcr", resourceCulture) ?? "WeChat OCR";
         public static string Prop_WeChatOcrTip => ResourceManager.GetString("Prop_WeChatOcrTip", resourceCulture) ?? "⚠ WeChat OCR requires configuration in Settings";
+        public static string Prop_ArrayBuilderInputExpr => ResourceManager.GetString("Prop_ArrayBuilderInputExpr", resourceCulture) ?? "Insert Data Expression";
+        public static string Prop_ArrayBuilderIndexExpr => ResourceManager.GetString("Prop_ArrayBuilderIndexExpr", resourceCulture) ?? "Insert Index Expression (-1 = auto append)";
+        public static string Prop_ArrayBuilderExportPath => ResourceManager.GetString("Prop_ArrayBuilderExportPath", resourceCulture) ?? "Auto Export File Path";
+        public static string Prop_ArrayBuilderExportBtn => ResourceManager.GetString("Prop_ArrayBuilderExportBtn", resourceCulture) ?? "Export Array Data";
+        public static string Prop_InputFilePath => ResourceManager.GetString("Prop_InputFilePath", resourceCulture) ?? "Input File Path Expression";
+        public static string Prop_OutputFilePath => ResourceManager.GetString("Prop_OutputFilePath", resourceCulture) ?? "Output File Path Expression";
+        public static string Prop_MaxCharsPerBatch => ResourceManager.GetString("Prop_MaxCharsPerBatch", resourceCulture) ?? "Max Characters Per Batch";
+        public static string Prop_BrowseFile => ResourceManager.GetString("Prop_BrowseFile", resourceCulture) ?? "Browse File";
         // ========== Auxiliary Dialogs ==========
         public static string Dlg_Settings => ResourceManager.GetString("Dlg_Settings", resourceCulture) ?? "Settings";
         public static string Dlg_SettingsTitle => ResourceManager.GetString("Dlg_SettingsTitle", resourceCulture) ?? "Settings Management";
@@ -680,6 +691,28 @@ namespace TaskFlow.Resources {
         public static string AC_BlobCount => ResourceManager.GetString("AC_BlobCount", resourceCulture) ?? "Blob Count";
         public static string AC_ScaleFactor => ResourceManager.GetString("AC_ScaleFactor", resourceCulture) ?? "Scale Factor";
         public static string AC_MatchScore => ResourceManager.GetString("AC_MatchScore", resourceCulture) ?? "Match Score";
+        public static string AC_ArrayCapacity => ResourceManager.GetString("AC_ArrayCapacity", resourceCulture) ?? "Array Capacity";
+        public static string AC_SaveFilePath => ResourceManager.GetString("AC_SaveFilePath", resourceCulture) ?? "Save File Path";
+        public static string AC_TranslatedFilePath => ResourceManager.GetString("AC_TranslatedFilePath", resourceCulture) ?? "Translated File Path";
+        public static string Prop_ArrayBuilderClearExpr => ResourceManager.GetString("Prop_ArrayBuilderClearExpr", resourceCulture) ?? "Clear Array Switch Expression";
+        public static string Prop_ArrayBuilderClearBtn => ResourceManager.GetString("Prop_ArrayBuilderClearBtn", resourceCulture) ?? "Clear Array";
+        public static string TaskType_FileRead => ResourceManager.GetString("TaskType_FileRead", resourceCulture) ?? "File Read";
+        public static string TaskType_EventListener => ResourceManager.GetString("TaskType_EventListener", resourceCulture) ?? "Win Event Listener";
+        public static string TaskType_ArraySearch => ResourceManager.GetString("TaskType_ArraySearch", resourceCulture) ?? "Array Search";
+        public static string Prop_FilePathExpr => ResourceManager.GetString("Prop_FilePathExpr", resourceCulture) ?? "File Path Expression";
+        public static string Prop_Delimiter => ResourceManager.GetString("Prop_Delimiter", resourceCulture) ?? "Delimiter";
+        public static string Prop_EventType => ResourceManager.GetString("Prop_EventType", resourceCulture) ?? "Event Type";
+        public static string Prop_SearchExpr => ResourceManager.GetString("Prop_SearchExpr", resourceCulture) ?? "Search Text Expression";
+        public static string AC_FileReadArrayCount => ResourceManager.GetString("AC_FileReadArrayCount", resourceCulture) ?? "Array Count";
+        public static string AC_MatchIndex => ResourceManager.GetString("AC_MatchIndex", resourceCulture) ?? "Match Index";
+        public static string AC_MatchValue => ResourceManager.GetString("AC_MatchValue", resourceCulture) ?? "Match Value";
+        public static string MatchMode_Exact => ResourceManager.GetString("MatchMode_Exact", resourceCulture) ?? "Exact";
+        public static string MatchMode_Contains => ResourceManager.GetString("MatchMode_Contains", resourceCulture) ?? "Contains";
+        public static string MatchMode_Best => ResourceManager.GetString("MatchMode_Best", resourceCulture) ?? "Best Match (LCS)";
+        public static string EventType_MouseLeft => ResourceManager.GetString("EventType_MouseLeft", resourceCulture) ?? "Mouse Left Click";
+        public static string EventType_MouseRight => ResourceManager.GetString("EventType_MouseRight", resourceCulture) ?? "Mouse Right Click";
+        public static string EventType_Enter => ResourceManager.GetString("EventType_Enter", resourceCulture) ?? "Enter Key";
+        public static string EventType_Space => ResourceManager.GetString("EventType_Space", resourceCulture) ?? "Space Key";
         public static string Json_FileNotFound => ResourceManager.GetString("Json_FileNotFound", resourceCulture) ?? "File not found: {0}";
         public static string Json_DefaultFlowName => ResourceManager.GetString("Json_DefaultFlowName", resourceCulture) ?? "Flow";
         public static string Win32_Found => ResourceManager.GetString("Win32_Found", resourceCulture) ?? "Found: {0}";
@@ -822,7 +855,7 @@ namespace TaskFlow.Resources {
         public static string UI_AddModel => ResourceManager.GetString("UI_AddModel", resourceCulture) ?? "UI_AddModel";
         public static string UI_EditModel => ResourceManager.GetString("UI_EditModel", resourceCulture) ?? "UI_EditModel";
         public static string UI_DeleteModel => ResourceManager.GetString("UI_DeleteModel", resourceCulture) ?? "UI_DeleteModel";
-        public static string UI_TestModel => ResourceManager.GetString("UI_TestModel", resourceCulture) ?? "UI_TestModel";
+        public static string UI_TestModel => ResourceManager.GetString("UI_TestModel", resourceCulture) ?? "Test Model";
         public static string UI_ResetTokens => ResourceManager.GetString("UI_ResetTokens", resourceCulture) ?? "UI_ResetTokens";
         public static string UI_ModelEditTitle => ResourceManager.GetString("UI_ModelEditTitle", resourceCulture) ?? "UI_ModelEditTitle";
         public static string UI_DisplayName => ResourceManager.GetString("UI_DisplayName", resourceCulture) ?? "UI_DisplayName";

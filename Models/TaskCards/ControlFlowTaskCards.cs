@@ -462,10 +462,16 @@ namespace TaskFlow.Models.TaskCards
         private ArrayDataType _arrayDataType = ArrayDataType.Int;
 
         /// <summary>
-        /// 数组引用表达式（如 #1 模板匹配.匹配坐标 或 #1 模板匹配.结果分数）
+        /// 数组引用表达式（如 #1 模板匹配.匹配坐标 或 #1 模板匹配.结果分数）- 旧属性，保留用于向后兼容
         /// </summary>
         [ObservableProperty]
         private string _sourceExpression = string.Empty;
+
+        /// <summary>
+        /// 数组来源任务ID（通过下拉框选择）
+        /// </summary>
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForArray;
 
         /// <summary>
         /// 输出索引（固定值，0-based）
@@ -520,6 +526,188 @@ namespace TaskFlow.Models.TaskCards
             OutputIntValue = 0;
             OutputStringValue = string.Empty;
             OutputDoubleValue = 0;
+        }
+    }
+
+    /// <summary>
+    /// 数组生成任务卡片 - 在循环中收集数据，构建动态数组
+    /// </summary>
+    public partial class ArrayBuilderTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.ArrayBuilder;
+
+        /// <summary>
+        /// 数组元素类型
+        /// </summary>
+        [ObservableProperty]
+        private ArrayDataType _arrayDataType = ArrayDataType.String;
+
+        /// <summary>
+        /// 要追加的数据表达式（支持 #N / @变量引用）
+        /// </summary>
+        [ObservableProperty]
+        private string _inputExpression = "";
+
+        /// <summary>
+        /// 插入索引表达式（-1 = 自动追加到末尾）
+        /// </summary>
+        [ObservableProperty]
+        private string _indexExpression = "-1";
+
+        /// <summary>
+        /// 自动导出文件路径（流程结束时自动导出，留空则不导出）
+        /// </summary>
+        [ObservableProperty]
+        private string _autoExportPath = "";
+
+        /// <summary>
+        /// 清空数组开关表达式（bool 类型，当为 true 时清空数组）
+        /// </summary>
+        [ObservableProperty]
+        private string _clearExpression = "";
+
+        /// <summary>
+        /// 输出：数组当前容量
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _outputArrayCount;
+
+        /// <summary>
+        /// 输出：保存文件路径
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string? _outputSavePath;
+
+        public ArrayBuilderTaskCard()
+        {
+            Name = "数组生成";
+        }
+
+        public override bool OutputsBoolResult => true;
+        public override bool OutputsStringArray => true;
+    }
+
+    /// <summary>
+    /// 读取文件任务卡片 - 读取文件按分隔符分割成数组，缓存到内存
+    /// </summary>
+    public partial class FileReadTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.FileRead;
+
+        /// <summary>
+        /// 文件路径表达式
+        /// </summary>
+        [ObservableProperty]
+        private string _filePathExpression = "";
+
+        /// <summary>
+        /// 分隔符（默认 \n）
+        /// </summary>
+        [ObservableProperty]
+        private string _delimiter = "\\n";
+
+        /// <summary>
+        /// 输出：数组元素数量
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _outputArrayCount;
+
+        public override bool OutputsBoolResult => true;
+        public override bool OutputsStringArray => true;
+
+        public FileReadTaskCard()
+        {
+            Name = "读取文件";
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputArrayCount = 0;
+        }
+    }
+
+    /// <summary>
+    /// 事件监听任务卡片 - 暂停流程，等待用户输入事件触发
+    /// </summary>
+    public partial class EventListenerTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.EventListener;
+
+        /// <summary>
+        /// 事件类型: MouseLeft / MouseRight / Enter / Space
+        /// </summary>
+        [ObservableProperty]
+        private string _eventType = "MouseLeft";
+
+        public override bool OutputsBoolResult => true;
+
+        public EventListenerTaskCard()
+        {
+            Name = "Win事件监听";
+        }
+    }
+
+    /// <summary>
+    /// 匹配查找任务卡片 - 在数组中搜索文本，支持多种匹配模式
+    /// </summary>
+    public partial class ArraySearchTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.ArraySearch;
+
+        /// <summary>
+        /// 要搜索的文本表达式
+        /// </summary>
+        [ObservableProperty]
+        private string _searchExpression = "";
+
+        /// <summary>
+        /// 数组来源引用表达式（#N 名称.数组）- 旧属性，保留用于向后兼容
+        /// </summary>
+        [ObservableProperty]
+        private string _arraySourceExpression = "";
+
+        /// <summary>
+        /// 数组来源任务ID（通过下拉框选择）
+        /// </summary>
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForArray;
+
+        /// <summary>
+        /// 匹配模式: Exact / Contains / Best
+        /// </summary>
+        [ObservableProperty]
+        private string _matchMode = "Contains";
+
+        /// <summary>
+        /// 输出：匹配到的索引（-1=未找到）
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _outputMatchIndex = -1;
+
+        /// <summary>
+        /// 输出：匹配到的值
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string? _outputMatchValue;
+
+        public override bool OutputsBoolResult => true;
+
+        public ArraySearchTaskCard()
+        {
+            Name = "匹配查找";
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputMatchIndex = -1;
+            OutputMatchValue = null;
         }
     }
 }

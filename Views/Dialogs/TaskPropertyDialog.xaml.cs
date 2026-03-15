@@ -188,6 +188,26 @@ namespace TaskFlow.Views.Dialogs
                     AddLlmVisionProperties(visionCard);
                     break;
 
+                case ArrayBuilderTaskCard arrayBuilderCard:
+                    AddArrayBuilderProperties(arrayBuilderCard);
+                    break;
+
+                case LlmFileTranslateTaskCard fileTransCard:
+                    AddLlmFileTranslateProperties(fileTransCard);
+                    break;
+
+                case FileReadTaskCard fileReadCard:
+                    AddFileReadProperties(fileReadCard);
+                    break;
+
+                case EventListenerTaskCard eventCard:
+                    AddEventListenerProperties(eventCard);
+                    break;
+
+                case ArraySearchTaskCard searchCard:
+                    AddArraySearchProperties(searchCard);
+                    break;
+
                 case ImgColorDetectTaskCard colorCard:
                     AddImageSourcePropertyColor(colorCard);
                     AddColorDetectProperties(colorCard);
@@ -302,6 +322,38 @@ namespace TaskFlow.Views.Dialogs
             PropertyPanel.Children.Add(labelBlock);
             PropertyPanel.Children.Add(textBox);
             _propertyControls[propertyName] = textBox;
+        }
+
+        /// <summary>
+        /// 将已添加的 TextBox 包裹到 Grid 中，并在右侧添加 ... 浏览按钮（与模版匹配的图像路径一致）
+        /// </summary>
+        private void AddFileBrowseButton(string propertyName)
+        {
+            if (!_propertyControls.TryGetValue(propertyName, out var ctrl) || ctrl is not TextBox fileBox)
+                return;
+
+            // 从 PropertyPanel 中移除原始 TextBox
+            PropertyPanel.Children.Remove(fileBox);
+
+            // 创建 Grid 容器，与模版匹配的图像文件路径布局一致
+            var fileGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            fileBox.Margin = new Thickness(0);
+            Grid.SetColumn(fileBox, 0);
+
+            var browseBtn = new Button { Content = "...", Width = 32, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Stretch, Style = FindResource("ActionButton") as Style };
+            browseBtn.Click += (s, e) =>
+            {
+                var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "所有文件|*.*|文本文件|*.txt" };
+                if (dlg.ShowDialog() == true) fileBox.Text = dlg.FileName;
+            };
+            Grid.SetColumn(browseBtn, 1);
+
+            fileGrid.Children.Add(fileBox);
+            fileGrid.Children.Add(browseBtn);
+            PropertyPanel.Children.Add(fileGrid);
         }
 
         /// <summary>
@@ -1879,6 +1931,26 @@ namespace TaskFlow.Views.Dialogs
                         SaveLlmVisionProperties(visionCard);
                         break;
 
+                    case ArrayBuilderTaskCard arrayBuilderCard:
+                        SaveArrayBuilderProperties(arrayBuilderCard);
+                        break;
+
+                    case LlmFileTranslateTaskCard fileTransCard:
+                        SaveLlmFileTranslateProperties(fileTransCard);
+                        break;
+
+                    case FileReadTaskCard fileReadCard:
+                        SaveFileReadProperties(fileReadCard);
+                        break;
+
+                    case EventListenerTaskCard eventCard:
+                        SaveEventListenerProperties(eventCard);
+                        break;
+
+                    case ArraySearchTaskCard searchCard:
+                        SaveArraySearchProperties(searchCard);
+                        break;
+
                     case IfElseBranchTaskCard ifCard when ifCard.BranchRole == BranchRole.IfStart:
                         SaveIfElseProperties(ifCard);
                         SaveElifProperties(ifCard);
@@ -2909,8 +2981,32 @@ namespace TaskFlow.Views.Dialogs
             PropertyPanel.Children.Add(typeCombo);
             _propertyControls["ArrayDataType"] = typeCombo;
 
-            // 数组引用表达式
-            AddTextProperty("SourceExpression", TaskFlow.Resources.Strings.Prop_ArraySourceExpr, card.SourceExpression);
+            // 数组来源任务下拉框
+            var arrayLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ArraySourceTask, Style = FindResource("PropertyLabel") as Style };
+            var arrayCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            arrayCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+
+            foreach (var task in _viewModel.GetStringArrayOutputTasks().Where(t => t.Id != _task.Id))
+            {
+                arrayCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            }
+
+            arrayCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForArray.HasValue)
+            {
+                for (int i = 1; i < arrayCombo.Items.Count; i++)
+                {
+                    if (((ComboBoxItem)arrayCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForArray)
+                    {
+                        arrayCombo.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            PropertyPanel.Children.Add(arrayLabel);
+            PropertyPanel.Children.Add(arrayCombo);
+            _propertyControls["SourceTaskIdForArray"] = arrayCombo;
 
             // 索引设置（合并为单一输入框）
             // 显示逻辑：如果使用表达式索引，显示表达式；否则显示数字索引
@@ -2947,6 +3043,207 @@ namespace TaskFlow.Views.Dialogs
             }
         }
 
+        #region ArrayBuilder 属性
+
+        private void AddArrayBuilderProperties(ArrayBuilderTaskCard card)
+        {
+            // 数据表达式（支持补全）
+            AddTextProperty("InputExpression", TaskFlow.Resources.Strings.Prop_ArrayBuilderInputExpr, card.InputExpression);
+
+            // 索引表达式
+            AddTextProperty("IndexExpression", TaskFlow.Resources.Strings.Prop_ArrayBuilderIndexExpr, card.IndexExpression);
+
+            // 自动导出文件路径
+            AddTextProperty("AutoExportPath", TaskFlow.Resources.Strings.Prop_ArrayBuilderExportPath, card.AutoExportPath);
+
+            // 为导出路径增加文件夹选择按钮
+            if (_propertyControls.TryGetValue("AutoExportPath", out var exportCtrl) && exportCtrl is TextBox exportBox)
+            {
+                PropertyPanel.Children.Remove(exportBox);
+                var exportGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+                exportGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                exportGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                exportBox.Margin = new Thickness(0);
+                Grid.SetColumn(exportBox, 0);
+                var folderBtn = new Button { Content = "...", Width = 32, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Stretch, Style = FindResource("ActionButton") as Style };
+                folderBtn.Click += (s, e) =>
+                {
+                    var dlg = new System.Windows.Forms.FolderBrowserDialog();
+                    if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    {
+                        // 根据选取的文件夹路径自动拼接文件名
+                        exportBox.Text = System.IO.Path.Combine(dlg.SelectedPath, $"array_export_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+                    }
+                };
+                Grid.SetColumn(folderBtn, 1);
+                exportGrid.Children.Add(exportBox);
+                exportGrid.Children.Add(folderBtn);
+                PropertyPanel.Children.Add(exportGrid);
+            }
+
+            // 清空数组开关表达式（支持补全）
+            AddTextProperty("ClearExpression", TaskFlow.Resources.Strings.Prop_ArrayBuilderClearExpr, card.ClearExpression);
+
+            // 为清空表达式增加手动清除按钮
+            if (_propertyControls.TryGetValue("ClearExpression", out var clearCtrl) && clearCtrl is TextBox clearBox)
+            {
+                PropertyPanel.Children.Remove(clearBox);
+                var clearGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+                clearGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                clearGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                clearBox.Margin = new Thickness(0);
+                Grid.SetColumn(clearBox, 0);
+                var manualClearBtn = new Button
+                {
+                    Content = "🗑",
+                    Width = 32,
+                    Margin = new Thickness(4, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Stretch,
+                    Style = FindResource("ActionButton") as Style
+                };
+                manualClearBtn.Click += (s, e) =>
+                {
+                    if (TaskFlow.Services.TaskExecutionService._arrayBuilderData.TryGetValue(card.Id, out var data))
+                    {
+                        data.Clear();
+                        MessageBox.Show("数组已清空。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("当前无数据可清空。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                };
+                Grid.SetColumn(manualClearBtn, 1);
+                clearGrid.Children.Add(clearBox);
+                clearGrid.Children.Add(manualClearBtn);
+                PropertyPanel.Children.Add(clearGrid);
+            }
+
+            // 手动导出按钮（与框选区域按钮风格一致）
+            var exportBtn = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Prop_ArrayBuilderExportBtn,
+                Height = 32,
+                Margin = new Thickness(0, 4, 0, 4),
+                Style = FindResource("ActionButton") as Style
+            };
+            exportBtn.Click += (s, e) =>
+            {
+                // 从静态数据字典获取运行时数据
+                if (!TaskFlow.Services.TaskExecutionService._arrayBuilderData.TryGetValue(card.Id, out var data) || data.Count == 0)
+                {
+                    MessageBox.Show("当前无数据可导出。请先运行流程收集数据。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var dlg = new Microsoft.Win32.SaveFileDialog
+                {
+                    Filter = "文本文件|*.txt|所有文件|*.*",
+                    DefaultExt = ".txt",
+                    FileName = $"array_export_{DateTime.Now:yyyyMMdd_HHmmss}"
+                };
+                if (dlg.ShowDialog() == true)
+                {
+                    System.IO.File.WriteAllText(dlg.FileName, string.Join("\n", data), System.Text.Encoding.UTF8);
+                    MessageBox.Show($"已导出 {data.Count} 条数据到:\n{dlg.FileName}", "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            };
+            PropertyPanel.Children.Add(exportBtn);
+        }
+
+        private void SaveArrayBuilderProperties(ArrayBuilderTaskCard card)
+        {
+            if (GetStringValue("InputExpression", out string inputExpr))
+                card.InputExpression = inputExpr;
+            if (GetStringValue("IndexExpression", out string indexExpr))
+                card.IndexExpression = indexExpr;
+            if (GetStringValue("AutoExportPath", out string exportPath))
+                card.AutoExportPath = exportPath;
+            if (GetStringValue("ClearExpression", out string clearExpr))
+                card.ClearExpression = clearExpr;
+        }
+
+        #endregion
+
+        #region LlmFileTranslate 属性
+
+        private void AddLlmFileTranslateProperties(LlmFileTranslateTaskCard card)
+        {
+            // 模型选择
+            var modelLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SelectModel, Style = FindResource("PropertyLabel") as Style };
+            var modelCombo = new ComboBox
+            {
+                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
+                Style = FindResource("PropertyComboBox") as Style,
+                DisplayMemberPath = "DisplayName",
+                SelectedValuePath = "Id",
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            TaskFlow.Helpers.LlmModelManager.Load();
+            modelCombo.ItemsSource = TaskFlow.Helpers.LlmModelManager.Models;
+            if (!string.IsNullOrEmpty(card.ModelId)) modelCombo.SelectedValue = card.ModelId;
+            modelCombo.SelectionChanged += (s, e) =>
+            {
+                var selectedId = modelCombo.SelectedValue?.ToString() ?? "";
+                if (card.ModelId != selectedId) card.ModelId = selectedId;
+            };
+            PropertyPanel.Children.Add(modelLabel);
+            PropertyPanel.Children.Add(modelCombo);
+
+            // 输入文件路径
+            AddTextProperty("InputFilePath", TaskFlow.Resources.Strings.Prop_InputFilePath, card.InputFilePath);
+            AddFileBrowseButton("InputFilePath");
+
+            // 输出文件路径
+            AddTextProperty("OutputFilePath", TaskFlow.Resources.Strings.Prop_OutputFilePath, card.OutputFilePath);
+            AddFileBrowseButton("OutputFilePath");
+
+            // 目标语言
+            AddTextProperty("TargetLanguage", TaskFlow.Resources.Strings.Prop_TargetLanguage, card.TargetLanguage);
+
+            // 每批最大字符数
+            AddIntProperty("MaxCharsPerBatch", TaskFlow.Resources.Strings.Prop_MaxCharsPerBatch, card.MaxCharsPerBatch);
+
+            // System Prompt 多行文本框
+            var promptLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SystemPrompt, Style = FindResource("PropertyLabel") as Style };
+            var promptTextBox = new TextBox
+            {
+                Text = card.SystemPrompt,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                Height = 100,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = Brushes.White,
+                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
+                Padding = new Thickness(6, 4, 6, 4),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            promptTextBox.TextChanged += (s, e) =>
+            {
+                card.SystemPrompt = promptTextBox.Text;
+            };
+            PropertyPanel.Children.Add(promptLabel);
+            PropertyPanel.Children.Add(promptTextBox);
+            _propertyControls["SystemPrompt"] = promptTextBox;
+        }
+
+        private void SaveLlmFileTranslateProperties(LlmFileTranslateTaskCard card)
+        {
+            if (GetStringValue("InputFilePath", out string inputPath))
+                card.InputFilePath = inputPath;
+            if (GetStringValue("OutputFilePath", out string outputPath))
+                card.OutputFilePath = outputPath;
+            if (GetStringValue("TargetLanguage", out string targetLang))
+                card.TargetLanguage = targetLang;
+            if (_propertyControls.TryGetValue("MaxCharsPerBatch", out var maxCharsCtrl) && maxCharsCtrl is TextBox maxCharsTb)
+            {
+                if (int.TryParse(maxCharsTb.Text, out int maxChars) && maxChars > 0)
+                    card.MaxCharsPerBatch = maxChars;
+            }
+        }
+
+        #endregion
+
         private void SaveArrayParseProperties(ArrayParseTaskCard card)
         {
             // 保存数组类型
@@ -2956,9 +3253,14 @@ namespace TaskFlow.Views.Dialogs
                     card.ArrayDataType = dataType;
             }
 
-            // 保存引用表达式
-            if (GetStringValue("SourceExpression", out string srcExpr))
-                card.SourceExpression = srcExpr;
+            // 保存数组来源任务ID
+            if (_propertyControls.TryGetValue("SourceTaskIdForArray", out var arrayCtrl) && arrayCtrl is ComboBox arrayCombo)
+            {
+                if (arrayCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForArray = taskId;
+                else
+                    card.SourceTaskIdForArray = null;
+            }
 
             // 保存索引：智能判断是整数还是表达式
             if (GetStringValue("ParseIndexUnified", out string idxInput))
@@ -3171,5 +3473,159 @@ namespace TaskFlow.Views.Dialogs
             SaveButton.Content = Strings.UI_Save;
             CancelButton.Content = Strings.UI_Cancel;
         }
+
+        #region FileRead 属性
+
+        private void AddFileReadProperties(FileReadTaskCard card)
+        {
+            // 文件路径表达式
+            AddTextProperty("FilePathExpression", Strings.Prop_FilePathExpr, card.FilePathExpression);
+            AddFileBrowseButton("FilePathExpression");
+
+            // 分隔符
+            AddTextProperty("Delimiter", Strings.Prop_Delimiter, card.Delimiter);
+        }
+
+        private void SaveFileReadProperties(FileReadTaskCard card)
+        {
+            if (GetStringValue("FilePathExpression", out string filePath))
+                card.FilePathExpression = filePath;
+            if (GetStringValue("Delimiter", out string delimiter))
+                card.Delimiter = delimiter;
+        }
+
+        #endregion
+
+        #region EventListener 属性
+
+        private void AddEventListenerProperties(EventListenerTaskCard card)
+        {
+            // 事件类型下拉选择
+            var eventTypes = new (string Value, string Display)[]
+            {
+                ("MouseLeft", Strings.EventType_MouseLeft),
+                ("MouseRight", Strings.EventType_MouseRight),
+                ("Enter", Strings.EventType_Enter),
+                ("Space", Strings.EventType_Space)
+            };
+
+            var label = new TextBlock { Text = Strings.Prop_EventType, Style = FindResource("PropertyLabel") as Style };
+            var combo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            foreach (var et in eventTypes)
+            {
+                combo.Items.Add(new ComboBoxItem { Content = et.Display, Tag = et.Value });
+            }
+            // 选中当前值
+            for (int i = 0; i < combo.Items.Count; i++)
+            {
+                if (combo.Items[i] is ComboBoxItem ci && (string)ci.Tag == card.EventType)
+                {
+                    combo.SelectedIndex = i;
+                    break;
+                }
+            }
+            if (combo.SelectedIndex < 0) combo.SelectedIndex = 0;
+
+            PropertyPanel.Children.Add(label);
+            PropertyPanel.Children.Add(combo);
+            _propertyControls["EventType"] = combo;
+        }
+
+        private void SaveEventListenerProperties(EventListenerTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("EventType", out var ctrl) && ctrl is ComboBox combo
+                && combo.SelectedItem is ComboBoxItem ci)
+            {
+                card.EventType = (string)ci.Tag;
+            }
+        }
+
+        #endregion
+
+        #region ArraySearch 属性
+
+        private void AddArraySearchProperties(ArraySearchTaskCard card)
+        {
+            // 搜索文本表达式
+            AddTextProperty("SearchExpression", Strings.Prop_SearchExpr, card.SearchExpression);
+
+            // 数组来源任务下拉框
+            var arrayLabel = new TextBlock { Text = Strings.Prop_ArraySourceTask, Style = FindResource("PropertyLabel") as Style };
+            var arrayCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            arrayCombo.Items.Add(new ComboBoxItem { Content = Strings.Prop_SelectTask, Tag = null });
+
+            foreach (var task in _viewModel.GetStringArrayOutputTasks().Where(t => t.Id != _task.Id))
+            {
+                arrayCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            }
+
+            arrayCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForArray.HasValue)
+            {
+                for (int i = 1; i < arrayCombo.Items.Count; i++)
+                {
+                    if (((ComboBoxItem)arrayCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForArray)
+                    {
+                        arrayCombo.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            PropertyPanel.Children.Add(arrayLabel);
+            PropertyPanel.Children.Add(arrayCombo);
+            _propertyControls["SourceTaskIdForArray"] = arrayCombo;
+
+            // 匹配模式下拉选择
+            var matchModes = new (string Value, string Display)[]
+            {
+                ("Exact", Strings.MatchMode_Exact),
+                ("Contains", Strings.MatchMode_Contains),
+                ("Best", Strings.MatchMode_Best)
+            };
+
+            var label = new TextBlock { Text = Strings.Prop_MatchMode, Style = FindResource("PropertyLabel") as Style };
+            var combo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            foreach (var mm in matchModes)
+            {
+                combo.Items.Add(new ComboBoxItem { Content = mm.Display, Tag = mm.Value });
+            }
+            for (int i = 0; i < combo.Items.Count; i++)
+            {
+                if (combo.Items[i] is ComboBoxItem ci && (string)ci.Tag == card.MatchMode)
+                {
+                    combo.SelectedIndex = i;
+                    break;
+                }
+            }
+            if (combo.SelectedIndex < 0) combo.SelectedIndex = 1; // 默认 Contains
+
+            PropertyPanel.Children.Add(label);
+            PropertyPanel.Children.Add(combo);
+            _propertyControls["MatchMode"] = combo;
+        }
+
+        private void SaveArraySearchProperties(ArraySearchTaskCard card)
+        {
+            if (GetStringValue("SearchExpression", out string searchExpr))
+                card.SearchExpression = searchExpr;
+
+            // 保存数组来源任务ID
+            if (_propertyControls.TryGetValue("SourceTaskIdForArray", out var arrayCtrl) && arrayCtrl is ComboBox arrayCombo)
+            {
+                if (arrayCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
+                    card.SourceTaskIdForArray = taskId;
+                else
+                    card.SourceTaskIdForArray = null;
+            }
+
+            if (_propertyControls.TryGetValue("MatchMode", out var ctrl) && ctrl is ComboBox combo
+                && combo.SelectedItem is ComboBoxItem ci)
+            {
+                card.MatchMode = (string)ci.Tag;
+            }
+        }
+
+        #endregion
     }
 }

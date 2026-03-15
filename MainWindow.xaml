@@ -1,4 +1,4 @@
-﻿<Window x:Class="TaskFlow.MainWindow"
+<Window x:Class="TaskFlow.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -652,6 +652,7 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinUiAutomation}" Click="AddTask_Click" Tag="WinUiAutomation"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinSimulateInput}" Click="AddTask_Click" Tag="WinSimulateInput"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinSubtitle}" Click="AddTask_Click" Tag="WinSubtitle"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_EventListener}" Click="AddTask_Click" Tag="EventListener"/>
                                         </MenuItem>
                                         <!-- ADB -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_AdbOps}">
@@ -679,11 +680,15 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_StringSubstring}" Click="AddTask_Click" Tag="StringSubstring"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_TypeConvert}" Click="AddTask_Click" Tag="TypeConvert"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ArrayParse}" Click="AddTask_Click" Tag="ArrayParse"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_ArrayBuilder}" Click="AddTask_Click" Tag="ArrayBuilder"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_FileRead}" Click="AddTask_Click" Tag="FileRead"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_ArraySearch}" Click="AddTask_Click" Tag="ArraySearch"/>
                                         </MenuItem>
                                         <!-- AI -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_AiOps}">
                                             <MenuItem Header="{x:Static res:Strings.TaskType_LlmTranslate}" Click="AddTask_Click" Tag="LlmTranslate"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_LlmVision}" Click="AddTask_Click" Tag="LlmVision"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_LlmFileTranslate}" Click="AddTask_Click" Tag="LlmFileTranslate"/>
                                         </MenuItem>
                                         <!-- Control Flow -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_ControlFlow}">

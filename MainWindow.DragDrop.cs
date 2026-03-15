@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -651,7 +651,7 @@ namespace TaskFlow
                 (TaskType.WinLaunchApp, "WinLaunchApp"), (TaskType.WinScreenshot, "WinScreenshot"),
                 (TaskType.WinClick, "WinClick"), (TaskType.WinCloseApp, "WinCloseApp"),
                 (TaskType.WinUiAutomation, "WinUiAutomation"), (TaskType.WinSimulateInput, "WinSimulateInput"),
-                (TaskType.WinSubtitle, "WinSubtitle") })
+                (TaskType.WinSubtitle, "WinSubtitle"), (TaskType.EventListener, "EventListener") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;
@@ -691,7 +691,9 @@ namespace TaskFlow
             var dataProc = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_DataProc };
             foreach (var (type, tag) in new[] {
                 (TaskType.ExpressionEval, "ExpressionEval"), (TaskType.StringSubstring, "StringSubstring"),
-                (TaskType.TypeConvert, "TypeConvert"), (TaskType.ArrayParse, "ArrayParse") })
+                (TaskType.TypeConvert, "TypeConvert"), (TaskType.ArrayParse, "ArrayParse"),
+                (TaskType.ArrayBuilder, "ArrayBuilder"), (TaskType.FileRead, "FileRead"),
+                (TaskType.ArraySearch, "ArraySearch") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;
@@ -702,7 +704,8 @@ namespace TaskFlow
             // AI 操作
             var aiOps = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_AiOps };
             foreach (var (type, tag) in new[] {
-                (TaskType.LlmTranslate, "LlmTranslate"), (TaskType.LlmVision, "LlmVision") })
+                (TaskType.LlmTranslate, "LlmTranslate"), (TaskType.LlmVision, "LlmVision"),
+                (TaskType.LlmFileTranslate, "LlmFileTranslate") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;

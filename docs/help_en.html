@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -323,6 +323,7 @@
     <li><a href="#WinUiAutomation">Win UI Automation</a></li>
     <li><a href="#WinSimulateInput">Win Simulate Input</a></li>
     <li><a href="#WinSubtitle">Win Subtitle Overlay</a></li>
+    <li><a href="#EventListener">Win Event Listener</a></li>
 
     <li class="toc-category">ADB Operations</li>
     <li><a href="#AdbConnect">ADB Connect Device</a></li>
@@ -347,10 +348,14 @@
     <li><a href="#StringSubstring">String Substring</a></li>
     <li><a href="#TypeConvert">Type Convert</a></li>
     <li><a href="#ArrayParse">Array Parse</a></li>
+    <li><a href="#ArrayBuilder">Array Builder</a></li>
+    <li><a href="#FileRead">File Read</a></li>
+    <li><a href="#ArraySearch">Array Search</a></li>
 
     <li class="toc-category">AI Operations</li>
     <li><a href="#LlmTranslate">LLM Translate</a></li>
     <li><a href="#LlmVision">Multimodal Vision</a></li>
+    <li><a href="#LlmFileTranslate">LLM File Translation</a></li>
 
     <li class="toc-category">Control Flow</li>
     <li><a href="#IfElse">If-Else Branch</a></li>
@@ -366,28 +371,31 @@
   <h3>Main Toolbar</h3>
   <p>The toolbar at the top of the main window contains all the core control functions of the application:</p>
   <dl class="props">
-    <dt>📄 New / 📂 Open / 💾 Save / 📝 Save As</dt>
+    <dt> New /  Open /  Save /  Save As</dt>
     <dd>Manage project files (.json). Contains all flows, cards, local variables, and UI layout states.</dd>
-    <dt>👁‍🗨 Hide Main Window</dt>
+    <dt>🔽 Hide Main Window</dt>
     <dd>Click to completely hide the software's main window, bringing up a compact <strong>Real-time Task Overlay Window</strong>. <strong>How to Restore:</strong> You can also look for the TaskFlow icon in the <strong>System Tray</strong> (bottom-right of the Windows taskbar) and double-click it to show the main window again.</dd>
     <dt>🪟 Real-time Task Overlay</dt>
     <dd>A mini floating card that appears after hiding the main window. This overlay is <strong>always on top</strong>, making it perfect for monitoring task progress while AFK:<br>
-    • <strong>Controls</strong>: Quickly switch flows (↻), run current flow (▶), run all flows (▶▶), stop execution (⏹), and restore the main window with one click (◉).<br>
-    • <strong>Progress</strong>: Highlights the name of the currently executing task card in real-time, while fading the previous and next card names, giving you a clear view of the execution progress at a glance.
+    • <strong>Drag to Move</strong>: Click and hold anywhere on the window background to easily drag it to any position on the screen.<br>
+    • <strong>Double-Click Restore</strong>: Double-click anywhere on the window background to instantly restore the main window.<br>
+    • <strong>Smart Opacity</strong>: When a flow is actively running, moving your mouse away from the window makes the task area semi-transparent (50% opacity) so it doesn't block your view limitlessly. Hovering over it restores full visibility.<br>
+    • <strong>Controls</strong>: Quickly switch flows (↻), run current flow (▶), run all flows (▶▶), stop execution (⏹), and restore the main window with one click (◉). The switch flow button spins during execution, and color changes indicate the active state.<br>
+    • <strong>Progress Context</strong>: Highlights the name of the currently executing task card in real-time, displaying its breadcrumb context (e.g., inside an If-branch or For-loop). It also fades the previous and next card names, giving you a clear view of the execution progress at a glance.
     </dd>
     <dt>⚙ Settings</dt>
     <dd>Open the system settings window (Shortcut: F12).</dd>
-    <dt>｛｝ Variables</dt>
+    <dt>📦 Variables</dt>
     <dd>Open the variable management window to configure global variables and local variables for the selected flow.</dd>
-    <dt>🔀 Flows</dt>
+    <dt>📑 Flows</dt>
     <dd>Open the flow management window to create, rename, or delete different task flows.</dd>
-    <dt>🤖 Models</dt>
+    <dt>📱 Models</dt>
     <dd>Open the model management window to configure LLM API parameters for text translation and multimodal vision.</dd>
-    <dt>▶ Run Once / ▶▶ Run Current / ⏭ Run All</dt>
+    <dt>▷ Run Once / Run Current / Run All</dt>
     <dd><strong>Run Once:</strong> Executes only the currently selected card once (useful for debugging).<br><strong>Run Current:</strong> Executes all tasks in the currently active flow tab.<br><strong>Run All:</strong> Executes all tasks across all flow tabs in sequence.</dd>
     <dt>⏹ Stop All</dt>
     <dd>Forcefully interrupts all currently running flows.</dd>
-    <dt>🖼 Image Preview / 👁 Live View / 📋 Log Output</dt>
+    <dt> Image Preview /  Live View /  Log Output</dt>
     <dd>Toggle the visibility of different panels at the bottom or sides.</dd>
   </dl>
 </div>
@@ -407,7 +415,7 @@
 
 <div class="card-doc" id="FlowMgr">
   <h3>Flow Manager</h3>
-  <p>Opened via the <strong>🔀 Flows</strong> button. TaskFlow allows creating multiple flows within a project (vertical tabs on the left) to break down complex logic.</p>
+  <p>Opened via the <strong>� Flows</strong> button. TaskFlow allows creating multiple flows within a project (vertical tabs on the left) to break down complex logic.</p>
   <dl class="props">
     <dt>Basic Operations</dt>
     <dd>Add new flows, rename, or delete. Note: Deleting a flow will also delete <strong>all task cards and local variables</strong> within it. This action cannot be undone.</dd>
@@ -453,7 +461,7 @@
     <dd>Number of milliseconds to pause. Supports expressions. For example, <code>1000</code> pauses for 1 second.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (controls flow pause only)</div>
   </div>
 </div>
@@ -466,7 +474,7 @@
     <dd>C# date format, e.g. <code>yyyy-MM-dd HH:mm:ss</code>, <code>yyyyMMdd</code>.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Current time (formatted string based on the output format)</div>
   </div>
 </div>
@@ -475,7 +483,7 @@
   <h3>End Current Flow <span class="badge badge-general">General</span></h3>
   <p>Immediately terminates execution of the current flow without affecting other flows.</p>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (controls flow termination only)</div>
   </div>
 </div>
@@ -484,7 +492,7 @@
   <h3>End All Flows <span class="badge badge-general">General</span></h3>
   <p>Immediately terminates execution of all flows.</p>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (controls flow termination only)</div>
   </div>
 </div>
@@ -502,13 +510,13 @@
     <dd>Optional command-line arguments passed to the application.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">App path <code>C:\Program Files\Google\Chrome\Application\chrome.exe</code></div>
     <div class="example-item">Arguments <code>https://www.google.com</code> → Launches Chrome and opens the URL</div>
     <div class="example-item">Arguments <code>--incognito https://www.google.com</code> → Opens in incognito mode</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (launches the application only)</div>
   </div>
 </div>
@@ -527,7 +535,7 @@
     <dd>When checked, the screenshot is automatically converted to grayscale. Grayscale images reduce data size and improve processing speed and accuracy for template matching and OCR, while reducing color interference.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Captured window image (color or grayscale)</div>
   </div>
 </div>
@@ -546,13 +554,13 @@
     <dd>When checked, sends background messages via PostMessage to the target process without requiring the window to be in the foreground. Requires specifying the target process name. Works when the window is occluded or minimized.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Fixed coordinate click: X = <code>100</code>, Y = <code>200</code></div>
     <div class="example-item">Reference template match output: X = <code>{{#3.x}}</code>, Y = <code>{{#3.y}}</code> (#3 is the template match card number)</div>
     <div class="example-item">Offset click: X = <code>{{#3.x + 50}}</code>, Y = <code>{{#3.y - 10}}</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.x</code> — Actual click X coordinate</div>
     <div class="output-item"><code>#N.y</code> — Actual click Y coordinate</div>
   </div>
@@ -566,7 +574,7 @@
     <dd>Name of the process to close.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (closes the application only)</div>
   </div>
 </div>
@@ -583,14 +591,14 @@
     <dd>Exact match / Contains / Regular expression.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Find button by name: Search By = <code>Name</code>, Match Mode = <code>Contains</code>, Search Text = <code>OK</code></div>
     <div class="example-item">Find by AutomationId: Search By = <code>AutomationId</code>, Match Mode = <code>Exact</code>, Search Text = <code>btnSubmit</code></div>
     <div class="example-item">Regex match: Match Mode = <code>Regex</code>, Search Text = <code>^(OK|Save)$</code> (matches controls named "OK" or "Save")</div>
     <div class="example-item">Regex wildcards: <code>btn.*Submit</code> (matches names starting with btn and ending with Submit), <code>\d+</code> (matches names containing digits)</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Text content of the element (if applicable)</div>
   </div>
 </div>
@@ -613,13 +621,13 @@
     <dd>Wait time between each repetition, default <code>50</code>ms.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Ctrl+S Save: Modifier = <code>Ctrl</code>, Action = <code>Keyboard Key</code>, Key = <code>S</code></div>
     <div class="example-item">Scroll down 5 times: Action = <code>Mouse Wheel Down</code>, Repeat = <code>5</code>, Interval = <code>200</code></div>
     <div class="example-item">Press Enter: Modifier = <code>None</code>, Key = <code>ENTER</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Description of the action performed</div>
   </div>
 </div>
@@ -652,19 +660,32 @@
     <dd>When checked, the flow waits until the subtitle display duration ends before executing the next task.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Display static text: Subtitle content = <code>Processing...</code></div>
     <div class="example-item">Display translation result: Subtitle content = <code>{{#5.text}}</code> (#5 is the LLM translation card)</div>
     <div class="example-item">Concatenate multiple variables: Subtitle content = <code>Original: {{#3.text}} → Translation: {{#5.text}}</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (displays subtitle overlay only)</div>
   </div>
 </div>
 
 <!-- ==================== ADB Operations ==================== -->
 <div class="category-title">ADB Operations</div>
+
+<div class="card-doc" id="EventListener">
+  <h3>Win Event Listener <span class="badge badge-win">Windows</span></h3>
+  <p>Continuously wait for a specific keyboard or mouse event, such as executing subsequent tasks when a shortcut key is pressed.</p>
+  <dl class="props">
+    <dt>Event to Listen</dt>
+    <dd>Select the key or mouse action to listen for.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">Output</div>
+    <div class="output-item"><code>#N.result</code> — Returns true when the event is triggered</div>
+  </div>
+</div>
 
 <div class="card-doc" id="AdbConnect">
   <h3>ADB Connect Device <span class="badge badge-adb">ADB</span></h3>
@@ -676,7 +697,7 @@
     <dd>Device ADB port, default <code>5555</code>.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (establishes connection only)</div>
   </div>
 </div>
@@ -693,7 +714,7 @@
     <dd>Optional. Specify the Activity to launch. Leave empty for the default Activity.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (launches the app only)</div>
   </div>
 </div>
@@ -708,7 +729,7 @@
     <dd>When checked, the screenshot is automatically converted to grayscale for faster processing.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Device screen screenshot</div>
   </div>
 </div>
@@ -725,7 +746,7 @@
     <dd>Duration of the swipe operation (milliseconds), default 300ms.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.x</code> — Actual click X coordinate</div>
     <div class="output-item"><code>#N.y</code> — Actual click Y coordinate</div>
   </div>
@@ -739,7 +760,7 @@
     <dd>Package name of the app to close.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (stops the app only)</div>
   </div>
 </div>
@@ -748,7 +769,7 @@
   <h3>ADB Disconnect <span class="badge badge-adb">ADB</span></h3>
   <p>Disconnects the ADB connection to the Android device.</p>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (disconnects only)</div>
   </div>
 </div>
@@ -766,7 +787,7 @@
     <dd>Top-left corner coordinates and dimensions of the crop rectangle. Supports expressions.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Cropped image</div>
   </div>
 </div>
@@ -785,13 +806,13 @@
     <dd>1 = single target match; &gt;1 = multi-target match.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Find button position: Threshold = <code>0.85</code>, use If to check <code>#N.result</code>, then click at <code>#N.x</code>, <code>#N.y</code></div>
     <div class="example-item">Multi-target match: Max count = <code>5</code>, results accessible via <code>OutputMatchResults</code> array</div>
     <div class="example-item">Threshold guidelines: Identical icons <code>0.9–0.95</code>, similar elements <code>0.75–0.85</code>, fuzzy match <code>0.6–0.75</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Result image with match positions annotated</div>
     <div class="output-item"><code>#N.result</code> — Whether a match was found (true/false)</div>
     <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Center coordinates of the best match (single target)</div>
@@ -819,13 +840,13 @@
     <dd>Optional. Limits the recognition area. The image is cropped before OCR.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Basic OCR: Screenshot → Crop ROI → OCR → Get <code>#N.text</code></div>
     <div class="example-item">With check: Enable "Check Contains Text", Target = <code>Success</code>, If branch on <code>#N.result</code></div>
     <div class="example-item">Improve accuracy: Preprocess image (grayscale + binarize) before OCR</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Full OCR recognized text</div>
     <div class="output-item"><code>#N.result</code> — Whether the specified text was found (when check is enabled)</div>
   </div>
@@ -843,13 +864,13 @@
     <dd>Optional. Limits the detection area.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Detect red area: H lower = <code>0</code> upper = <code>10</code>, S lower = <code>100</code> upper = <code>255</code>, V lower = <code>100</code> upper = <code>255</code></div>
     <div class="example-item">Detect green area: H lower = <code>35</code> upper = <code>85</code></div>
     <div class="example-item">HSV hue reference: Red <code>0–10/170–180</code>, Orange <code>10–25</code>, Yellow <code>25–35</code>, Green <code>35–85</code>, Blue <code>85–125</code>, Purple <code>125–170</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Color detection visualization image</div>
     <div class="output-item"><code>#N.result</code> — Whether color match meets threshold (true/false)</div>
     <div class="output-item"><code>OutputMeanH/S/V</code> — Average HSV values in the region</div>
@@ -865,7 +886,7 @@
     <dd>HSV color range for pixels to keep.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Color-segmented image (only matching regions retained)</div>
   </div>
 </div>
@@ -888,7 +909,7 @@
     <dd>Kernel size for morphological operations, default 3. Larger kernels produce more pronounced effects.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Preprocessed image</div>
   </div>
 </div>
@@ -913,13 +934,13 @@
     <dd>Optional. Limits the analysis area. The image is cropped before analysis.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Typical pipeline: Screenshot → Color segmentation/binarization → Blob analysis → Get target position</div>
     <div class="example-item">Filter small noise: Min area = <code>500</code>, ignore blobs that are too small</div>
     <div class="example-item">Find largest target: Sort = <code>Area descending</code>, Max count = <code>1</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Result image with blob positions annotated</div>
     <div class="output-item"><code>#N.result</code> — Whether blobs were detected (true/false)</div>
     <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Center coordinates of the first blob</div>
@@ -936,7 +957,7 @@
     <dd>Image dimensions after resizing (pixels).</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.image</code> — Resized image</div>
     <div class="output-item"><code>OutputScaleRatio</code> — Actual scale ratio</div>
   </div>
@@ -953,14 +974,14 @@
     <dd>Supports <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code> arithmetic, and <code>&gt;</code> <code>&lt;</code> <code>==</code> <code>!=</code> comparisons. Can reference other card outputs, e.g. <code>#1.text</code>, <code>#2.x</code>.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Math calculation: <code>#1.x * 2 + 100</code> → doubles the coordinate and offsets by 100</div>
     <div class="example-item">String comparison: <code>#3.text == "Success"</code> → checks if OCR result matches specific text</div>
     <div class="example-item">Numeric comparison: <code>#2.x > 500</code> → checks if coordinate is in the right half</div>
     <div class="example-item">Combined condition: <code>#1.result == true</code> → use with If branches</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Expression evaluation result (string)</div>
     <div class="output-item"><code>#N.result</code> — Boolean result (when expression is a comparison)</div>
   </div>
@@ -984,7 +1005,7 @@
     <dd>Number of characters to extract. -1 extracts to the end.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Extracted substring</div>
   </div>
 </div>
@@ -999,7 +1020,7 @@
     <dd>Text to convert. Supports <code>@variables</code> and <code>#task references</code>.</dd>
   </dl>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Converted value (string form)</div>
     <div class="output-item"><code>#N.result</code> — Converted integer value</div>
   </div>
@@ -1015,18 +1036,75 @@
     <dd>Element index to extract (0-based). Supports expressions.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Extract 2nd coordinate from Blob results: Array Type = <code>Coordinate</code>, Index = <code>1</code></div>
     <div class="example-item">Dynamic index: Index = <code>{{#5.loopIndex}}</code> (sequentially extract each element in a For loop)</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Extracted element value (string form)</div>
     <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Coordinate values (for coordinate array type)</div>
   </div>
 </div>
 
 <!-- ==================== AI Operations ==================== -->
+<div class="card-doc" id="ArrayBuilder">
+  <h3>Array Builder <span class="badge badge-data">Data</span></h3>
+  <p>Dynamically build and manage a string array, append data to it, and optionally export it to a file.</p>
+  <dl class="props">
+    <dt>Append Data</dt>
+    <dd>Data to append (supports <code>#N</code> / <code>@variable</code> references).</dd>
+    <dt>Insert Index</dt>
+    <dd>A numeric expression for the insertion position; <code>-1</code> appends to the end.</dd>
+    <dt>Auto Export Path</dt>
+    <dd>File path to automatically export the array when the flow ends (leave blank to disable).</dd>
+    <dt>Clear Array Trigger</dt>
+    <dd>Boolean expression that clears the array when evaluated to true.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">Output</div>
+    <div class="output-item"><code>#N.result</code> — Whether the operation succeeded (true/false)</div>
+    <div class="output-item"><code>OutputArrayCount</code> — Current number of elements in the array</div>
+    <div class="output-item"><code>OutputStringArray</code> — The generated string array</div>
+  </div>
+</div>
+
+<div class="card-doc" id="FileRead">
+  <h3>File Read <span class="badge badge-data">Data</span></h3>
+  <p>Read a file and split its contents into an array by a delimiter, caching it in memory for later use.</p>
+  <dl class="props">
+    <dt>File Path Expression</dt>
+    <dd>The path of the file to read.</dd>
+    <dt>Delimiter</dt>
+    <dd>Character used to split the file content (default is <code>\n</code>).</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">Output</div>
+    <div class="output-item"><code>#N.result</code> — Whether the file was successfully read (true/false)</div>
+    <div class="output-item"><code>OutputArrayCount</code> — Current number of elements in the array</div>
+    <div class="output-item"><code>OutputStringArray</code> — The string array read from the file</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ArraySearch">
+  <h3>Array Search <span class="badge badge-data">Data</span></h3>
+  <p>Search for specific text within an array, supporting multiple matching modes.</p>
+  <dl class="props">
+    <dt>Array Source Task</dt>
+    <dd>Select a previous task that outputs an array (e.g., File Read or Array Builder).</dd>
+    <dt>Search Expression</dt>
+    <dd>The text content to search for.</dd>
+    <dt>Match Mode</dt>
+    <dd><code>Exact</code>, <code>Contains</code>, or <code>Best</code>.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">Output</div>
+    <div class="output-item"><code>#N.result</code> — Whether a match was found (true/false)</div>
+    <div class="output-item"><code>OutputMatchIndex</code> — The index of the matched element (<code>-1</code> if not found)</div>
+    <div class="output-item"><code>OutputMatchValue</code> — The matched value string</div>
+  </div>
+</div>
+
 <div class="category-title">AI Operations</div>
 
 <div class="card-doc" id="LlmTranslate">
@@ -1043,12 +1121,12 @@
     <dd>Custom translation instructions. Can be modified to adjust translation style. Supports <code>{target language}</code> placeholder.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Translate OCR result: Source text = <code>{{#4.text}}</code>, Target language = <code>Chinese</code> (#4 is the OCR card)</div>
     <div class="example-item">Real-time translation pipeline: Screenshot → Crop subtitle area → OCR → LLM Translate → Subtitle display</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Translated text</div>
   </div>
 </div>
@@ -1067,19 +1145,42 @@
     <dd>Reference the output from a preceding screenshot or image processing card.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Image description: Prompt = <code>Describe the main content in the image</code></div>
     <div class="example-item">Status check: Prompt = <code>Is the button in the image enabled? Answer only "yes" or "no"</code>, use with If branch</div>
     <div class="example-item">Extract information: Prompt = <code>Extract all numbers in the image, separated by commas</code></div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.text</code> — Model analysis result text</div>
     <div class="output-item"><code>#N.result</code> — Whether analysis was successful (true/false)</div>
   </div>
 </div>
 
 <!-- ==================== Control Flow ==================== -->
+<div class="card-doc" id="LlmFileTranslate">
+  <h3>LLM File Translation <span class="badge badge-ai">AI</span></h3>
+  <p>Reads text from a file, intelligently chunks it, translates it via an LLM, and writes to an output file.</p>
+  <dl class="props">
+    <dt>Translation Model</dt>
+    <dd>The LLM assigned in the Model Manager.</dd>
+    <dt>Input File Path</dt>
+    <dd>Path to the file to be translated (supports variables).</dd>
+    <dt>Output File Path</dt>
+    <dd>Path to save the translation results (supports variables).</dd>
+    <dt>Target Language</dt>
+    <dd>The language to translate to (default is "Simplified Chinese").</dd>
+    <dt>System Prompt</dt>
+    <dd>Custom translation rules. Translation maintains line count and character names.</dd>
+    <dt>Max Chars Per Batch</dt>
+    <dd>The maximum number of characters sent per request (auto-chunks large files).</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title">Output</div>
+    <div class="output-item"><code>OutputTranslatedFilePath</code> — The output path of the translated file</div>
+  </div>
+</div>
+
 <div class="category-title">Control Flow</div>
 
 <div class="card-doc" id="IfElse">
@@ -1092,13 +1193,13 @@
     <dd>An expression that returns a boolean, e.g. <code>#1.result == true</code>.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Check template match result: Source = <code>TaskResult</code>, reference the template match card → If branch on success, Else on failure</div>
     <div class="example-item">Manual condition: Source = <code>ManualInput</code>, Expression = <code>#3.text == "Confirm"</code></div>
     <div class="example-item">Multi-condition branching: If + Elif + Else for three-way or more branch logic</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No direct output (controls execution path)</div>
   </div>
   <p style="margin-top:8px"><strong>Tip:</strong> Right-click the IF start card to add Elif branches or show/hide the Else branch. The collapse button (▶) can fold the entire branch block.</p>
@@ -1112,13 +1213,13 @@
     <dd>Total number of iterations. Supports expressions.</dd>
   </dl>
   <div class="example-section">
-    <div class="example-title">💡 Examples</div>
+    <div class="example-title"> Examples</div>
     <div class="example-item">Fixed loop: Count = <code>10</code> → repeats 10 times</div>
     <div class="example-item">Iterate Blob results: Count = <code>{{#5.blobCount}}</code>, use Array Parse + index <code>{{#N.loopIndex}}</code> inside the loop to process each item</div>
     <div class="example-item">With Break: use If inside the loop to check a condition and break when met</div>
   </div>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item"><code>#N.loopIndex</code> — Current loop index (starts from 0)</div>
   </div>
   <p style="margin-top:8px"><strong>Tip:</strong> Inside the loop body you can use <code>#N.loopIndex</code> to reference the current loop index (N is the loop start card's number).</p>
@@ -1128,7 +1229,7 @@
   <h3>Break Loop <span class="badge badge-flow">Control Flow</span></h3>
   <p>Immediately exits the nearest For loop and continues executing tasks after the loop. Typically used with an If condition.</p>
   <div class="output-section">
-    <div class="output-title">📤 Output</div>
+    <div class="output-title"> Output</div>
     <div class="output-item">No output (controls loop exit only)</div>
   </div>
 </div>

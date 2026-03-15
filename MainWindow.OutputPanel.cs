@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -140,7 +140,13 @@ namespace TaskFlow
                 nameof(TaskCardBase.OutputLoopIndex) or
                 nameof(TaskCardBase.ExecutionDuration) or
                 nameof(TaskCardBase.Status) or
-                nameof(TaskCardBase.ErrorMessage))
+                nameof(TaskCardBase.ErrorMessage) or
+                nameof(ArrayBuilderTaskCard.OutputArrayCount) or
+                nameof(ArrayBuilderTaskCard.OutputSavePath) or
+                nameof(LlmFileTranslateTaskCard.OutputTranslatedFilePath) or
+                nameof(FileReadTaskCard.OutputArrayCount) or
+                nameof(ArraySearchTaskCard.OutputMatchIndex) or
+                nameof(ArraySearchTaskCard.OutputMatchValue))
             {
                 Dispatcher.BeginInvoke(() => ScheduleOutputPanelUpdate());
             }
@@ -345,6 +351,35 @@ namespace TaskFlow
                 AddOutputRow(TaskFlow.Resources.Strings.Output_CurrentTime, tsCard.OutputTimestamp.ToString());
             }
 
+            // ArrayBuilder specific: 数组当前容量、保存文件路径
+            if (task is ArrayBuilderTaskCard abCard)
+            {
+                AddOutputRow(TaskFlow.Resources.Strings.AC_ArrayCapacity, abCard.OutputArrayCount.ToString());
+                if (!string.IsNullOrEmpty(abCard.OutputSavePath))
+                    AddOutputRow(TaskFlow.Resources.Strings.AC_SaveFilePath, abCard.OutputSavePath);
+            }
+
+            // LlmFileTranslate specific: 已翻译文件路径
+            if (task is LlmFileTranslateTaskCard ftCard)
+            {
+                if (!string.IsNullOrEmpty(ftCard.OutputTranslatedFilePath))
+                    AddOutputRow(TaskFlow.Resources.Strings.AC_TranslatedFilePath, ftCard.OutputTranslatedFilePath);
+            }
+
+            // FileRead specific: 数组元素数量
+            if (task is FileReadTaskCard frCard)
+            {
+                AddOutputRow(TaskFlow.Resources.Strings.AC_FileReadArrayCount, frCard.OutputArrayCount.ToString());
+            }
+
+            // ArraySearch specific: 匹配索引和匹配值
+            if (task is ArraySearchTaskCard asCard)
+            {
+                AddOutputRow(TaskFlow.Resources.Strings.AC_MatchIndex, asCard.OutputMatchIndex.ToString());
+                if (!string.IsNullOrEmpty(asCard.OutputMatchValue))
+                    AddOutputRow(TaskFlow.Resources.Strings.AC_MatchValue, asCard.OutputMatchValue);
+            }
+
             // ErrorMessage
             if (!string.IsNullOrEmpty(task.ErrorMessage))
             {
@@ -359,7 +394,9 @@ namespace TaskFlow
                             !string.IsNullOrEmpty(task.ErrorMessage) ||
                             task is ForLoopTaskCard || task is ImgColorDetectTaskCard ||
                             task is ImgTemplateMatchTaskCard || task is TypeConvertTaskCard ||
-                            task is ArrayParseTaskCard || task is GetTimestampTaskCard;
+                            task is ArrayParseTaskCard || task is GetTimestampTaskCard ||
+                            task is ArrayBuilderTaskCard || task is LlmFileTranslateTaskCard ||
+                            task is FileReadTaskCard || task is ArraySearchTaskCard;
 
             if (!hasOutput)
             {

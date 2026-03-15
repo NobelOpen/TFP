@@ -330,6 +330,12 @@
             <!-- 关于 -->
             <TextBlock x:Name="TxtAboutSection" Text="ℹ About / 关于" Style="{StaticResource SectionHeader}"/>
             <TextBlock x:Name="TxtVersion" Foreground="#b0aea5" FontSize="13" Margin="0,2"/>
+            <TextBlock Foreground="#b0aea5" FontSize="13" Margin="0,2">
+                <Run Text="GitHub: "/>
+                <Hyperlink NavigateUri="https://github.com/NobelOpen/TFP" RequestNavigate="Hyperlink_RequestNavigate">
+                    https://github.com/NobelOpen/TFP
+                </Hyperlink>
+            </TextBlock>
 
             <!-- 按钮 -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">

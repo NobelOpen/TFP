@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TaskFlow.Resources;
 using System.Collections.Generic;
 using System.Linq;
@@ -97,6 +97,24 @@ namespace TaskFlow.Helpers
                     "缩放倍率" => referencedTask is ImgResizeTaskCard resizeCard
                         ? resizeCard.OutputScaleRatio.ToString()
                         : "0",
+                    "数组当前容量" => referencedTask is ArrayBuilderTaskCard abCard
+                        ? abCard.OutputArrayCount.ToString()
+                        : "0",
+                    "保存文件路径" => referencedTask is ArrayBuilderTaskCard abCard2
+                        ? $"\"{abCard2.OutputSavePath ?? ""}\""
+                        : "\"\"",
+                    "已翻译文件路径" => referencedTask is LlmFileTranslateTaskCard ftCard
+                        ? $"\"{ftCard.OutputTranslatedFilePath ?? ""}\""
+                        : "\"\"",
+                    "数组元素数量" => referencedTask is FileReadTaskCard frCard
+                        ? frCard.OutputArrayCount.ToString()
+                        : "0",
+                    "匹配索引" => referencedTask is ArraySearchTaskCard asCard
+                        ? asCard.OutputMatchIndex.ToString()
+                        : "-1",
+                    "匹配值" => referencedTask is ArraySearchTaskCard asCard2
+                        ? $"\"{asCard2.OutputMatchValue ?? ""}\""
+                        : "\"\"",
                     _ => throw new InvalidOperationException($"不支持的输出属性: {property}")
                 };
             });

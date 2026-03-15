@@ -42,3 +42,7 @@ $RECYCLE.BIN/
 
 ## macOS
 .DS_Store
+
+publish/
+.agents/
+add-task-card.md

@@ -73,10 +73,23 @@ namespace TaskFlow.Models.TaskCards
 
         // 数值解析
         ArrayParse,
+
+        // 数组生成
+        ArrayBuilder,
+
+        // 文件读取
+        FileRead,
+
+        // 事件监听
+        EventListener,
+
+        // 匹配查找
+        ArraySearch,
         
         // AI操作
         LlmTranslate,
         LlmVision,
+        LlmFileTranslate,
 
         // 时间
         GetTimestamp
@@ -222,6 +235,10 @@ namespace TaskFlow.Models.TaskCards
         [ObservableProperty]
         private int _indentLevel;
 
+        [JsonIgnore]
+        [ObservableProperty]
+        private string? _breadcrumbText;
+
         // 输出数据
         [JsonIgnore]
         [ObservableProperty]
@@ -300,9 +317,14 @@ namespace TaskFlow.Models.TaskCards
                 TaskType.StringSubstring => Resources.Strings.TaskType_StringSubstring,
                 TaskType.TypeConvert => Resources.Strings.TaskType_TypeConvert,
                 TaskType.ArrayParse => Resources.Strings.TaskType_ArrayParse,
+                TaskType.ArrayBuilder => Resources.Strings.TaskType_ArrayBuilder,
                 TaskType.GetTimestamp => Resources.Strings.TaskType_GetTimestamp,
                 TaskType.LlmTranslate => Resources.Strings.TaskType_LlmTranslate,
                 TaskType.LlmVision => Resources.Strings.TaskType_LlmVision,
+                TaskType.LlmFileTranslate => Resources.Strings.TaskType_LlmFileTranslate,
+                TaskType.FileRead => Resources.Strings.TaskType_FileRead,
+                TaskType.EventListener => Resources.Strings.TaskType_EventListener,
+                TaskType.ArraySearch => Resources.Strings.TaskType_ArraySearch,
                 _ => type.ToString()
             };
         }
@@ -349,5 +371,10 @@ namespace TaskFlow.Models.TaskCards
         /// 是否输出结果
         /// </summary>
         public virtual bool OutputsBoolResult => false;
+
+        /// <summary>
+        /// 是否输出字符串数组（如 FileRead、ArrayBuilder）
+        /// </summary>
+        public virtual bool OutputsStringArray => false;
     }
 }

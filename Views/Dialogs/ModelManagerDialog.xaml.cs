@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -129,7 +129,9 @@ namespace TaskFlow.Views.Dialogs
             var btn = sender as Button;
             string oldContent = btn.Content.ToString();
             btn.Content = Strings.Dlg_Testing;
-            btn.IsEnabled = false;
+
+            // 测试中禁用窗口所有交互
+            this.IsEnabled = false;
 
             try
             {
@@ -185,8 +187,11 @@ namespace TaskFlow.Views.Dialogs
             }
             finally
             {
+                // 恢复窗口交互
+                this.IsEnabled = true;
                 btn.Content = oldContent;
-                btn.IsEnabled = true;
+                // 恢复按钮状态（根据当前选择）
+                ModelGrid_SelectionChanged(ModelGrid, null!);
             }
         }
 

@@ -182,6 +182,7 @@ namespace TaskFlow.ViewModels
             Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 CurrentRunningTask = task;
+                CurrentTaskBreadcrumb = task.BreadcrumbText;
 
                 // 计算上一个和下一个任务
                 var index = TaskCards.IndexOf(task);
@@ -208,6 +209,7 @@ namespace TaskFlow.ViewModels
             {
                 IsRunning = false;
                 CurrentRunningTask = null;
+                CurrentTaskBreadcrumb = null;
                 PreviousTask = null;
                 NextTask = null;
                 AddLog("========== 全部流程执行完毕 ==========");

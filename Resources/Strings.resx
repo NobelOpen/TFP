@@ -92,6 +92,8 @@
   <data name="TaskType_GetTimestamp" xml:space="preserve"><value>Get Current Time</value></data>
   <data name="TaskType_LlmTranslate" xml:space="preserve"><value>LLM Translate</value></data>
   <data name="TaskType_LlmVision" xml:space="preserve"><value>Multimodal Vision</value></data>
+  <data name="TaskType_ArrayBuilder" xml:space="preserve"><value>Array Builder</value></data>
+  <data name="TaskType_LlmFileTranslate" xml:space="preserve"><value>LLM File Translate</value></data>
 
   <!-- ========== MainWindow ========== -->
   <data name="Main_Title" xml:space="preserve"><value>TaskFlow</value></data>
@@ -436,6 +438,7 @@
   <data name="Prop_SaveFailed" xml:space="preserve"><value>Save failed: {0}</value></data>
   <data name="Prop_ImageSourceTask" xml:space="preserve"><value>Image Source Task</value></data>
   <data name="Prop_SelectTask" xml:space="preserve"><value>-- Select Task --</value></data>
+  <data name="Prop_ArraySourceTask" xml:space="preserve"><value>Array Source Task</value></data>
   <data name="Prop_ImageFilePath" xml:space="preserve"><value>Image File Path</value></data>
   <data name="Filter_ImageFile" xml:space="preserve"><value>Image Files|*.png;*.jpg;*.bmp</value></data>
   <data name="Prop_UseSourceTaskImage" xml:space="preserve"><value>Use output image from another task</value></data>
@@ -467,6 +470,14 @@ Example: @A = 1; @B = @A + 1</value></data>
   <data name="Prop_PaddleOcr" xml:space="preserve"><value>PaddleOCR (Built-in)</value></data>
   <data name="Prop_WeChatOcr" xml:space="preserve"><value>WeChat OCR</value></data>
   <data name="Prop_WeChatOcrTip" xml:space="preserve"><value>⚠ WeChat OCR requires configuration in Settings</value></data>
+  <data name="Prop_ArrayBuilderInputExpr" xml:space="preserve"><value>Insert Data Expression</value></data>
+  <data name="Prop_ArrayBuilderIndexExpr" xml:space="preserve"><value>Insert Index Expression (-1 = auto append)</value></data>
+  <data name="Prop_ArrayBuilderExportPath" xml:space="preserve"><value>Auto Export File Path (empty = no export)</value></data>
+  <data name="Prop_ArrayBuilderExportBtn" xml:space="preserve"><value>Export Array Data</value></data>
+  <data name="Prop_InputFilePath" xml:space="preserve"><value>Input File Path Expression</value></data>
+  <data name="Prop_OutputFilePath" xml:space="preserve"><value>Output File Path Expression</value></data>
+  <data name="Prop_MaxCharsPerBatch" xml:space="preserve"><value>Max Characters Per Batch</value></data>
+  <data name="Prop_BrowseFile" xml:space="preserve"><value>Browse File</value></data>
 
   <data name="Dlg_Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="Dlg_SettingsTitle" xml:space="preserve"><value>Settings Management</value></data>
@@ -671,6 +682,28 @@ Example: @A = 1; @B = @A + 1</value></data>
   <data name="AC_BlobCount" xml:space="preserve"><value>Blob Count</value></data>
   <data name="AC_ScaleFactor" xml:space="preserve"><value>Scale Factor</value></data>
   <data name="AC_MatchScore" xml:space="preserve"><value>Match Score</value></data>
+  <data name="AC_ArrayCapacity" xml:space="preserve"><value>Array Capacity</value></data>
+  <data name="AC_SaveFilePath" xml:space="preserve"><value>Save File Path</value></data>
+  <data name="AC_TranslatedFilePath" xml:space="preserve"><value>Translated File Path</value></data>
+  <data name="Prop_ArrayBuilderClearExpr" xml:space="preserve"><value>Clear Array Switch Expression</value></data>
+  <data name="Prop_ArrayBuilderClearBtn" xml:space="preserve"><value>Clear Array</value></data>
+  <data name="TaskType_FileRead" xml:space="preserve"><value>File Read</value></data>
+  <data name="TaskType_EventListener" xml:space="preserve"><value>Win Event Listener</value></data>
+  <data name="TaskType_ArraySearch" xml:space="preserve"><value>Array Search</value></data>
+  <data name="Prop_FilePathExpr" xml:space="preserve"><value>File Path Expression</value></data>
+  <data name="Prop_Delimiter" xml:space="preserve"><value>Delimiter (\n = newline)</value></data>
+  <data name="Prop_EventType" xml:space="preserve"><value>Event Type</value></data>
+  <data name="Prop_SearchExpr" xml:space="preserve"><value>Search Text Expression</value></data>
+  <data name="AC_FileReadArrayCount" xml:space="preserve"><value>Array Count</value></data>
+  <data name="AC_MatchIndex" xml:space="preserve"><value>Match Index</value></data>
+  <data name="AC_MatchValue" xml:space="preserve"><value>Match Value</value></data>
+  <data name="MatchMode_Exact" xml:space="preserve"><value>Exact</value></data>
+  <data name="MatchMode_Contains" xml:space="preserve"><value>Contains</value></data>
+  <data name="MatchMode_Best" xml:space="preserve"><value>Best Match (LCS)</value></data>
+  <data name="EventType_MouseLeft" xml:space="preserve"><value>Mouse Left Click</value></data>
+  <data name="EventType_MouseRight" xml:space="preserve"><value>Mouse Right Click</value></data>
+  <data name="EventType_Enter" xml:space="preserve"><value>Enter Key</value></data>
+  <data name="EventType_Space" xml:space="preserve"><value>Space Key</value></data>
   <data name="Json_FileNotFound" xml:space="preserve"><value>File not found: {0}</value></data>
   <data name="Json_DefaultFlowName" xml:space="preserve"><value>Flow</value></data>
   <data name="Win32_Found" xml:space="preserve"><value>Found: {0}</value></data>
@@ -810,7 +843,7 @@ Example: @A = 1; @B = @A + 1</value></data>
   <data name="UI_AddModel" xml:space="preserve"><value>Add Model</value></data>
   <data name="UI_EditModel" xml:space="preserve"><value>Edit Model</value></data>
   <data name="UI_DeleteModel" xml:space="preserve"><value>Delete Model</value></data>
-  <data name="UI_TestModel" xml:space="preserve"><value>Test</value></data>
+  <data name="UI_TestModel" xml:space="preserve"><value>Test Model</value></data>
   <data name="UI_ResetTokens" xml:space="preserve"><value>Reset Tokens</value></data>
   <data name="UI_ModelEditTitle" xml:space="preserve"><value>Edit Model</value></data>
   <data name="UI_DisplayName" xml:space="preserve"><value>Display Name</value></data>
