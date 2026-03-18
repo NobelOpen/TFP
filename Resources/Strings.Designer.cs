@@ -442,6 +442,9 @@ namespace TaskFlow.Resources {
         public static string Prop_SelectRoiArea => ResourceManager.GetString("Prop_SelectRoiArea", resourceCulture) ?? "Select ROI Area";
         public static string Prop_TemplatePreview => ResourceManager.GetString("Prop_TemplatePreview", resourceCulture) ?? "Current Template Preview";
         public static string Prop_SelectTemplate => ResourceManager.GetString("Prop_SelectTemplate", resourceCulture) ?? "Select Template Area";
+        public static string Prop_TemplateSectionTitle => ResourceManager.GetString("Prop_TemplateSectionTitle", resourceCulture) ?? "Template Settings";
+        public static string Prop_UseSourceTaskTemplate => ResourceManager.GetString("Prop_UseSourceTaskTemplate", resourceCulture) ?? "Use output image from another task as template";
+        public static string Prop_TemplateSourceTask => ResourceManager.GetString("Prop_TemplateSourceTask", resourceCulture) ?? "Template Source Task";
         public static string Prop_SelectSearchRoiMask => ResourceManager.GetString("Prop_SelectSearchRoiMask", resourceCulture) ?? "▭ Select Search Area / Draw Mask";
         public static string Prop_MaskPaint => ResourceManager.GetString("Prop_MaskPaint", resourceCulture) ?? "🖌 Mask Paint";
         public static string Prop_ClearMask => ResourceManager.GetString("Prop_ClearMask", resourceCulture) ?? "Clear Mask";
@@ -575,6 +578,7 @@ namespace TaskFlow.Resources {
         public static string Dlg_ActualModelName => ResourceManager.GetString("Dlg_ActualModelName", resourceCulture) ?? "Model Name";
         public static string Dlg_Timeout => ResourceManager.GetString("Dlg_Timeout", resourceCulture) ?? "Timeout (seconds)";
         public static string Dlg_DisplayNameEmpty => ResourceManager.GetString("Dlg_DisplayNameEmpty", resourceCulture) ?? "Display name cannot be empty.";
+        public static string Dlg_DisplayNameDuplicate => ResourceManager.GetString("Dlg_DisplayNameDuplicate", resourceCulture) ?? "A model with this display name already exists. Please use a different name.";
         public static string Dlg_FlowManager => ResourceManager.GetString("Dlg_FlowManager", resourceCulture) ?? "Flow Management";
         public static string Dlg_AddFlow => ResourceManager.GetString("Dlg_AddFlow", resourceCulture) ?? "Add Flow";
         public static string Dlg_DeleteFlow => ResourceManager.GetString("Dlg_DeleteFlow", resourceCulture) ?? "Delete Flow";
@@ -706,6 +710,12 @@ namespace TaskFlow.Resources {
         public static string AC_FileReadArrayCount => ResourceManager.GetString("AC_FileReadArrayCount", resourceCulture) ?? "Array Count";
         public static string AC_MatchIndex => ResourceManager.GetString("AC_MatchIndex", resourceCulture) ?? "Match Index";
         public static string AC_MatchValue => ResourceManager.GetString("AC_MatchValue", resourceCulture) ?? "Match Value";
+        public static string TaskType_WinFindFile => ResourceManager.GetString("TaskType_WinFindFile", resourceCulture) ?? "Win Path Find";
+        public static string Prop_WinFindFileName => ResourceManager.GetString("Prop_WinFindFileName", resourceCulture) ?? "File Name (supports expressions)";
+        public static string Prop_WinFindFileRoot => ResourceManager.GetString("Prop_WinFindFileRoot", resourceCulture) ?? "Search Root (empty=all drives)";
+        public static string Prop_WinFindFileDepth => ResourceManager.GetString("Prop_WinFindFileDepth", resourceCulture) ?? "Max Search Depth (0=unlimited)";
+        public static string Prop_WinFindFileWildcard => ResourceManager.GetString("Prop_WinFindFileWildcard", resourceCulture) ?? "Enable Wildcard Matching";
+        public static string AC_FilePath => ResourceManager.GetString("AC_FilePath", resourceCulture) ?? "Found Path";
         public static string MatchMode_Exact => ResourceManager.GetString("MatchMode_Exact", resourceCulture) ?? "Exact";
         public static string MatchMode_Contains => ResourceManager.GetString("MatchMode_Contains", resourceCulture) ?? "Contains";
         public static string MatchMode_Best => ResourceManager.GetString("MatchMode_Best", resourceCulture) ?? "Best Match (LCS)";

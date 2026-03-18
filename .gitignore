@@ -46,3 +46,6 @@ $RECYCLE.BIN/
 publish/
 .agents/
 add-task-card.md
+
+*.binlog
+*_wpftmp.csproj

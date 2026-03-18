@@ -40,6 +40,27 @@ namespace TaskFlow.Views.Dialogs
 
             // 通用属性：名称
             AddTextProperty("Name", TaskFlow.Resources.Strings.Prop_TaskName, _task.Name);
+            if (_propertyControls.TryGetValue("Name", out var nameCtrl) && nameCtrl is TextBox nameTb)
+            {
+                nameTb.TextChanged += (s, e) =>
+                {
+                    if (s is TextBox tb && tb.Text.Any(c => char.IsPunctuation(c) || char.IsSymbol(c)))
+                    {
+                        tb.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            string currentText = tb.Text;
+                            string newText = new string(currentText.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c)).ToArray());
+                            if (currentText != newText)
+                            {
+                                int caret = tb.CaretIndex;
+                                tb.Text = newText;
+                                tb.CaretIndex = Math.Max(0, caret - (currentText.Length - newText.Length));
+                            }
+                        }), System.Windows.Threading.DispatcherPriority.Input);
+                    }
+                };
+            }
+
 
             // 根据任务类型添加特定属性
             switch (_task)
@@ -86,7 +107,7 @@ namespace TaskFlow.Views.Dialogs
                     }
 
                 case WinLaunchAppTaskCard launchCard:
-                    AddFilePathProperty("ExePath", TaskFlow.Resources.Strings.Prop_ExePath, launchCard.ExePath, TaskFlow.Resources.Strings.Filter_ExeFile);
+                    AddFilePathProperty("ExePath", "EXE路径表达式", launchCard.ExePath, TaskFlow.Resources.Strings.Filter_ExeFile, true);
                     AddTextProperty("Arguments", TaskFlow.Resources.Strings.Prop_Arguments, launchCard.Arguments);
                     break;
 
@@ -206,6 +227,10 @@ namespace TaskFlow.Views.Dialogs
 
                 case ArraySearchTaskCard searchCard:
                     AddArraySearchProperties(searchCard);
+                    break;
+
+                case WinFindFileTaskCard findFileCard:
+                    AddWinFindFileProperties(findFileCard);
                     break;
 
                 case ImgColorDetectTaskCard colorCard:
@@ -492,7 +517,7 @@ namespace TaskFlow.Views.Dialogs
             _propertyControls[propertyName] = checkBox;
         }
 
-        private void AddFilePathProperty(string propertyName, string label, string value, string filter)
+        private void AddFilePathProperty(string propertyName, string label, string value, string filter, bool supportExpression = false)
         {
             var labelBlock = new TextBlock { Text = label, Style = FindResource("PropertyLabel") as Style };
 
@@ -525,6 +550,11 @@ namespace TaskFlow.Views.Dialogs
                 }
             };
             Grid.SetColumn(browseButton, 1);
+
+            if (supportExpression)
+            {
+                AutoCompleteHelper.Attach(textBox, _viewModel.VariableStore.Variables, _viewModel.TaskCards);
+            }
 
             grid.Children.Add(textBox);
             grid.Children.Add(browseButton);
@@ -1667,9 +1697,34 @@ namespace TaskFlow.Views.Dialogs
 
         private void AddTemplateProperty(ImgTemplateMatchTaskCard card)
         {
+            // ==================== 模板设置分区标题 ====================
+            var sectionTitle = new TextBlock
+            {
+                Text = TaskFlow.Resources.Strings.Prop_TemplateSectionTitle,
+                Style = FindResource("PropertyLabel") as Style,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 8, 0, 4)
+            };
+            PropertyPanel.Children.Add(sectionTitle);
+
+            // ==================== 勾选：引用其他任务输出作为模板 ====================
+            var templateTaskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TemplateSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var templateTaskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            templateTaskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+            foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
+                templateTaskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+            templateTaskCombo.SelectedIndex = 0;
+            if (card.SourceTaskIdForTemplate.HasValue)
+                for (int i = 1; i < templateTaskCombo.Items.Count; i++)
+                    if (((ComboBoxItem)templateTaskCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForTemplate) { templateTaskCombo.SelectedIndex = i; break; }
+            _propertyControls["SourceTaskIdForTemplate"] = templateTaskCombo;
+
+            // 静态模板面板（模板预览 + 框选按钮）
+            var staticTemplatePanel = new StackPanel();
+
             // 模板图像路径（隐藏控件，仅用于保存时读取）
             var templatePathBox = new TextBox { Text = card.TemplateImagePath ?? string.Empty, Visibility = Visibility.Collapsed };
-            PropertyPanel.Children.Add(templatePathBox);
+            staticTemplatePanel.Children.Add(templatePathBox);
             _propertyControls["TemplateImagePath"] = templatePathBox;
 
             // 显示模板图像预览
@@ -1682,7 +1737,7 @@ namespace TaskFlow.Views.Dialogs
                         Text = TaskFlow.Resources.Strings.Prop_TemplatePreview,
                         Style = FindResource("PropertyLabel") as Style
                     };
-                    PropertyPanel.Children.Add(templateLabel);
+                    staticTemplatePanel.Children.Add(templateLabel);
 
                     var bitmap = new System.Windows.Media.Imaging.BitmapImage();
                     bitmap.BeginInit();
@@ -1709,7 +1764,7 @@ namespace TaskFlow.Views.Dialogs
                         Padding = new Thickness(4),
                         Child = templateImage
                     };
-                    PropertyPanel.Children.Add(border);
+                    staticTemplatePanel.Children.Add(border);
                 }
                 catch { /* 图像加载失败则跳过预览 */ }
             }
@@ -1722,7 +1777,31 @@ namespace TaskFlow.Views.Dialogs
                 Style = FindResource("ActionButton") as Style
             };
             selectButton.Click += (s, e) => SelectTemplateRoi(card);
-            PropertyPanel.Children.Add(selectButton);
+            staticTemplatePanel.Children.Add(selectButton);
+
+            // 联动显隐
+            void UpdateTemplateVis(bool useDynamic)
+            {
+                templateTaskLabel.Visibility = templateTaskCombo.Visibility = useDynamic ? Visibility.Visible : Visibility.Collapsed;
+                staticTemplatePanel.Visibility = useDynamic ? Visibility.Collapsed : Visibility.Visible;
+            }
+
+            var useSourceTemplateCb = new CheckBox
+            {
+                Content = TaskFlow.Resources.Strings.Prop_UseSourceTaskTemplate,
+                IsChecked = card.UseSourceTaskTemplate,
+                Style = FindResource("PropertyCheckBox") as Style,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            useSourceTemplateCb.Checked += (s, e) => UpdateTemplateVis(true);
+            useSourceTemplateCb.Unchecked += (s, e) => UpdateTemplateVis(false);
+            _propertyControls["UseSourceTaskTemplate"] = useSourceTemplateCb;
+
+            PropertyPanel.Children.Add(useSourceTemplateCb);
+            PropertyPanel.Children.Add(templateTaskLabel);
+            PropertyPanel.Children.Add(templateTaskCombo);
+            PropertyPanel.Children.Add(staticTemplatePanel);
+            UpdateTemplateVis(card.UseSourceTaskTemplate);
 
             // ROI区域框选
             AddRoiCompactProperties(card.RoiX, card.RoiY, card.RoiWidth, card.RoiHeight);
@@ -1949,6 +2028,10 @@ namespace TaskFlow.Views.Dialogs
 
                     case ArraySearchTaskCard searchCard:
                         SaveArraySearchProperties(searchCard);
+                        break;
+
+                    case WinFindFileTaskCard findFileCard:
+                        SaveWinFindFileProperties(findFileCard);
                         break;
 
                     case IfElseBranchTaskCard ifCard when ifCard.BranchRole == BranchRole.IfStart:
@@ -2409,6 +2492,19 @@ namespace TaskFlow.Views.Dialogs
             }
 
             if (GetStringValue("ImageFilePath", out string path)) card.ImageFilePath = path;
+
+            // 保存动态模板来源设置
+            if (GetBoolValue("UseSourceTaskTemplate", out bool useSourceTemplate))
+                card.UseSourceTaskTemplate = useSourceTemplate;
+
+            if (_propertyControls.TryGetValue("SourceTaskIdForTemplate", out var templateTaskCtrl) && templateTaskCtrl is ComboBox templateTaskCombo2)
+            {
+                if (templateTaskCombo2.SelectedItem is ComboBoxItem tItem && tItem.Tag is Guid tId)
+                    card.SourceTaskIdForTemplate = tId;
+                else
+                    card.SourceTaskIdForTemplate = null;
+            }
+
             if (GetStringValue("TemplateImagePath", out string templatePath)) card.TemplateImagePath = templatePath;
             if (GetDoubleValue("MatchThreshold", out double threshold)) card.MatchThreshold = threshold;
             if (GetIntValue("MaxMatchCount", out int maxMatch)) card.MaxMatchCount = Math.Max(1, maxMatch);
@@ -3624,6 +3720,70 @@ namespace TaskFlow.Views.Dialogs
             {
                 card.MatchMode = (string)ci.Tag;
             }
+        }
+
+        private void AddWinFindFileProperties(WinFindFileTaskCard card)
+        {
+            // 文件名称（支持表达式补全）
+            AddTextProperty("FileName", Strings.Prop_WinFindFileName, card.FileName);
+
+            // 搜索根目录（带文件夹浏览按钮）
+            AddTextProperty("SearchRootPath", Strings.Prop_WinFindFileRoot, card.SearchRootPath);
+
+            // 替换 TextBox 为 Grid + 文件夹浏览按钮
+            if (_propertyControls.TryGetValue("SearchRootPath", out var rootCtrl) && rootCtrl is TextBox rootBox)
+            {
+                PropertyPanel.Children.Remove(rootBox);
+
+                var fileGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+                fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                fileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                rootBox.Margin = new Thickness(0);
+                Grid.SetColumn(rootBox, 0);
+
+                var browseBtn = new Button
+                {
+                    Content = "...",
+                    Width = 32,
+                    Margin = new Thickness(4, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Stretch,
+                    Style = FindResource("ActionButton") as Style
+                };
+                browseBtn.Click += (s, e) =>
+                {
+                    var dlg = new System.Windows.Forms.FolderBrowserDialog();
+                    if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                        rootBox.Text = dlg.SelectedPath;
+                };
+                Grid.SetColumn(browseBtn, 1);
+
+                fileGrid.Children.Add(rootBox);
+                fileGrid.Children.Add(browseBtn);
+                PropertyPanel.Children.Add(fileGrid);
+            }
+
+            // 最大搜索深度
+            AddIntProperty("MaxDepth", Strings.Prop_WinFindFileDepth, card.MaxDepth);
+
+            // 启用通配符
+            AddCheckboxProperty("UseWildcard", Strings.Prop_WinFindFileWildcard, card.UseWildcard);
+        }
+
+        private void SaveWinFindFileProperties(WinFindFileTaskCard card)
+        {
+            if (GetStringValue("FileName", out string fileName))
+                card.FileName = fileName;
+
+            if (GetStringValue("SearchRootPath", out string rootPath))
+                card.SearchRootPath = rootPath;
+
+            if (_propertyControls.TryGetValue("MaxDepth", out var depthCtrl) && depthCtrl is TextBox depthBox
+                && int.TryParse(depthBox.Text, out int maxDepth))
+                card.MaxDepth = maxDepth;
+
+            if (_propertyControls.TryGetValue("UseWildcard", out var wildCtrl) && wildCtrl is CheckBox wildCheck)
+                card.UseWildcard = wildCheck.IsChecked == true;
         }
 
         #endregion

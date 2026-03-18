@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -174,6 +174,14 @@ namespace TaskFlow
             if (string.IsNullOrEmpty(_liveProcessName))
             {
                 AnthropicMessageDialog.ShowWarning(TaskFlow.Resources.Strings.Common_Tip, TaskFlow.Resources.Strings.Msg_LiveSetProcess, this);
+                return;
+            }
+
+            // Orchid 运行时禁止启动实时显示（避免截图冲突）
+            if (ViewModel.AiFlowVm.IsGenerating || ViewModel.AiFlowVm.IsAiExecuting)
+            {
+                AnthropicMessageDialog.ShowWarning(TaskFlow.Resources.Strings.Common_Tip,
+                    "Orchid 正在运行中，请等待其完成后再启动实时显示。", this);
                 return;
             }
 
@@ -472,4 +480,3 @@ namespace TaskFlow
         #endregion
     }
 }
-

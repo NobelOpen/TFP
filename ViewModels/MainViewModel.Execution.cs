@@ -16,7 +16,7 @@ namespace TaskFlow.ViewModels
         [RelayCommand]
         private async Task RunAllAsync()
         {
-            if (IsRunning) return;
+            if (IsBusy) return;
 
             IsRunning = true;
             _cts = new CancellationTokenSource();
@@ -88,7 +88,7 @@ namespace TaskFlow.ViewModels
         [RelayCommand]
         private async Task RunSelectedAsync()
         {
-            if (IsRunning || SelectedTask == null) return;
+            if (IsBusy || SelectedTask == null) return;
 
             IsRunning = true;
             _cts = new CancellationTokenSource();
@@ -155,7 +155,7 @@ namespace TaskFlow.ViewModels
         [RelayCommand]
         private async Task RunCurrentFlowAsync()
         {
-            if (IsRunning) return;
+            if (IsBusy) return;
 
             IsRunning = true;
             _cts = new CancellationTokenSource();
@@ -219,6 +219,15 @@ namespace TaskFlow.ViewModels
         private void OnLogMessage(object? sender, string message)
         {
             AddLog(message);
+        }
+
+        /// <summary>
+        /// 供 AI 自主模式调用：运行单张卡片并返回结果
+        /// 不影响全局 IsRunning 状态
+        /// </summary>
+        public async Task ExecuteSingleCardAsync(TaskCardBase card, CancellationToken cancellationToken)
+        {
+            await _executionService.ExecuteTaskAsync(card, TaskCards.ToList(), cancellationToken);
         }
     }
 }

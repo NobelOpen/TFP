@@ -1,5 +1,6 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json;
 
 namespace TaskFlow.Models.TaskCards
 {
@@ -368,6 +369,58 @@ namespace TaskFlow.Models.TaskCards
         public WinSimulateInputTaskCard()
         {
             Name = "Win模拟输入";
+        }
+    }
+
+    /// <summary>
+    /// Win路径查找任务卡片 - 在指定目录或全盘搜索文件，返回第一个匹配的完整路径
+    /// </summary>
+    public partial class WinFindFileTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.WinFindFile;
+
+        /// <summary>
+        /// 要查找的文件名（如 photo.jpg），支持表达式引用
+        /// </summary>
+        [ObservableProperty]
+        private string _fileName = string.Empty;
+
+        /// <summary>
+        /// 搜索根目录，留空则搜索所有逻辑驱动器
+        /// </summary>
+        [ObservableProperty]
+        private string _searchRootPath = string.Empty;
+
+        /// <summary>
+        /// 最大搜索深度（0=不限制深度）
+        /// </summary>
+        [ObservableProperty]
+        private int _maxDepth = 0;
+
+        /// <summary>
+        /// 是否启用通配符匹配（如 *.jpg、setup*.exe）
+        /// </summary>
+        [ObservableProperty]
+        private bool _useWildcard = false;
+
+        /// <summary>
+        /// 输出：找到的文件完整路径
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string _outputFilePath = string.Empty;
+
+        public override bool OutputsBoolResult => true;
+
+        public WinFindFileTaskCard()
+        {
+            Name = "Win路径查找";
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputFilePath = string.Empty;
         }
     }
 }

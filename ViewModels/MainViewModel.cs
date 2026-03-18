@@ -78,6 +78,32 @@ namespace TaskFlow.ViewModels
         private bool _isRunning;
 
         /// <summary>
+        /// 是否处于忙碌状态（流程运行中 或 Orchid 生成/执行中）
+        /// </summary>
+        public bool IsBusy => IsRunning
+            || (AiFlowVm?.IsGenerating ?? false)
+            || (AiFlowVm?.IsAiExecuting ?? false);
+
+        /// <summary>
+        /// IsRunning 变化时同步通知 IsBusy
+        /// </summary>
+        partial void OnIsRunningChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsBusy));
+        }
+
+        /// <summary>
+        /// AI 流程助手面板是否展开
+        /// </summary>
+        [ObservableProperty]
+        private bool _isAiPanelOpen;
+
+        /// <summary>
+        /// AI 流程助手 ViewModel
+        /// </summary>
+        public AiFlowViewModel AiFlowVm { get; private set; } = null!;
+
+        /// <summary>
         /// 当前正在执行的任务卡片
         /// </summary>
         [ObservableProperty]
@@ -177,6 +203,11 @@ namespace TaskFlow.ViewModels
         /// </summary>
         public event EventHandler? LogScrollToEndRequested;
 
+        /// <summary>
+        /// 请求 View 清空并重建所有流程 ListBox 缓存（新建/加载项目时触发）
+        /// </summary>
+        public event EventHandler? FlowListBoxResetRequested;
+
         public MainViewModel()
         {
             var adbService = new AdbService();
@@ -214,6 +245,19 @@ namespace TaskFlow.ViewModels
             var firstTab = new WorkflowTab { Name = string.Format(Strings.VM_FlowDefault, NextTabIndex++), IsSelected = true };
             Tabs.Add(firstTab);
             SelectedTab = firstTab;
+
+            // 初始化 AI 流程助手 ViewModel
+            AiFlowVm = new AiFlowViewModel(this);
+
+            // 监听 Orchid 状态变化，同步刷新 IsBusy
+            AiFlowVm.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName is nameof(AiFlowViewModel.IsGenerating)
+                                   or nameof(AiFlowViewModel.IsAiExecuting))
+                {
+                    OnPropertyChanged(nameof(IsBusy));
+                }
+            };
         }
 
 
@@ -812,8 +856,16 @@ namespace TaskFlow.ViewModels
         /// </summary>
         public void RecalculateIndentLevels()
         {
+            RecalculateIndentLevelsFor(TaskCards);
+        }
+
+        /// <summary>
+        /// 对指定集合重新计算缩进等级（用于文件加载时处理所有分页）
+        /// </summary>
+        public static void RecalculateIndentLevelsFor(IList<TaskCardBase> cards)
+        {
             int currentIndent = 0;
-            foreach (var card in TaskCards)
+            foreach (var card in cards)
             {
                 switch (card.BranchRole)
                 {
@@ -876,7 +928,7 @@ namespace TaskFlow.ViewModels
             return baseIndex + 1;
         }
 
-        private TaskCardBase CreateTaskCard(TaskType taskType)
+        internal TaskCardBase CreateTaskCard(TaskType taskType)
         {
             return taskType switch
             {
@@ -890,6 +942,7 @@ namespace TaskFlow.ViewModels
                 TaskType.WinUiAutomation => new WinUiAutomationTaskCard(),
                 TaskType.WinSimulateInput => new WinSimulateInputTaskCard(),
                 TaskType.WinSubtitle => new WinSubtitleTaskCard(),
+                TaskType.WinFindFile => new WinFindFileTaskCard(),
                 TaskType.AdbConnect => new AdbConnectTaskCard(),
                 TaskType.AdbLaunchApp => new AdbLaunchAppTaskCard(),
                 TaskType.AdbScreenshot => new AdbScreenshotTaskCard(),

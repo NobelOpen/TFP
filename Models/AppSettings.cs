@@ -43,6 +43,12 @@ namespace TaskFlow.Models
         /// <summary>界面语言，默认英文。可选值: "en", "zh-CN"</summary>
         public string Language { get; set; } = "en";
 
+        /// <summary>AI 助手模式：0=设计, 1=自主</summary>
+        public int AiAssistantMode { get; set; } = 0;
+
+        /// <summary>Orchid 单次调用模式（跳过类别判断阶段，适合高级模型）</summary>
+        public bool OrchidSingleStage { get; set; } = false;
+
         // ========== 微信 OCR ==========
 
         /// <summary>微信 OCR 可执行文件路径（WeChatOCR.exe 或 wxocr.dll）</summary>

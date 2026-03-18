@@ -77,6 +77,9 @@ namespace TaskFlow.Views.Dialogs
                 }
             }
 
+            // Orchid 设置
+            ChkSingleStage.IsChecked = _settings.OrchidSingleStage;
+
             // 微信 OCR
             TxtOcrExePath.Text = _settings.WeChatOcrExePath ?? string.Empty;
             TxtOcrDirPath.Text = _settings.WeChatOcrDirPath ?? string.Empty;
@@ -84,7 +87,7 @@ namespace TaskFlow.Views.Dialogs
 
             // 版本号
             var version = Assembly.GetExecutingAssembly().GetName().Version;
-            TxtVersion.Text = $"TaskFlow v{version?.Major}.{version?.Minor}.{version?.Build ?? 0}";
+            TxtVersion.Text = "TaskFlow Pro v1.2";
         }
 
         /// <summary>
@@ -167,6 +170,15 @@ namespace TaskFlow.Views.Dialogs
             }
         }
 
+        /// <summary>
+        /// 查看 Vision 坐标标定结果
+        /// </summary>
+        private void ViewCalibration_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new CalibrationResultsDialog { Owner = this };
+            dialog.ShowDialog();
+        }
+
         private async void TestOcr_Click(object sender, RoutedEventArgs e)
         {
             string exePath = TxtOcrExePath.Text.Trim();
@@ -246,6 +258,7 @@ namespace TaskFlow.Views.Dialogs
             _settings.AutoSaveLogToFile = ChkAutoSaveLog.IsChecked == true;
             _settings.RepeatRunAll = ChkRepeatRunAll.IsChecked == true;
             _settings.KeepScreenOn = ChkKeepScreenOn.IsChecked == true;
+            _settings.OrchidSingleStage = ChkSingleStage.IsChecked == true;
 
             if (!int.TryParse(TxtRepeatInterval.Text.Trim(), out int repeatInterval) || repeatInterval < 0)
             {

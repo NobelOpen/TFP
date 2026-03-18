@@ -432,6 +432,9 @@
   <data name="Prop_SelectRoiArea" xml:space="preserve"><value>Select ROI Area</value></data>
   <data name="Prop_TemplatePreview" xml:space="preserve"><value>Current Template Preview</value></data>
   <data name="Prop_SelectTemplate" xml:space="preserve"><value>Select Template Area</value></data>
+  <data name="Prop_TemplateSectionTitle" xml:space="preserve"><value>Template Settings</value></data>
+  <data name="Prop_UseSourceTaskTemplate" xml:space="preserve"><value>Use output image from another task as template</value></data>
+  <data name="Prop_TemplateSourceTask" xml:space="preserve"><value>Template Source Task</value></data>
   <data name="Prop_SelectSearchRoiMask" xml:space="preserve"><value>▭ Select Search Area / Draw Mask</value></data>
   <data name="Prop_MaskPaint" xml:space="preserve"><value>🖌 Mask Paint</value></data>
   <data name="Prop_ClearMask" xml:space="preserve"><value>Clear Mask</value></data>
@@ -567,6 +570,7 @@ Example: @A = 1; @B = @A + 1</value></data>
   <data name="Dlg_ActualModelName" xml:space="preserve"><value>Model Name</value></data>
   <data name="Dlg_Timeout" xml:space="preserve"><value>Timeout (seconds)</value></data>
   <data name="Dlg_DisplayNameEmpty" xml:space="preserve"><value>Display name cannot be empty.</value></data>
+  <data name="Dlg_DisplayNameDuplicate" xml:space="preserve"><value>A model with this display name already exists. Please use a different name.</value></data>
   <data name="Dlg_FlowManager" xml:space="preserve"><value>Flow Management</value></data>
   <data name="Dlg_AddFlow" xml:space="preserve"><value>Add Flow</value></data>
   <data name="Dlg_DeleteFlow" xml:space="preserve"><value>Delete Flow</value></data>
@@ -697,6 +701,12 @@ Example: @A = 1; @B = @A + 1</value></data>
   <data name="AC_FileReadArrayCount" xml:space="preserve"><value>Array Count</value></data>
   <data name="AC_MatchIndex" xml:space="preserve"><value>Match Index</value></data>
   <data name="AC_MatchValue" xml:space="preserve"><value>Match Value</value></data>
+  <data name="TaskType_WinFindFile" xml:space="preserve"><value>Win Path Find</value></data>
+  <data name="Prop_WinFindFileName" xml:space="preserve"><value>File Name (supports expressions)</value></data>
+  <data name="Prop_WinFindFileRoot" xml:space="preserve"><value>Search Root (empty=all drives)</value></data>
+  <data name="Prop_WinFindFileDepth" xml:space="preserve"><value>Max Search Depth (0=unlimited)</value></data>
+  <data name="Prop_WinFindFileWildcard" xml:space="preserve"><value>Enable Wildcard Matching</value></data>
+  <data name="AC_FilePath" xml:space="preserve"><value>Found Path</value></data>
   <data name="MatchMode_Exact" xml:space="preserve"><value>Exact</value></data>
   <data name="MatchMode_Contains" xml:space="preserve"><value>Contains</value></data>
   <data name="MatchMode_Best" xml:space="preserve"><value>Best Match (LCS)</value></data>

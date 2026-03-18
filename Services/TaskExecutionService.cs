@@ -398,13 +398,14 @@ namespace TaskFlow.Services
                     TaskType.GetTimestamp => ExecuteGetTimestamp((GetTimestampTaskCard)task),
 
                     // Windows操作
-                    TaskType.WinLaunchApp => await ExecuteWinLaunchAppAsync((WinLaunchAppTaskCard)task),
+                    TaskType.WinLaunchApp => await ExecuteWinLaunchAppAsync((WinLaunchAppTaskCard)task, allTasks),
                     TaskType.WinScreenshot => await ExecuteWinScreenshotAsync((WinScreenshotTaskCard)task),
                     TaskType.WinClick => await ExecuteWinClickAsync((WinClickTaskCard)task, allTasks),
                     TaskType.WinCloseApp => ExecuteWinCloseApp((WinCloseAppTaskCard)task),
                     TaskType.WinUiAutomation => await ExecuteWinUiAutomationAsync((WinUiAutomationTaskCard)task),
                     TaskType.WinSimulateInput => await ExecuteWinSimulateInputAsync((WinSimulateInputTaskCard)task),
                     TaskType.WinSubtitle => await ExecuteWinSubtitleAsync((WinSubtitleTaskCard)task, allTasks),
+                    TaskType.WinFindFile => await ExecuteWinFindFileAsync((WinFindFileTaskCard)task, allTasks, cancellationToken),
 
                     // ADB操作
                     TaskType.AdbConnect => await ExecuteAdbConnectAsync((AdbConnectTaskCard)task),

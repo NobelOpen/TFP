@@ -24,11 +24,13 @@
         <conv:SelectedToBorderColorConverter x:Key="SelectedToBorderConverter"/>
         <conv:CollapseIconConverter x:Key="CollapseIconConverter"/>
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
+        <conv:InverseBoolConverter x:Key="InverseBoolConverter"/>
         <conv:CollapseIconVisibilityConverter x:Key="CollapseIconVisConverter"/>
         <conv:DragHandleVisibilityConverter x:Key="DragHandleVisConverter"/>
         <conv:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
         <conv:MatToBitmapSourceConverter x:Key="MatToImageConverter"/>
         <conv:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter"/>
+        <conv:NullToCollapsedConverter x:Key="NullToCollapsedConverter"/>
 
         <!-- Anthropic 风格工具栏按钮-->
         <Style x:Key="ToolbarButton" TargetType="Button">

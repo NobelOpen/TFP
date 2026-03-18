@@ -131,6 +131,30 @@ namespace TaskFlow.Converters
     }
 
     /// <summary>
+    /// 反向布尔转换器（true 转 false，false 转 true）
+    /// </summary>
+    public class InverseBoolConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool b)
+            {
+                return !b;
+            }
+            return false;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool b)
+            {
+                return !b;
+            }
+            return false;
+        }
+    }
+
+    /// <summary>
     /// 折叠图标可见性转换器（只对IfStart和ForLoopStart显示）
     /// </summary>
     public class CollapseIconVisibilityConverter : IValueConverter
@@ -350,6 +374,24 @@ namespace TaskFlow.Converters
             if (value is string str && string.IsNullOrEmpty(str)) return Visibility.Visible;
             if (value is OpenCvSharp.Mat mat && mat.Empty()) return Visibility.Visible;
             return Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 非 null/非空集合时 Visible，否则 Collapsed（用于内嵌配置气泡显隐）
+    /// </summary>
+    public class NullToCollapsedConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null) return Visibility.Collapsed;
+            if (value is System.Collections.ICollection col && col.Count == 0) return Visibility.Collapsed;
+            return Visibility.Visible;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

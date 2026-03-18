@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -304,10 +304,11 @@
   <ul>
     <li class="toc-category">Interface Guide</li>
     <li><a href="#MainToolbar">Main Toolbar</a></li>
+    <li><a href="#AiFlowPanel">AI Flow Assistant</a></li>
     <li><a href="#VarMgr">Variable Manager</a></li>
     <li><a href="#FlowMgr">Flow Manager</a></li>
     <li><a href="#ModelMgr">Model Manager</a></li>
-    <li><a href="#SettingsUI">Settings & OCR</a></li>
+    <li><a href="#SettingsUI">Settings &amp; OCR</a></li>
 
     <li class="toc-category">General Tasks</li>
     <li><a href="#PauseTask">Pause All Tasks</a></li>
@@ -323,6 +324,7 @@
     <li><a href="#WinUiAutomation">Win UI Automation</a></li>
     <li><a href="#WinSimulateInput">Win Simulate Input</a></li>
     <li><a href="#WinSubtitle">Win Subtitle Overlay</a></li>
+    <li><a href="#WinFindFile">Win Path Finder</a></li>
     <li><a href="#EventListener">Win Event Listener</a></li>
 
     <li class="toc-category">ADB Operations</li>
@@ -395,6 +397,8 @@
     <dd><strong>Run Once:</strong> Executes only the currently selected card once (useful for debugging).<br><strong>Run Current:</strong> Executes all tasks in the currently active flow tab.<br><strong>Run All:</strong> Executes all tasks across all flow tabs in sequence.</dd>
     <dt>⏹ Stop All</dt>
     <dd>Forcefully interrupts all currently running flows.</dd>
+    <dt>🤖 AI Assistant</dt>
+    <dd>Toggle the left-side AI Flow Assistant panel. See the <a href="#AiFlowPanel">AI Flow Assistant</a> section for details.</dd>
     <dt> Image Preview /  Live View /  Log Output</dt>
     <dd>Toggle the visibility of different panels at the bottom or sides.</dd>
   </dl>
@@ -426,15 +430,47 @@
 
 <div class="card-doc" id="ModelMgr">
   <h3>Model Manager</h3>
-  <p>Configure API endpoints required to call LLM (Large Language Model) services. Used for AI cards like <strong>LLM Translate</strong> or <strong>Multimodal Vision</strong>.</p>
+  <p>Configure API endpoints required to call LLM (Large Language Model) services. Used for AI cards like <strong>LLM Translate</strong>, <strong>Multimodal Vision</strong>, and <strong>LLM File Translation</strong>. Open via the <strong>📱 Models</strong> button in the toolbar.</p>
   <dl class="props">
-    <dt>Configuration List</dt>
-    <dd>The model list is on the left. Model configurations take effect <strong>globally on the local machine</strong> (not just for the current project). Once configured, they can be reused across any project.</dd>
+    <dt>Model List</dt>
+    <dd>The top of the window shows a model list table displaying all configured models. Each row shows: <strong>Display Name</strong> (user-defined identifier), <strong>API Endpoint</strong>, <strong>Model Name</strong>, and <strong>Token Stats</strong> (cumulative Input and Output token consumption). Model configurations take effect <strong>globally on the local machine</strong> (not project-specific). Once configured, they can be reused across any project.</dd>
+
+    <dt>Add Model</dt>
+    <dd>Click the <strong>Add Model</strong> button at the bottom to open the edit dialog, fill in the parameters, and save. <strong>Note: Display names must be unique</strong> (case-insensitive).</dd>
+
+    <dt>Edit Model</dt>
+    <dd>Select a row and click <strong>Edit Model</strong> to modify parameters in the edit dialog. Canceling discards all changes. When editing, keeping the original display name will not trigger a duplicate name error.</dd>
+
+    <dt>Delete Model</dt>
+    <dd>Select a row and click <strong>Delete Model</strong>. After confirmation, the model configuration is permanently removed. This action cannot be undone.</dd>
+
     <dt>Core Parameters</dt>
-    <dd><strong>API Endpoint:</strong> Full request address, e.g., <code>https://api.deepseek.com/chat/completions</code> or other OpenAI-compatible endpoints.<br><strong>API Key:</strong> The Bearer Token provided by the service.<br><strong>Model Name:</strong> The actual model name required by the backend, e.g., <code>deepseek-chat</code> or <code>gpt-4o</code>.</dd>
+    <dd>
+      <strong>Display Name:</strong> A user-defined identifier for the model, used to distinguish models when selecting them in AI cards. Must be unique and non-empty.<br>
+      <strong>API Endpoint:</strong> The full API request URL. Three formats are supported:<br>
+      • <strong>OpenAI Chat Completions</strong> (default): e.g., <code>https://api.openai.com/v1/chat/completions</code> or <code>https://api.deepseek.com/chat/completions</code><br>
+      • <strong>OpenAI Responses API</strong>: endpoints containing <code>/v1/responses</code> in the URL<br>
+      • <strong>Google Gemini API</strong>: e.g., <code>https://generativelanguage.googleapis.com/v1beta/</code> — the program automatically appends <code>models/{modelName}:generateContent</code><br>
+      <strong>API Key:</strong> The key provided by the service. OpenAI-compatible services use <code>Bearer Token</code> authentication; Gemini API uses the <code>X-goog-api-key</code> header — the program handles this automatically.<br>
+      <strong>Model Name:</strong> The actual model name required by the backend, e.g., <code>gpt-4o</code>, <code>deepseek-chat</code>, <code>gemini-2.0-flash</code>. For Gemini API, there's no need to include <code>:generateContent</code> in the model name (it will be auto-stripped if accidentally included).<br>
+      <strong>Timeout (seconds):</strong> Maximum wait time for API calls, default 60 seconds. Increase this value for slower models or larger requests.
+    </dd>
+
     <dt>Test Connection</dt>
-    <dd>After configuration, click "Test Connection". The program will initiate a minimal chat request to verify API connectivity and key validity.</dd>
+    <dd>Select a model and click <strong>Test Connection</strong>. The program sends a minimal chat request to verify API connectivity and key validity. The window is temporarily disabled during testing. On success, the HTTP status code and a response summary are shown; on failure, the error code and detailed error message are displayed for troubleshooting.</dd>
+
+    <dt>Reset Stats</dt>
+    <dd>Select a model and click <strong>Reset Stats</strong> to zero out the cumulative Input Token and Output Token counts for that model.</dd>
+
+    <dt>Token Stats</dt>
+    <dd>The <strong>Token Stats</strong> column in the list shows real-time cumulative consumption for each model, formatted as "Total N (In: X Out: Y)". This helps you track API usage and costs per model. Counts are automatically incremented after each successful AI card invocation.</dd>
   </dl>
+  <div class="example-section">
+    <div class="example-title"> Configuration Examples</div>
+    <div class="example-item"><strong>OpenAI / DeepSeek:</strong> API Endpoint = <code>https://api.deepseek.com/chat/completions</code>, API Key = <code>sk-xxxx</code>, Model Name = <code>deepseek-chat</code></div>
+    <div class="example-item"><strong>Google Gemini:</strong> API Endpoint = <code>https://generativelanguage.googleapis.com/v1beta/</code>, API Key = <code>AIzaSy...</code>, Model Name = <code>gemini-2.0-flash</code></div>
+    <div class="example-item"><strong>Self-hosted / Proxy:</strong> API Endpoint = <code>https://your-proxy.com/v1/chat/completions</code>, API Key = as required by the provider</div>
+  </div>
 </div>
 
 <div class="card-doc" id="SettingsUI">
@@ -448,6 +484,57 @@
     <dt>WeChat OCR Configuration</dt>
     <dd>TaskFlow supports calling the extremely fast and highly accurate WeChat OCR engine component. Under <strong>OCR Settings</strong>, click <strong>Auto Detect</strong>. If WeChat has been logged in on the machine, it can usually auto-find the required file paths. Otherwise, manually specify <code>WeChatOCR.exe</code> and its corresponding <code>WeChatXX.X.X</code> runtime directory. Click "Test Availability" to verify.</dd>
   </dl>
+</div>
+
+<div class="card-doc" id="AiFlowPanel">
+  <h3>AI Flow Assistant <span class="badge badge-ai">AI</span></h3>
+  <p>The AI Flow Assistant can automatically design and create complete task card workflows based on your natural language descriptions. Click the <strong>🤖 AI Assistant</strong> button in the toolbar to expand the left panel.</p>
+  <dl class="props">
+    <dt>How to Use</dt>
+    <dd>
+      <strong>1. Select Model:</strong> Choose a configured LLM model from the dropdown at the top of the panel (must be added in <a href="#ModelMgr">Model Manager</a> first).<br>
+      <strong>2. Describe Requirements:</strong> Type your automation needs in natural language, e.g., "Launch Chrome, take a screenshot, then use OCR to recognize text".<br>
+      <strong>3. Review Plan:</strong> The AI generates a plan with concrete steps, displayed in a tree structure (with indentation for If-Else branches and For loops).<br>
+      <strong>4. Confirm Creation:</strong> Click "Confirm" to have the AI automatically create all task cards; or click "Regenerate" to have the AI redesign the plan.<br>
+      <strong>5. Fill Properties:</strong> After creation, the panel shows a report of properties that need manual input. Click any report item to jump directly to that card's property dialog.
+    </dd>
+
+    <dt>Control Flow Support</dt>
+    <dd>The AI can generate nested workflows with <strong>If-Else conditional branches</strong> and <strong>For loops</strong>. For example, describing "if the screenshot matches a button then click it, otherwise pause and retry" will automatically create the corresponding IfElse branch structure.</dd>
+
+    <dt>Flow Context Awareness</dt>
+    <dd>The AI assistant <strong>automatically detects existing task cards on the canvas</strong>. When cards are already present, you can:<br>
+    • <strong>Analyze / Review</strong>: Type "analyze the current flow" or "check for issues" and the AI will read the existing card structure and provide analysis.<br>
+    • <strong>Explain</strong>: Type "explain what this flow does" and the AI will describe the flow's functionality in natural language.<br>
+    • <strong>Append</strong>: Type "add OCR recognition at the end" and the AI will only generate new steps (without duplicating existing cards).
+    </dd>
+
+    <dt>Visual Intuition (Direct Screenshot)</dt>
+    <dd>When you ask the AI about screen content (e.g., "what icons are on the desktop?"), or ask it to perform operations requiring visual context, if there is no preceding screenshot card, Orchid will automatically capture a full-screen screenshot in the background and send it to the LLM. Therefore, <strong>you do not need to manually instruct it to "take a screenshot first"</strong>—it inherently "sees" your screen, perfectly suited for pure analysis or coordinate querying. Note that to avoid resource conflicts, the "Live Preview" feature is temporarily disabled while Orchid is analyzing.</dd>
+
+    <dt>Smart Card Insertion</dt>
+    <dd>Orchid can intelligently insert newly generated task cards into existing complex logic branches. For example, if you want to add steps inside an existing <strong>If-Else branch</strong> or a <strong>For loop</strong>, simply instruct "insert a click task into #4's IF branch". Orchid uses nested block structures to precisely insert cards at the correct level, without needing to rebuild the entire control flow block. This makes local modifications to complex flows extremely convenient.</dd>
+
+    <dt>Two-Stage LLM Calls</dt>
+    <dd>To optimize token consumption, the AI uses a two-stage approach: Stage 1 determines which card categories are relevant to the request; Stage 2 loads only the detailed descriptions of those categories to generate the plan. This significantly reduces token usage per request.</dd>
+
+    <dt>Automatic Variable Creation</dt>
+    <dd>When a flow requires counters, status flags, or loop conditions, the AI automatically declares required variables in the plan (supporting Int, String, Bool, and Double types). Upon confirmation, variables are automatically added to the Variable Manager—no manual creation needed. You can see declared variables marked with 📦 in the plan preview.</dd>
+
+    <dt>Enhanced Property References</dt>
+    <dd>The AI can use <code>@variableName</code> to reference variables, and <code>#N.propertyName</code> to reference outputs from previous steps. For example, the AI may generate <code>#2.path</code> to reference a file path found in step 2, or use <code>@retryCount</code> to reference a retry counter variable.</dd>
+
+    <dt>Logging</dt>
+    <dd>All AI Flow Assistant interactions are automatically saved to local log files in the <code>logs/ai_flow/</code> folder under the program directory, named by date (e.g., <code>ai_flow_2026-03-15.log</code>). Logs contain: user input, LLM request/response JSON, token consumption, card creation details, and exception stack traces. When encountering issues, simply provide the corresponding date's log file to the developer for quick troubleshooting.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title"> Usage Examples</div>
+    <div class="example-item">Simple linear flow: "Launch Notepad, take a screenshot, then use OCR to recognize text"</div>
+    <div class="example-item">Conditional branch flow: "After taking a screenshot, match a button template. If matched, click it; otherwise, pause 1 second and retry"</div>
+    <div class="example-item">Loop flow: "Repeat 5 times: take a screenshot and OCR recognize, break the loop if it contains 'Done'"</div>
+    <div class="example-item">Analyze existing flow: "Analyze the current flow for any issues"</div>
+    <div class="example-item">Append steps: "Add a subtitle notification step at the end of the current flow"</div>
+  </div>
 </div>
 
 <!-- ==================== General ==================== -->
@@ -668,6 +755,31 @@
   <div class="output-section">
     <div class="output-title"> Output</div>
     <div class="output-item">No output (displays subtitle overlay only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="WinFindFile">
+  <h3>Win Path Finder <span class="badge badge-win">Windows</span></h3>
+  <p>Searches for a target file within a specified directory (or across all local drives) and returns the absolute path of the first match found.</p>
+  <dl class="props">
+    <dt>File Name to Find</dt>
+    <dd>The name of the target file, e.g., <code>Code.exe</code> or <code>photo.jpg</code>. Supports expressions.</dd>
+    <dt>Search Root Path</dt>
+    <dd>The starting directory path for the search. Leave empty to search across all local logical drives.</dd>
+    <dt>Max Search Depth</dt>
+    <dd>Limits the level of recursive directory traversal. 0 means unlimited, 1 means searching only in the root directory without entering subfolders.</dd>
+    <dt>Enable Wildcard Matching</dt>
+    <dd>When checked, allows wildcard symbols like <code>*.exe</code> or <code>report_?.pdf</code> (case-insensitive by default). Uncheck for exact name matching.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title"> Examples</div>
+    <div class="example-item">Search across all drives: File Name = <code>WeChat.exe</code>, Search Root Path is left empty.</div>
+    <div class="example-item">Wildcard search in specific folder: File Name = <code>screenshot_*.png</code>, Root Path = <code>D:\Images</code>, Checked Wildcard.</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item"><code>#N.Found Path</code> — Full absolute path of the first matching file (alias for <code>#N.OutputFilePath</code>)</div>
+    <div class="output-item"><code>#N.result</code> — Whether the file was found successfully (True/False)</div>
   </div>
 </div>
 
@@ -971,7 +1083,7 @@
   <p>Evaluates mathematical or logical expressions.</p>
   <dl class="props">
     <dt>Expression</dt>
-    <dd>Supports <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code> arithmetic, and <code>&gt;</code> <code>&lt;</code> <code>==</code> <code>!=</code> comparisons. Can reference other card outputs, e.g. <code>#1.text</code>, <code>#2.x</code>.</dd>
+    <dd>Supports math arithmetic, and <code>&gt;</code> <code>&lt;</code> <code>==</code> <code>!=</code> comparisons. <strong>Note:</strong> When assigning to variables, <strong>string literals must be enclosed in double quotes</strong> (e.g. <code>@A = "text"</code>); floating-point math results are automatically truncated when assigned to integers; comparisons are strictly type-checked.</dd>
   </dl>
   <div class="example-section">
     <div class="example-title"> Examples</div>

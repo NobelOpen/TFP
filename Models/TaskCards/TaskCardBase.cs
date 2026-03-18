@@ -43,6 +43,7 @@ namespace TaskFlow.Models.TaskCards
         WinUiAutomation,
         WinSimulateInput,
         WinSubtitle,
+        WinFindFile,
 
         // ADB操作
         AdbConnect,
@@ -187,8 +188,18 @@ namespace TaskFlow.Models.TaskCards
         [ObservableProperty]
         private Guid _id = Guid.NewGuid();
 
-        [ObservableProperty]
         private string _name = "新任务";
+
+        public string Name
+        {
+            get => _name;
+            set
+            {
+                value ??= "";
+                value = new string(value.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c)).ToArray());
+                SetProperty(ref _name, value);
+            }
+        }
 
         [ObservableProperty]
         private int _order;
@@ -298,6 +309,7 @@ namespace TaskFlow.Models.TaskCards
                 TaskType.WinUiAutomation => Resources.Strings.TaskType_WinUiAutomation,
                 TaskType.WinSimulateInput => Resources.Strings.TaskType_WinSimulateInput,
                 TaskType.WinSubtitle => Resources.Strings.TaskType_WinSubtitle,
+                TaskType.WinFindFile => Resources.Strings.TaskType_WinFindFile,
                 TaskType.AdbConnect => Resources.Strings.TaskType_AdbConnect,
                 TaskType.AdbLaunchApp => Resources.Strings.TaskType_AdbLaunchApp,
                 TaskType.AdbScreenshot => Resources.Strings.TaskType_AdbScreenshot,

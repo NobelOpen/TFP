@@ -253,6 +253,8 @@ namespace TaskFlow.Helpers
                 TaskType.WinUiAutomation => new WinUiAutomationTaskCard(),
                 TaskType.WinSimulateInput => new WinSimulateInputTaskCard(),
                 TaskType.WinSubtitle => new WinSubtitleTaskCard(),
+                TaskType.WinFindFile => new WinFindFileTaskCard(),
+                TaskType.EventListener => new EventListenerTaskCard(),
                 TaskType.AdbConnect => new AdbConnectTaskCard(),
                 TaskType.AdbLaunchApp => new AdbLaunchAppTaskCard(),
                 TaskType.AdbScreenshot => new AdbScreenshotTaskCard(),

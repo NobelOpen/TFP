@@ -7,6 +7,7 @@
         xmlns:vm="clr-namespace:TaskFlow.ViewModels"
         xmlns:conv="clr-namespace:TaskFlow.Converters"
         xmlns:models="clr-namespace:TaskFlow.Models.TaskCards"
+        xmlns:panels="clr-namespace:TaskFlow.Views.Panels"
         xmlns:res="clr-namespace:TaskFlow.Resources"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" 
@@ -297,10 +298,10 @@
 
                     <!-- 左侧核心 -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Command="{Binding NewProjectCommand}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📋 "/><TextBlock Text="{x:Static res:Strings.Main_NewProject}"/></StackPanel></Button>
-                        <Button Command="{Binding SaveCommand}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="💾 "/><TextBlock Text="{x:Static res:Strings.Main_SaveProject}"/></StackPanel></Button>
-                        <Button Command="{Binding SaveAsCommand}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📄 "/><TextBlock Text="{x:Static res:Strings.Main_SaveAs}"/></StackPanel></Button>
-                        <Button Command="{Binding LoadCommand}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📂 "/><TextBlock Text="{x:Static res:Strings.Main_Load}"/></StackPanel></Button>
+                        <Button Command="{Binding NewProjectCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📋 "/><TextBlock Text="{x:Static res:Strings.Main_NewProject}"/></StackPanel></Button>
+                        <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="💾 "/><TextBlock Text="{x:Static res:Strings.Main_SaveProject}"/></StackPanel></Button>
+                        <Button Command="{Binding SaveAsCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📄 "/><TextBlock Text="{x:Static res:Strings.Main_SaveAs}"/></StackPanel></Button>
+                        <Button Command="{Binding LoadCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📂 "/><TextBlock Text="{x:Static res:Strings.Main_Load}"/></StackPanel></Button>
                         <Separator Style="{StaticResource VerticalSeparator}"/>
                     </StackPanel>
 
@@ -309,11 +310,12 @@
                         <ToolBar x:Name="MainToolBar" Style="{DynamicResource FlatToolBar}"  MinHeight="0" Padding="0,0,0,0" ToolBarTray.IsLocked="True">
                             <!-- Button在ToolBar中默认样式会被覆盖，必须显式指定Style -->
                             <Button Click="HideToTray_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="🔽 "/><TextBlock Text="{x:Static res:Strings.Main_Hide}"/></StackPanel></Button>
-                            <Button Click="OpenSettings_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="⚙ "/><TextBlock Text="{x:Static res:Strings.Main_Settings}"/></StackPanel></Button>
-                            <Button Click="OpenVariableManager_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📦 "/><TextBlock Text="{x:Static res:Strings.Main_Variables}"/></StackPanel></Button>
-                            <Button Click="OpenFlowManager_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📑 "/><TextBlock Text="{x:Static res:Strings.Main_Flows}"/></StackPanel></Button>
-                            <Button Click="OpenModelManager_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📱 "/><TextBlock Text="{x:Static res:Strings.Main_Models}"/></StackPanel></Button>
+                            <Button Click="OpenSettings_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13" Margin="0,1,2,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Settings}"/></StackPanel></Button>
+                            <Button Click="OpenVariableManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📦 "/><TextBlock Text="{x:Static res:Strings.Main_Variables}"/></StackPanel></Button>
+                            <Button Click="OpenFlowManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📑 "/><TextBlock Text="{x:Static res:Strings.Main_Flows}"/></StackPanel></Button>
+                            <Button Click="OpenModelManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📱 "/><TextBlock Text="{x:Static res:Strings.Main_Models}"/></StackPanel></Button>
                             <Button Click="OpenHelp_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="❓ "/><TextBlock Text="{x:Static res:Strings.Common_Help}"/></StackPanel></Button>
+                            <Button Click="ToggleAiPanel_Click" Style="{StaticResource ToolbarButton}" Margin="4,0" ToolTip="Orchid AI Assistant"><StackPanel Orientation="Horizontal"><TextBlock Text="✦ "/><TextBlock Text="Orchid"/></StackPanel></Button>
                         </ToolBar>
                     </ToolBarTray>
 
@@ -329,6 +331,7 @@
                             </Grid.ColumnDefinitions>
                             <Button x:Name="RunModeButton" Content="{x:Static res:Strings.Main_RunCurrent}" 
                                     Command="{Binding RunCurrentFlowCommand}" 
+                                    IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
                                     Padding="12,6,4,6" Cursor="Hand" BorderThickness="0">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
@@ -364,6 +367,7 @@
                             </Button>
                             <ToggleButton x:Name="RunModeDropdown" Grid.Column="1" 
                                           Click="RunModeDropdown_Click"
+                                          IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
                                           WindowChrome.IsHitTestVisibleInChrome="True"
                                           Cursor="Hand" Padding="4,6" BorderThickness="0">
                                 <TextBlock x:Name="RunModeDropdownIcon" Text="▾" FontSize="10" Foreground="#faf9f5"/>
@@ -451,13 +455,22 @@
         <!-- 主内容区 -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="AiPanelColumn" Width="0"/>  <!-- AI 面板列（默认收起） -->
+                <ColumnDefinition x:Name="AiPanelSplitterColumn" Width="0"/>  <!-- AI 面板分隔器 -->
                 <ColumnDefinition Width="*" MinWidth="400"/>
                 <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="420"/>
+                <ColumnDefinition x:Name="RightPanelColumn" Width="420"/>
             </Grid.ColumnDefinitions>
-            
+
+            <!-- AI 流程助手面板（默认收起） -->
+            <panels:AiFlowPanel x:Name="AiFlowPanelControl" Grid.Column="0" Visibility="Collapsed" Margin="8,8,0,8"/>
+
+            <!-- AI 面板分隔器 -->
+            <GridSplitter x:Name="AiPanelSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                          Background="Transparent" Visibility="Collapsed"/>
+
             <!-- 左侧任务卡片画布 -->
-                <Border Grid.Column="0" Background="#f0eee6" Margin="8"  CornerRadius="8" BorderThickness="1" BorderBrush="#e3dacc">
+                <Border Grid.Column="2" Background="#f0eee6"  Margin="8"  CornerRadius="8" BorderThickness="1" BorderBrush="#e3dacc">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -611,28 +624,11 @@
                         
                     </StackPanel>
 
-                        <ListBox Grid.Row="1" x:Name="TaskCanvas"
-                                      ItemsSource="{Binding TaskCards}"
-                                      ItemTemplate="{StaticResource TaskCardTemplate}"
-                                      AllowDrop="True"
-                                      Drop="Canvas_Drop"
-                                      DragOver="Canvas_DragOver"
-                                      Background="Transparent"
-                                      BorderThickness="0"
-                                      Padding="8"
-                                      PreviewMouseLeftButtonDown="Canvas_PreviewMouseLeftButtonDown"
-                                      Loaded="TaskCanvas_Loaded"
-                                      VirtualizingPanel.IsVirtualizing="True"
-                                      VirtualizingPanel.VirtualizationMode="Recycling"
-                                      VirtualizingPanel.ScrollUnit="Pixel"
-                                      VirtualizingPanel.CacheLength="0.5,0.5"
-                                      VirtualizingPanel.CacheLengthUnit="Page"
-                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                      ScrollViewer.CanContentScroll="True"
-                                      SelectionMode="Single">
-                            <ListBox.ContextMenu>
-                                <ContextMenu ContextMenuOpening="TaskList_ContextMenuOpening">
+                        <!-- 流程画布容器：每个 Tab 拥有独立的 ListBox，切换时翻转 Visibility 实现瞬切 -->
+                        <Grid x:Name="FlowCanvasHost" Grid.Row="1">
+                            <Grid.Resources>
+                                <!-- 画布右键菜单（共享给所有动态 ListBox） -->
+                                <ContextMenu x:Key="CanvasContextMenu">
                                     <MenuItem Header="{x:Static res:Strings.Main_SearchTask}" Click="SearchTask_Click" Tag="Search"/>
                                     <Separator/>
                                     <MenuItem Header="{x:Static res:Strings.Main_AddTask}">
@@ -652,6 +648,7 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinUiAutomation}" Click="AddTask_Click" Tag="WinUiAutomation"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinSimulateInput}" Click="AddTask_Click" Tag="WinSimulateInput"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinSubtitle}" Click="AddTask_Click" Tag="WinSubtitle"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_WinFindFile}" Click="AddTask_Click" Tag="WinFindFile"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_EventListener}" Click="AddTask_Click" Tag="EventListener"/>
                                         </MenuItem>
                                         <!-- ADB -->
@@ -698,9 +695,9 @@
                                         </MenuItem>
                                     </MenuItem>
                                 </ContextMenu>
-                            </ListBox.ContextMenu>
-                        </ListBox>
-                    
+                            </Grid.Resources>
+                        </Grid>
+
                     <!-- 空状态提示 -->
                     <TextBlock Text="{x:Static res:Strings.Main_EmptyHint}"
                                Grid.Row="1"
@@ -713,10 +710,10 @@
             </Border>
             
             <!-- 分隔器 -->
-            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="Transparent"/>
+            <GridSplitter Grid.Column="3" Width="1" HorizontalAlignment="Stretch" Background="Transparent"/>
             
             <!-- 右侧显示与通知区 -->
-            <Grid Grid.Column="2" Margin="8">
+            <Grid Grid.Column="4" Margin="0,8,8,8">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="5"/>
@@ -774,7 +771,7 @@
                         </Grid>
                         
                         <!-- 图像预览页面 -->
-                            <Border x:Name="ImagePreviewPanel" Grid.Row="1" Margin="8" Background="#f0eee6" CornerRadius="6" ClipToBounds="True">
+                            <Border x:Name="ImagePreviewPanel" Grid.Row="1" Margin="5" Background="#f0eee6" CornerRadius="6" ClipToBounds="True">
                             <Grid>
                                 <!-- 无图像时居中显示文字 -->
                                 <TextBlock Text="No image (∀&lt;)"
@@ -808,7 +805,7 @@
                         </Border>
                         
                         <!-- 实时显示页面 -->
-                            <Border x:Name="LivePreviewPanel" Grid.Row="1" Margin="8" Background="#f0eee6" CornerRadius="6" ClipToBounds="True" Visibility="Collapsed">
+                            <Border x:Name="LivePreviewPanel" Grid.Row="1" Margin="5" Background="#f0eee6" CornerRadius="6" ClipToBounds="True" Visibility="Collapsed">
                             <Grid>
                                 <!-- 实时画面（支持缩放和滚动） -->
                                 <ScrollViewer x:Name="LiveScrollViewer"
@@ -846,7 +843,7 @@
                                             HorizontalAlignment="Left" VerticalAlignment="Bottom" 
                                             Margin="8,0,0,8">
                                     <!-- 播放按钮 -->
-                                    <Button x:Name="BtnLiveStart" Content="▶" Click="LivePreviewStart_Click"
+                                    <Button x:Name="BtnLiveStart" Content="▶" Click="LivePreviewStart_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
                                             Width="28"  FontSize="22" Padding="0"
                                             Background="Transparent" Foreground="#b0aea5" BorderThickness="0" Cursor="Hand"
                                             ToolTip="开始实时显示">
@@ -951,7 +948,7 @@
                         </Grid>
                         
                         <!-- 日志页面 -->
-                            <Border x:Name="LogPanel" Grid.Row="1" Margin="8" Background="#f0eee6" CornerRadius="6">
+                            <Border x:Name="LogPanel" Grid.Row="1" Margin="5" Background="#f0eee6" CornerRadius="6">
                             <Grid>
                                 <!-- 无日志时居中显示提示 -->
                                 <TextBlock Text="No logs ∠)_"
@@ -981,7 +978,7 @@
                         </Border>
                         
                         <!-- 输出信息页面 -->
-                            <Border x:Name="OutputPanel" Grid.Row="1" Margin="8" Background="#f0eee6" CornerRadius="6" Visibility="Collapsed">
+                            <Border x:Name="OutputPanel" Grid.Row="1" Margin="5" Background="#f0eee6" CornerRadius="6" Visibility="Collapsed">
                             <Grid>
                                 <!-- 空状态居中提示 -->
                                 <TextBlock x:Name="OutputEmptyHint"

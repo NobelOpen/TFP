@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -40,14 +40,29 @@ namespace TaskFlow.Services
             return false;
         }
 
-        private async Task<bool> ExecuteWinLaunchAppAsync(WinLaunchAppTaskCard task)
+        private async Task<bool> ExecuteWinLaunchAppAsync(WinLaunchAppTaskCard task, IList<TaskCardBase> allTasks)
         {
-            var result = await Win32Helper.LaunchApplicationAsync(task.ExePath, task.Arguments);
-            if (!result.Success)
+            try
             {
-                task.ErrorMessage = result.Message;
+                string exePath = _variableStore.ResolveVariableReferences(task.ExePath);
+                exePath = ExpressionEvaluator.ResolveExpression(exePath, allTasks, _variableStore);
+                exePath = exePath.Trim().Trim('"');
+
+                string args = _variableStore.ResolveVariableReferences(task.Arguments);
+                args = ExpressionEvaluator.ResolveExpression(args, allTasks, _variableStore);
+
+                var result = await Win32Helper.LaunchApplicationAsync(exePath, args);
+                if (!result.Success)
+                {
+                    task.ErrorMessage = result.Message;
+                }
+                return result.Success;
             }
-            return result.Success;
+            catch (Exception ex)
+            {
+                task.ErrorMessage = $"解析异常: {ex.Message}";
+                return false;
+            }
         }
 
         private async Task<bool> ExecuteWinScreenshotAsync(WinScreenshotTaskCard task)
@@ -57,6 +72,8 @@ namespace TaskFlow.Services
             {
                 task.OutputImage?.Dispose();
                 task.OutputImage = ApplyGrayscaleIfNeeded(result.Image, task.ConvertToGrayscale);
+                // 输出分辨率信息，方便 AI 自主模式估算坐标
+                task.OutputText = $"图像分辨率: {task.OutputImage.Width}x{task.OutputImage.Height}";
                 return true;
             }
             task.ErrorMessage = result.Error ?? "截屏失败";

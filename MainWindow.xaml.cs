@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -37,6 +37,15 @@ namespace TaskFlow
 
         // 滚动节流相关
         private ScrollViewer? _taskCanvasScrollViewer;
+
+        // 多 ListBox 缓存：每个 WorkflowTab 拥有独立的 ListBox，切换时翻转 Visibility
+        private readonly Dictionary<WorkflowTab, ListBox> _flowListBoxes = new();
+        private ListBox? _activeFlowListBox;
+
+        /// <summary>
+        /// 兼容属性：返回当前活跃的 ListBox（替代原 XAML 中的 x:Name="TaskCanvas"）
+        /// </summary>
+        private ListBox TaskCanvas => _activeFlowListBox!;
 
         // 静态冻结 Brush 缓存（避免 AddOutputRow 每次创建新对象）
         private static readonly System.Windows.Media.SolidColorBrush LabelBrush = CreateFrozenBrush(0x6B, 0x6A, 0x65);
@@ -90,6 +99,13 @@ namespace TaskFlow
             {
                 vm.LogScrollToEndRequested += LogScrollToEnd;
                 vm.PropertyChanged += ViewModel_PropertyChanged;
+                vm.FlowListBoxResetRequested += (_, __) => ClearAllFlowListBoxes();
+
+                // 为初始 Tab 创建 ListBox
+                if (vm.SelectedTab != null)
+                {
+                    Loaded += (_, __) => EnsureFlowListBox(vm.SelectedTab);
+                }
             }
 
             // 初始化系统托盘图标
@@ -277,6 +293,18 @@ namespace TaskFlow
             {
                 Dispatcher.Invoke(() => AnimateRunStopTransition(ViewModel.IsRunning));
             }
+            else if (e.PropertyName == nameof(MainViewModel.SelectedTab))
+            {
+                // 当 ViewModel 通过其他路径（AddTab、RemoveTab、文件加载等）改变 SelectedTab 时，
+                // 自动切换对应的 ListBox Visibility
+                Dispatcher.Invoke(() =>
+                {
+                    if (ViewModel.SelectedTab != null)
+                    {
+                        EnsureFlowListBox(ViewModel.SelectedTab);
+                    }
+                });
+            }
         }
 
         /// <summary>
@@ -375,6 +403,7 @@ namespace TaskFlow
         /// </summary>
         private void HideToTray_Click(object sender, RoutedEventArgs e)
         {
+
             // 隐藏主窗口
             Hide();
 
@@ -413,6 +442,105 @@ namespace TaskFlow
         }
 
         private MainViewModel ViewModel => (MainViewModel)DataContext;
+
+        #region 流程 ListBox 动态管理
+
+        /// <summary>
+        /// 为指定 Tab 创建 ListBox（复制原 XAML TaskCanvas 的所有属性和事件）
+        /// </summary>
+        private ListBox CreateFlowListBox(WorkflowTab tab)
+        {
+            var listBox = new ListBox
+            {
+                ItemsSource = tab.TaskCards,
+                ItemTemplate = (DataTemplate)FindResource("TaskCardTemplate"),
+                AllowDrop = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(8),
+                SelectionMode = System.Windows.Controls.SelectionMode.Single,
+                Visibility = Visibility.Collapsed
+            };
+
+            // 虚拟化设置
+            VirtualizingPanel.SetIsVirtualizing(listBox, true);
+            VirtualizingPanel.SetVirtualizationMode(listBox, VirtualizationMode.Recycling);
+            VirtualizingPanel.SetScrollUnit(listBox, ScrollUnit.Pixel);
+            VirtualizingPanel.SetCacheLength(listBox, new VirtualizationCacheLength(0.5, 0.5));
+            VirtualizingPanel.SetCacheLengthUnit(listBox, VirtualizationCacheLengthUnit.Page);
+            ScrollViewer.SetVerticalScrollBarVisibility(listBox, ScrollBarVisibility.Auto);
+            ScrollViewer.SetHorizontalScrollBarVisibility(listBox, ScrollBarVisibility.Disabled);
+            ScrollViewer.SetCanContentScroll(listBox, true);
+
+            // 事件绑定
+            listBox.Drop += Canvas_Drop;
+            listBox.DragOver += Canvas_DragOver;
+            listBox.PreviewMouseLeftButtonDown += Canvas_PreviewMouseLeftButtonDown;
+            listBox.ContextMenuOpening += TaskList_ContextMenuOpening;
+
+            // 共享画布右键菜单
+            listBox.ContextMenu = (ContextMenu)FlowCanvasHost.FindResource("CanvasContextMenu");
+
+            return listBox;
+        }
+
+        /// <summary>
+        /// 确保指定 Tab 有对应的 ListBox，并切换为可见
+        /// </summary>
+        internal void EnsureFlowListBox(WorkflowTab tab)
+        {
+            if (!_flowListBoxes.TryGetValue(tab, out var listBox))
+            {
+                // 首次访问：创建并加入容器
+                listBox = CreateFlowListBox(tab);
+                _flowListBoxes[tab] = listBox;
+                FlowCanvasHost.Children.Add(listBox);
+            }
+
+            // 隐藏当前活跃 ListBox
+            if (_activeFlowListBox != null && _activeFlowListBox != listBox)
+            {
+                _activeFlowListBox.Visibility = Visibility.Collapsed;
+            }
+
+            // 显示目标 ListBox
+            listBox.Visibility = Visibility.Visible;
+            _activeFlowListBox = listBox;
+
+            // 更新 ScrollViewer 引用（用于滚动节流）
+            _taskCanvasScrollViewer = FindVisualChild<ScrollViewer>(listBox);
+        }
+
+        /// <summary>
+        /// 删除 Tab 时清理对应的 ListBox
+        /// </summary>
+        internal void RemoveFlowListBox(WorkflowTab tab)
+        {
+            if (_flowListBoxes.TryGetValue(tab, out var listBox))
+            {
+                FlowCanvasHost.Children.Remove(listBox);
+                _flowListBoxes.Remove(tab);
+
+                if (_activeFlowListBox == listBox)
+                {
+                    _activeFlowListBox = null;
+                    _taskCanvasScrollViewer = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 新建项目时清空所有缓存的 ListBox
+        /// </summary>
+        internal void ClearAllFlowListBoxes()
+        {
+            FlowCanvasHost.Children.Clear();
+            _flowListBoxes.Clear();
+            _activeFlowListBox = null;
+            _taskCanvasScrollViewer = null;
+        }
+
+        #endregion
 
     }
 }

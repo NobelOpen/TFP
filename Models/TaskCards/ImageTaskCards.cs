@@ -92,7 +92,15 @@ namespace TaskFlow.Models.TaskCards
         [ObservableProperty]
         private int _maxMatchCount = 1;
 
-        // 保存的模板图像路径
+        // 是否引用其他任务输出的图像作为模板（动态模板）
+        [ObservableProperty]
+        private bool _useSourceTaskTemplate;
+
+        // 模板来源任务 ID（当 UseSourceTaskTemplate 为 true 时使用）
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForTemplate;
+
+        // 保存的模板图像路径（静态模板）
         [ObservableProperty]
         private string? _templateImagePath;
 
@@ -141,6 +149,7 @@ namespace TaskFlow.Models.TaskCards
 
         public override bool OutputsImage => true;
         public override bool OutputsBoolResult => true;
+        public override bool OutputsCoordinates => true;
 
         public override void Reset()
         {

@@ -26,22 +26,8 @@ namespace TaskFlow
         /// </summary>
         private void TaskCanvas_Loaded(object sender, RoutedEventArgs e)
         {
-            _taskCanvasScrollViewer = FindVisualChild<ScrollViewer>(TaskCanvas);
-            if (_taskCanvasScrollViewer != null)
-            {
-                // 查找垂直滚动条并监听 Scroll 事件
-                var verticalScrollBar = FindVisualChild<System.Windows.Controls.Primitives.ScrollBar>(
-                    _taskCanvasScrollViewer, "PART_VerticalScrollBar");
-                if (verticalScrollBar == null)
-                {
-                    // 如果找不到命名的，尝试找任意垂直 ScrollBar
-                    verticalScrollBar = FindVisualChild<System.Windows.Controls.Primitives.ScrollBar>(_taskCanvasScrollViewer);
-                }
-                if (verticalScrollBar != null)
-                {
-                    verticalScrollBar.Scroll += TaskCanvas_ScrollBarScroll;
-                }
-            }
+            // 由 EnsureFlowListBox 在首次显示时获取 ScrollViewer
+            // 此方法保留为空以防其他地方引用
         }
 
         /// <summary>
@@ -127,7 +113,7 @@ namespace TaskFlow
                 }
 
                 // 运行中只允许选中，禁止长按和拖拽
-                if (ViewModel.IsRunning)
+                if (ViewModel.IsBusy)
                 {
                     ViewModel.SelectTaskCommand.Execute(task);
                     return;
@@ -152,7 +138,7 @@ namespace TaskFlow
         private void TaskCard_MouseMove(object sender, MouseEventArgs e)
         {
             // 运行中禁止拖拽
-            if (ViewModel.IsRunning) return;
+            if (ViewModel.IsBusy) return;
 
             if (e.LeftButton != MouseButtonState.Pressed)
             {
@@ -341,20 +327,23 @@ namespace TaskFlow
         }
 
         /// <summary>
-        /// 分页标签点击事件，切换选中分页
+        /// 分页标签点击事件，切换选中分页（通过 Visibility 翻转实现瞬切）
         /// </summary>
         private void TabItem_Click(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Controls.Button btn && btn.Tag is WorkflowTab tab)
             {
-                ViewModel.SelectedTab = tab;
-
-                // 触发流程标签滑动指示条动画
+                // 指示线滑动动画
                 if (FlowTabIndicator != null && FlowTabItemsControl != null)
                 {
-                    btn.UpdateLayout();
                     AnimateIndicator(FlowTabIndicator, FlowTabIndicatorTransform, btn, FlowTabItemsControl);
                 }
+
+                // 切换 ListBox Visibility（瞬间完成，无需等待）
+                EnsureFlowListBox(tab);
+
+                // 更新 ViewModel 状态
+                ViewModel.SelectedTab = tab;
             }
         }
 
@@ -376,6 +365,9 @@ namespace TaskFlow
 
         private void OpenVariableManager_Click(object sender, RoutedEventArgs e)
         {
+            // 忙碌状态禁止操作
+            if (ViewModel.IsBusy) return;
+
             var dialog = new VariableManagerDialog(ViewModel.VariableStore);
             dialog.Owner = this;
             dialog.ShowDialog();
@@ -383,6 +375,9 @@ namespace TaskFlow
 
         private void OpenFlowManager_Click(object sender, RoutedEventArgs e)
         {
+            // 忙碌状态禁止操作
+            if (ViewModel.IsBusy) return;
+
             var dialog = new FlowManagerDialog(
                 ViewModel.Tabs,
                 tab => ViewModel.SelectedTab = tab,
@@ -394,6 +389,9 @@ namespace TaskFlow
 
         private void OpenSettings_Click(object sender, RoutedEventArgs e)
         {
+            // 忙碌状态禁止操作
+            if (ViewModel.IsBusy) return;
+
             var settings = AppSettings.Load();
             var dialog = new SettingsDialog(settings) { Owner = this };
             if (dialog.ShowDialog() == true)
@@ -405,6 +403,9 @@ namespace TaskFlow
 
         private void OpenModelManager_Click(object sender, RoutedEventArgs e)
         {
+            // 忙碌状态禁止操作
+            if (ViewModel.IsBusy) return;
+
             var dialog = new ModelManagerDialog(this);
             dialog.ShowDialog();
         }
@@ -415,6 +416,78 @@ namespace TaskFlow
         private void OpenHelp_Click(object sender, RoutedEventArgs e)
         {
             OpenHelpDocument(null);
+        }
+
+        /// <summary>
+        /// AI 助手按钮 - 切换左侧 AI 面板的显示/隐藏
+        /// </summary>
+        private void ToggleAiPanel_Click(object sender, RoutedEventArgs e)
+        {
+            // 忙碌状态禁止操作
+            if (ViewModel.IsBusy) return;
+
+            ViewModel.IsAiPanelOpen = !ViewModel.IsAiPanelOpen;
+
+            if (ViewModel.IsAiPanelOpen)
+            {
+                InitializeAiPanel();
+                // 每次打开面板时刷新模型列表（用户可能在模型管理中添加了新模型）
+                AiFlowPanelControl.RefreshModelList();
+                AiFlowPanelControl.Visibility = Visibility.Visible;
+                AiPanelSplitter.Visibility = Visibility.Visible;
+                AiPanelColumn.Width = new GridLength(320);
+                AiPanelSplitterColumn.Width = new GridLength(5);
+                
+                // 收缩右侧面板为流程画布腾出空间
+                RightPanelColumn.Width = new GridLength(300);
+            }
+            else
+            {
+                AiFlowPanelControl.Visibility = Visibility.Collapsed;
+                AiPanelSplitter.Visibility = Visibility.Collapsed;
+                AiPanelColumn.Width = new GridLength(0);
+                AiPanelSplitterColumn.Width = new GridLength(0);
+                
+                // 恢复右侧面板默认宽度
+                RightPanelColumn.Width = new GridLength(420);
+            }
+        }
+
+        private bool _aiPanelInitialized = false;
+
+        /// <summary>
+        /// 初始化 AI 流程助手面板（仅首次调用时执行）
+        /// </summary>
+        private void InitializeAiPanel()
+        {
+            if (_aiPanelInitialized) return;
+            _aiPanelInitialized = true;
+
+            AiFlowPanelControl.Initialize(ViewModel.AiFlowVm);
+
+            ViewModel.AiFlowVm.OpenCardPropertyRequested += (cardId) =>
+            {
+                var task = ViewModel.TaskCards.FirstOrDefault(t => t.Id == cardId);
+                if (task != null)
+                {
+                    var dialog = new Views.Dialogs.TaskPropertyDialog(task, ViewModel) { Owner = this };
+                    if (dialog.ShowDialog() == true)
+                    {
+                        ViewModel.AddLog($"[AI] 已配置卡片: {task.Name}");
+                    }
+                }
+            };
+
+            // 订阅面板内关闭按钮事件
+            AiFlowPanelControl.ClosePanelRequested += () =>
+            {
+                ViewModel.IsAiPanelOpen = false;
+                AiFlowPanelControl.Visibility = Visibility.Collapsed;
+                AiPanelSplitter.Visibility = Visibility.Collapsed;
+                AiPanelColumn.Width = new GridLength(0);
+                AiPanelSplitterColumn.Width = new GridLength(0);
+                RightPanelColumn.Width = new GridLength(420);
+            };
         }
 
         /// <summary>
@@ -537,8 +610,8 @@ namespace TaskFlow
 
         private void TaskCard_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            // 运行中禁止弹出右键菜单
-            if (ViewModel.IsRunning) return;
+            // 运行中或Orchid执行中禁止弹出右键菜单
+            if (ViewModel.IsBusy) return;
 
             if (sender is Border border && border.DataContext is TaskCardBase task)
             {
@@ -759,8 +832,8 @@ namespace TaskFlow
 
         private void TaskList_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            // 运行中禁止弹出任务列表右键菜单
-            if (ViewModel.IsRunning)
+            // 运行中或Orchid执行中禁止弹出任务列表右键菜单
+            if (ViewModel.IsBusy)
             {
                 e.Handled = true;
             }

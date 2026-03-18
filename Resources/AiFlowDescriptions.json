@@ -1,0 +1,266 @@
+[
+  {
+    "TaskType": "WinLaunchApp",
+    "Category": "Windows操作",
+    "Description": "启动 Windows 应用程序（.exe文件）",
+    "Usage": "当需要打开一个桌面程序（如记事本、浏览器、游戏客户端）时使用",
+    "KeyProperties": ["exePath: 可执行文件的完整路径", "arguments: 启动参数（可选）"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "WinScreenshot",
+    "Category": "Windows操作",
+    "Description": "截取指定进程窗口的截图，或截取整个桌面",
+    "Usage": "当需要获取某个窗口的画面用于后续图像分析（OCR、模板匹配等）时使用",
+    "KeyProperties": ["processName: 目标进程名称（不含.exe），留空时截取整个桌面（包含所有显示器）。严禁使用 explorer 作为截屏整个桌面的进程名"],
+    "Outputs": ["outputImage: 截取的窗口图像"]
+  },
+  {
+    "TaskType": "WinClick",
+    "Category": "Windows操作",
+    "Description": "在屏幕指定坐标执行鼠标点击（单击/双击/滑动）",
+    "Usage": "当需要点击屏幕上某个位置（如按钮、链接）时使用。坐标可以手动设置或引用其他任务（如模板匹配）的坐标输出",
+    "KeyProperties": ["startX/startY: 点击坐标", "clickType: Single/Double/Swipe", "processName: 离屏点击时的目标进程名"],
+    "Outputs": ["outputX/outputY: 实际点击的坐标"]
+  },
+  {
+    "TaskType": "WinCloseApp",
+    "Category": "Windows操作",
+    "Description": "关闭指定进程的应用程序",
+    "Usage": "当需要关闭一个正在运行的程序时使用",
+    "KeyProperties": ["processName: 目标进程名称（不含.exe）"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "WinUiAutomation",
+    "Category": "Windows操作",
+    "Description": "通过 Windows UI 自动化框架查找并点击窗口中的按钮或控件",
+    "Usage": "当需要按名称或AutomationId点击应用程序中的按钮时使用，比模拟坐标点击更稳定",
+    "KeyProperties": ["processName: 目标进程名称", "buttonName: 按钮名称", "searchBy: Name/AutomationId", "matchMode: Exact/Contains/Regex"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "WinSimulateInput",
+    "Category": "Windows操作",
+    "Description": "模拟键盘按键或鼠标滚轮操作",
+    "Usage": "当需要按下特定键盘按键（如回车、Tab）或滚动鼠标滚轮时使用",
+    "KeyProperties": ["actionType: ScrollUp/ScrollDown/KeyPress", "keyName: 按键名称（KeyPress时使用）", "repeatCount: 重复次数"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "WinSubtitle",
+    "Category": "Windows操作",
+    "Description": "在指定窗口上显示浮动字幕文本",
+    "Usage": "当需要在窗口上方显示提示文字、翻译结果等信息时使用",
+    "KeyProperties": ["processName: 目标进程名称", "displayText: 显示文本（支持变量引用）", "fontSize: 字体大小", "durationMs: 显示时长"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "EventListener",
+    "Category": "Windows操作",
+    "Description": "监听 Windows 事件（如键盘热键），等待触发后继续执行",
+    "Usage": "当需要等待用户按下某个快捷键后才继续执行流程时使用",
+    "KeyProperties": ["hotkeyModifier: 修饰键", "hotkeyKey: 按键"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "WinFindFile",
+    "Category": "Windows操作",
+    "Description": "在指定目录或全盘搜索指定文件（按文件名匹配），返回第一个匹配到的文件的完整本地路径",
+    "Usage": "当需要查找某个本地文件（如特定游戏启动器.exe、图片文件）的具体位置并在后续任务中使用时使用",
+    "KeyProperties": ["fileName: 查找文件名", "searchRootPath: 搜索根目录（留空为全盘搜索）", "maxDepth: 搜索最大深度（0为无限制）", "useWildcard: 是否启用通配符匹配"],
+    "Outputs": ["outputFilePath: 查找到的文件完整路径"]
+  },
+  {
+    "TaskType": "AdbConnect",
+    "Category": "ADB操作",
+    "Description": "通过 ADB 连接到 Android 设备或模拟器",
+    "Usage": "当需要操控安卓设备/模拟器之前，先建立 ADB 连接",
+    "KeyProperties": ["serialNumber: 设备序列号（如 127.0.0.1:5555 或 emulator-5554）"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "AdbLaunchApp",
+    "Category": "ADB操作",
+    "Description": "通过 ADB 在安卓设备上启动应用",
+    "Usage": "当需要在安卓设备上打开一个 APP 时使用",
+    "KeyProperties": ["serialNumber: 设备序列号", "packageName: 应用包名"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "AdbScreenshot",
+    "Category": "ADB操作",
+    "Description": "通过 ADB 截取安卓设备的屏幕截图",
+    "Usage": "当需要获取安卓设备画面用于后续图像分析时使用",
+    "KeyProperties": ["serialNumber: 设备序列号"],
+    "Outputs": ["outputImage: 设备截图"]
+  },
+  {
+    "TaskType": "AdbClick",
+    "Category": "ADB操作",
+    "Description": "通过 ADB 在安卓设备屏幕上模拟点击或滑动",
+    "Usage": "当需要点击安卓设备屏幕上某个位置时使用",
+    "KeyProperties": ["serialNumber: 设备序列号", "startX/startY: 点击坐标"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "AdbCloseApp",
+    "Category": "ADB操作",
+    "Description": "通过 ADB 强制关闭安卓设备上的应用",
+    "Usage": "当需要关闭安卓设备上的某个 APP 时使用",
+    "KeyProperties": ["serialNumber: 设备序列号", "packageName: 应用包名"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "AdbDisconnect",
+    "Category": "ADB操作",
+    "Description": "断开 ADB 连接",
+    "Usage": "当完成安卓设备操作后，断开连接释放资源",
+    "KeyProperties": ["serialNumber: 设备序列号"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "ImgOcr",
+    "Category": "图像处理",
+    "Description": "对图像执行 OCR 文字识别，提取图片中的文本内容",
+    "Usage": "当需要从截图中提取文字（如读取按钮文字、检测状态文本）时使用。需要先有截图卡片作为图像来源",
+    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务（如截图卡片）", "ocrEngine: PaddleOCR/WeChatOCR", "roiX/roiY/roiWidth/roiHeight: 感兴趣区域（可选，限定识别范围）"],
+    "Outputs": ["outputText: 识别出的文本"]
+  },
+  {
+    "TaskType": "ImgTemplateMatch",
+    "Category": "图像处理",
+    "Description": "在源图像中查找与模板图像匹配的位置（模板匹配）",
+    "Usage": "当需要在截图中查找特定图标、按钮图片的位置时使用",
+    "KeyProperties": ["sourceStep: 搜索图来源步骤", "templateSourceStep: 模板图来源步骤（如 ImgCrop 裁剪出的区域）", "templateImagePath: 模板图像路径（与 templateSourceStep 二选一）", "matchThreshold: 匹配阈值(0~1)"],
+    "Outputs": ["outputX/outputY: 匹配位置坐标", "outputResult: 是否匹配成功"]
+  },
+  {
+    "TaskType": "ImgCrop",
+    "Category": "图像处理",
+    "Description": "裁剪图像的指定区域",
+    "Usage": "当需要从截图中截取特定区域用于后续处理时使用",
+    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务", "roiX/roiY/roiWidth/roiHeight: 裁剪区域"],
+    "Outputs": ["outputImage: 裁剪后的图像"]
+  },
+  {
+    "TaskType": "ImgColorDetect",
+    "Category": "图像处理",
+    "Description": "在图像中检测指定颜色的占比",
+    "Usage": "当需要判断画面中是否存在特定颜色（如红色警告、绿色成功图标）时使用",
+    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务", "targetH/targetS/targetV: 目标HSV颜色"],
+    "Outputs": ["outputResult: 是否检测到目标颜色", "outputMatchRatio: 颜色匹配占比"]
+  },
+  {
+    "TaskType": "ImgPreprocess",
+    "Category": "图像处理",
+    "Description": "对图像进行预处理（灰度化、二值化、模糊、锐化等）",
+    "Usage": "当OCR或模板匹配效果不好，需要预处理图像以提升识别率时使用",
+    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务"],
+    "Outputs": ["outputImage: 处理后的图像"]
+  },
+  {
+    "TaskType": "ImgResize",
+    "Category": "图像处理",
+    "Description": "调整图像大小",
+    "Usage": "当图像尺寸不合适需要缩放时使用",
+    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务", "targetWidth/targetHeight: 目标尺寸"],
+    "Outputs": ["outputImage: 缩放后的图像"]
+  },
+  {
+    "TaskType": "ExpressionEval",
+    "Category": "数据处理",
+    "Description": "计算数学或逻辑表达式、变量赋值，处理运算逻辑与强类型比较",
+    "Usage": "对变量进行数学运算、比较或赋值时使用。重要：字符串变量赋值必须用双引号包裹（如 @A = \"文本\"）；浮点数赋给Int会自动截断；比较判断严格区分带分号字符串和原生数字类型。",
+    "KeyProperties": ["expression: 表达式内容（支持变量引用和任务输出引用）"],
+    "Outputs": ["outputText: 计算结果文本", "outputResult: 布尔判断结果"]
+  },
+  {
+    "TaskType": "StringSubstring",
+    "Category": "数据处理",
+    "Description": "从文本中截取子串",
+    "Usage": "当需要从OCR结果或其他文本中提取特定部分时使用",
+    "KeyProperties": ["sourceExpression: 源文本表达式", "startIndex: 起始位置", "length: 截取长度"],
+    "Outputs": ["outputText: 截取的子串"]
+  },
+  {
+    "TaskType": "PauseTask",
+    "Category": "通用",
+    "Description": "暂停流程执行指定的时长",
+    "Usage": "当需要等待一段时间（如等待页面加载、等待动画结束）再继续时使用",
+    "KeyProperties": ["pauseMs: 暂停毫秒数"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "EndTask",
+    "Category": "通用",
+    "Description": "结束当前流程的执行",
+    "Usage": "当需要在流程中的某个位置提前终止当前流程时使用",
+    "KeyProperties": [],
+    "Outputs": []
+  },
+  {
+    "TaskType": "LlmTranslate",
+    "Category": "AI操作",
+    "Description": "使用大语言模型翻译文本",
+    "Usage": "当需要将文本翻译为其他语言时使用",
+    "KeyProperties": ["modelId: 模型ID", "sourceTextExpression: 待翻译文本", "targetLanguage: 目标语言"],
+    "Outputs": ["outputText: 翻译结果"]
+  },
+  {
+    "TaskType": "LlmVision",
+    "Category": "AI操作",
+    "Description": "使用多模态大模型分析图像内容",
+    "Usage": "当需要让 AI 理解图像内容并返回文字描述或判断结果时使用",
+    "KeyProperties": ["modelId: 模型ID", "sourceTaskIdForImage: 图像来源任务", "promptExpression: 分析提示词"],
+    "Outputs": ["outputText: AI回复文本", "outputResult: 判断结果"]
+  },
+  {
+    "TaskType": "GetTimestamp",
+    "Category": "通用",
+    "Description": "获取当前时间戳",
+    "Usage": "当需要记录时间或在文件名中使用时间戳时使用",
+    "KeyProperties": [],
+    "Outputs": ["outputText: 时间戳字符串"]
+  },
+  {
+    "TaskType": "FileRead",
+    "Category": "数据处理",
+    "Description": "从文件中读取内容（按行分割为数组）",
+    "Usage": "当需要从文本文件中读取数据列表时使用",
+    "KeyProperties": ["filePath: 文件路径"],
+    "Outputs": ["outputText: 文件内容"]
+  },
+  {
+    "TaskType": "ArrayParse",
+    "Category": "数据处理",
+    "Description": "从数组型数据源中按索引取值",
+    "Usage": "当需要从文件读取或数组生成的结果中取出特定项时使用",
+    "KeyProperties": ["sourceTaskIdForArray: 数组来源任务", "parseIndex: 提取索引"],
+    "Outputs": ["outputText: 提取的值"]
+  },
+  {
+    "TaskType": "TypeConvert",
+    "Category": "数据处理",
+    "Description": "将文本值转换为指定的数据类型（整数、浮点数）",
+    "Usage": "当需要将文本转成数字用于后续计算或比较时使用",
+    "KeyProperties": ["sourceExpression: 源值表达式"],
+    "Outputs": ["outputText: 转换后的值"]
+  },
+  {
+    "TaskType": "IfElseBlock",
+    "Category": "控制流",
+    "Description": "条件分支结构 — 当条件为真时执行 IfBody 中的步骤，否则执行 ElseBody 中的步骤",
+    "Usage": "当流程需要根据某个条件（如模板匹配是否成功、OCR结果是否包含关键字）决定不同执行路径时使用。IfBody 和 ElseBody 中可以放置任意步骤（包括嵌套的 IfElseBlock 或 ForLoopBlock）",
+    "KeyProperties": ["conditionExpression: 条件表达式，支持引用变量和任务输出，如 'true'、'#2 模板匹配.匹配结果==True'"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "ForLoopBlock",
+    "Category": "控制流",
+    "Description": "循环结构 — 将 LoopBody 中的步骤重复执行指定次数",
+    "Usage": "当需要重复执行某些操作（如循环截图检测、批量处理文件列表中的每一项）时使用。LoopBody 中可以放置任意步骤（包括嵌套的 IfElseBlock 或 ForLoopBlock）",
+    "KeyProperties": ["loopCount: 循环次数（整数）"],
+    "Outputs": []
+  }
+]

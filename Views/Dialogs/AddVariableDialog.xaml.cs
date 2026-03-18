@@ -1,4 +1,5 @@
-﻿using System.Windows;
+using System.Linq;
+using System.Windows;
 using TaskFlow.Models;
 using TaskFlow.Resources;
 
@@ -14,6 +15,25 @@ namespace TaskFlow.Views.Dialogs
         {
             InitializeComponent();
             ApplyLocalization();
+
+            NameTextBox.TextChanged += (s, e) =>
+            {
+                if (NameTextBox.Text.Any(c => char.IsPunctuation(c) || char.IsSymbol(c)))
+                {
+                    NameTextBox.Dispatcher.BeginInvoke(new System.Action(() =>
+                    {
+                        string currentText = NameTextBox.Text;
+                        string newText = new string(currentText.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c)).ToArray());
+                        if (currentText != newText)
+                        {
+                            int caret = NameTextBox.CaretIndex;
+                            NameTextBox.Text = newText;
+                            NameTextBox.CaretIndex = System.Math.Max(0, caret - (currentText.Length - newText.Length));
+                        }
+                    }), System.Windows.Threading.DispatcherPriority.Input);
+                }
+            };
+
             NameTextBox.Focus();
         }
 

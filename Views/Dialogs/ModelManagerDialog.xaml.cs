@@ -46,6 +46,7 @@ namespace TaskFlow.Views.Dialogs
             if (editDialog.IsSaved)
             {
                 LlmModelManager.Models.Add(newModel);
+                LlmModelManager.NotifyModelsChanged();
                 TriggerProjectSave();
                 RefreshList();
                 ModelGrid.SelectedItem = newModel;
@@ -58,7 +59,7 @@ namespace TaskFlow.Views.Dialogs
             {
                 // 使用克隆的对象进行编辑，防止取消保存时修改了原引用
                 var editingClone = model.Clone();
-                var editDialog = new ModelEditDialog(this, editingClone, Strings.Dlg_Edit_Title);
+                var editDialog = new ModelEditDialog(this, editingClone, Strings.Dlg_Edit_Title, model.Id);
                 editDialog.ShowDialog();
 
                 if (editDialog.IsSaved)
@@ -70,6 +71,7 @@ namespace TaskFlow.Views.Dialogs
                     model.ModelName = editingClone.ModelName;
                     model.TimeoutSeconds = editingClone.TimeoutSeconds;
 
+                    LlmModelManager.NotifyModelsChanged();
                     TriggerProjectSave();
                     
                     int selectedIndex = ModelGrid.SelectedIndex;
@@ -88,6 +90,7 @@ namespace TaskFlow.Views.Dialogs
                 if (confirmed)
                 {
                     LlmModelManager.Models.Remove(model);
+                    LlmModelManager.NotifyModelsChanged();
                     TriggerProjectSave();
                     RefreshList();
                 }
@@ -110,6 +113,26 @@ namespace TaskFlow.Views.Dialogs
                     ModelGrid.SelectedIndex = selectedIndex;
                 }
             }
+        }
+
+        /// <summary>
+        /// 判断是否为 Google Gemini API
+        /// </summary>
+        private static bool IsGeminiApi(string url)
+        {
+            return url.Contains("generativelanguage.googleapis.com", StringComparison.OrdinalIgnoreCase)
+                || url.Contains("aiplatform.googleapis.com", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 为 Gemini API 构建完整的 URL：{baseUrl}/models/{modelName}:generateContent
+        /// </summary>
+        private static string BuildGeminiUrl(string baseUrl, string modelName)
+        {
+            // 去掉模型名中可能多余的 :generateContent 后缀
+            var cleanModel = modelName.Replace(":generateContent", "").Trim();
+            var cleanBase = baseUrl.TrimEnd('/');
+            return $"{cleanBase}/models/{cleanModel}:generateContent";
         }
 
         private async void TestBtn_Click(object sender, RoutedEventArgs e)
@@ -135,39 +158,65 @@ namespace TaskFlow.Views.Dialogs
 
             try
             {
-                object requestBody;
-                if (url.Contains("/v1/responses", StringComparison.OrdinalIgnoreCase))
+                string actualUrl;
+                string jsonContent;
+                bool isGemini = IsGeminiApi(url);
+
+                if (isGemini)
                 {
-                    requestBody = new
+                    // Gemini API：使用 contents/parts 格式
+                    actualUrl = BuildGeminiUrl(url, modelName);
+                    var requestBody = new
+                    {
+                        contents = new[] { new { parts = new[] { new { text = "Hello! Please reply with exactly one word: OK." } } } }
+                    };
+                    jsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody);
+                }
+                else if (url.Contains("/v1/responses", StringComparison.OrdinalIgnoreCase))
+                {
+                    // OpenAI Responses API
+                    actualUrl = url;
+                    var requestBody = new
                     {
                         model = modelName,
                         input = new[] { new { role = "user", content = "Hello! Please reply with exactly one word: OK." } },
                         store = false,
                         stream = false
                     };
+                    jsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody);
                 }
                 else
                 {
-                    requestBody = new
+                    // OpenAI Chat Completions API（默认）
+                    actualUrl = url;
+                    var requestBody = new
                     {
                         model = modelName,
                         messages = new[] { new { role = "user", content = "Hello! Please reply with exactly one word: OK." } },
                         max_tokens = 5
                     };
+                    jsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody);
                 }
 
-                string jsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody);
-                using var request = new HttpRequestMessage(HttpMethod.Post, url);
+                using var request = new HttpRequestMessage(HttpMethod.Post, actualUrl);
                 
                 if (!string.IsNullOrEmpty(key))
                 {
-                    request.Headers.Add("Authorization", $"Bearer {key}");
+                    if (isGemini)
+                    {
+                        // Gemini 使用 X-goog-api-key 头认证
+                        request.Headers.Add("X-goog-api-key", key);
+                    }
+                    else
+                    {
+                        request.Headers.Add("Authorization", $"Bearer {key}");
+                    }
                 }
                 
                 request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
                 
                 using var cts = new System.Threading.CancellationTokenSource();
-                cts.CancelAfter(TimeSpan.FromSeconds(15)); 
+                cts.CancelAfter(TimeSpan.FromSeconds(30)); 
 
                 var response = await _httpClient.SendAsync(request, cts.Token);
                 string responseText = await response.Content.ReadAsStringAsync();
@@ -180,6 +229,14 @@ namespace TaskFlow.Views.Dialogs
                 {
                     AnthropicMessageDialog.ShowError(Strings.Dlg_TestFailed, string.Format(Strings.Dlg_ConnFailed, (int)response.StatusCode, responseText), this);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                AnthropicMessageDialog.ShowError(Strings.Dlg_TestFailed, string.Format(Strings.Dlg_ConnException, "连接超时（30秒），请检查网络连接或 API 地址是否正确。"), this);
+            }
+            catch (HttpRequestException httpEx)
+            {
+                AnthropicMessageDialog.ShowError(Strings.Dlg_TestFailed, string.Format(Strings.Dlg_ConnException, $"网络请求失败：{httpEx.Message}"), this);
             }
             catch (Exception ex)
             {

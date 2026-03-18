@@ -115,6 +115,9 @@ namespace TaskFlow.Helpers
                     "匹配值" => referencedTask is ArraySearchTaskCard asCard2
                         ? $"\"{asCard2.OutputMatchValue ?? ""}\""
                         : "\"\"",
+                    "查找路径" or "outputFilePath" or "filePath" => referencedTask is WinFindFileTaskCard ffCard
+                        ? $"\"{ffCard.OutputFilePath ?? ""}\""
+                        : "\"\"",
                     _ => throw new InvalidOperationException($"不支持的输出属性: {property}")
                 };
             });
@@ -181,14 +184,25 @@ namespace TaskFlow.Helpers
             string op = compMatch.Groups[2].Value.ToLower();
             string rightStr = compMatch.Groups[3].Value.Trim();
 
+            bool leftIsString = leftStr.StartsWith("\"") && leftStr.EndsWith("\"") && leftStr.Length >= 2;
+            bool rightIsString = rightStr.StartsWith("\"") && rightStr.EndsWith("\"") && rightStr.Length >= 2;
+
             // Check for containment operators first as they are string-specific
             if (op == "contains" || op == "包含" || op == "=~")
             {
                 return EvaluateStringContainment(leftStr, rightStr);
             }
 
+            // 严格的类型比较：如果一方是显式带双引号的字符串，另一方不是，它们类型不匹配
+            if (leftIsString != rightIsString)
+            {
+                if (op == "==") return false;
+                if (op == "!=") return true;
+                throw new InvalidOperationException($"类型不匹配：无法将明确的字符串资源与非字符串进行 '{op}' 比较（请检查双引号是否成对匹配特定类型）");
+            }
+
             // 尝试作为数字比较
-            if (double.TryParse(leftStr, out double leftNum) && double.TryParse(rightStr, out double rightNum))
+            if (!leftIsString && !rightIsString && double.TryParse(leftStr, out double leftNum) && double.TryParse(rightStr, out double rightNum))
             {
                 return op switch
                 {

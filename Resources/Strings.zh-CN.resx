@@ -431,6 +431,9 @@
   <data name="Prop_SelectRoiArea" xml:space="preserve"><value>框选ROI区域</value></data>
   <data name="Prop_TemplatePreview" xml:space="preserve"><value>当前模板图像预览</value></data>
   <data name="Prop_SelectTemplate" xml:space="preserve"><value>框选模板区域</value></data>
+  <data name="Prop_TemplateSectionTitle" xml:space="preserve"><value>模板设置</value></data>
+  <data name="Prop_UseSourceTaskTemplate" xml:space="preserve"><value>引用其他任务输出的图像作为模板</value></data>
+  <data name="Prop_TemplateSourceTask" xml:space="preserve"><value>模板来源任务</value></data>
   <data name="Prop_SelectSearchRoiMask" xml:space="preserve"><value>▭ 框选搜索区域 / 绘制掩膜</value></data>
   <data name="Prop_MaskPaint" xml:space="preserve"><value>🖌 掩膜画笔</value></data>
   <data name="Prop_ClearMask" xml:space="preserve"><value>清除掩膜</value></data>
@@ -566,6 +569,7 @@
   <data name="Dlg_ActualModelName" xml:space="preserve"><value>实际模型名 (Model Name)</value></data>
   <data name="Dlg_Timeout" xml:space="preserve"><value>超时时间 (秒)</value></data>
   <data name="Dlg_DisplayNameEmpty" xml:space="preserve"><value>显示名称不能为空。</value></data>
+  <data name="Dlg_DisplayNameDuplicate" xml:space="preserve"><value>已存在相同显示名称的模型，请使用其他名称。</value></data>
   <data name="Dlg_FlowManager" xml:space="preserve"><value>流程管理</value></data>
   <data name="Dlg_AddFlow" xml:space="preserve"><value>添加流程</value></data>
   <data name="Dlg_DeleteFlow" xml:space="preserve"><value>删除流程</value></data>
@@ -696,6 +700,12 @@
   <data name="AC_FileReadArrayCount" xml:space="preserve"><value>数组元素数量</value></data>
   <data name="AC_MatchIndex" xml:space="preserve"><value>匹配索引</value></data>
   <data name="AC_MatchValue" xml:space="preserve"><value>匹配值</value></data>
+  <data name="TaskType_WinFindFile" xml:space="preserve"><value>Win路径查找</value></data>
+  <data name="Prop_WinFindFileName" xml:space="preserve"><value>文件名称 (支持表达式)</value></data>
+  <data name="Prop_WinFindFileRoot" xml:space="preserve"><value>搜索根目录 (留空=全盘搜索)</value></data>
+  <data name="Prop_WinFindFileDepth" xml:space="preserve"><value>最大搜索深度 (0=无限制)</value></data>
+  <data name="Prop_WinFindFileWildcard" xml:space="preserve"><value>启用通配符匹配</value></data>
+  <data name="AC_FilePath" xml:space="preserve"><value>查找路径</value></data>
   <data name="MatchMode_Exact" xml:space="preserve"><value>精确匹配</value></data>
   <data name="MatchMode_Contains" xml:space="preserve"><value>包含匹配</value></data>
   <data name="MatchMode_Best" xml:space="preserve"><value>最佳匹配 (LCS)</value></data>

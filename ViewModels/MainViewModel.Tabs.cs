@@ -11,7 +11,7 @@ namespace TaskFlow.ViewModels
     public partial class MainViewModel
     {
         /// <summary>
-        /// 当选中分页变化时，保存旧分页数据并恢复新分页数据
+        /// 当选中分页变化时，切换轻量级状态（不再替换集合，由 ListBox Visibility 切换处理 UI）
         /// </summary>
         partial void OnSelectedTabChanged(WorkflowTab? oldValue, WorkflowTab? newValue)
         {
@@ -20,18 +20,24 @@ namespace TaskFlow.ViewModels
 
             try
             {
-                // 保存旧分页数据
                 if (oldValue != null)
                 {
-                    SaveCurrentTabState(oldValue);
+                    // 保存轻量级状态到旧分页
+                    oldValue.NextTaskNumber = NextTaskNumber;
+                    oldValue.FilePath = _currentFilePath;
                     oldValue.IsSelected = false;
                 }
 
-                // 恢复新分页数据
                 if (newValue != null)
                 {
-                    RestoreTabState(newValue);
+                    // 恢复新分页状态（TaskCards 指向新分页的集合，但不触发 ListBox 重建）
+                    TaskCards = newValue.TaskCards;
+                    NextTaskNumber = newValue.NextTaskNumber;
+                    if (!string.IsNullOrEmpty(newValue.FilePath))
+                        _currentFilePath = newValue.FilePath;
                     newValue.IsSelected = true;
+                    SelectedTask = null;
+                    DisplayImage = null;
                 }
             }
             finally
@@ -41,31 +47,13 @@ namespace TaskFlow.ViewModels
         }
 
         /// <summary>
-        /// 将当前 ViewModel 数据保存到指定分页
+        /// 将当前轻量级状态保存到指定分页（用于文件保存前同步）
         /// </summary>
         internal void SaveCurrentTabState(WorkflowTab tab)
         {
-            tab.TaskCards = new ObservableCollection<TaskCardBase>(TaskCards);
+            // TaskCards 已直接由 Tab 拥有，无需拷贝
             tab.NextTaskNumber = NextTaskNumber;
             tab.FilePath = _currentFilePath;
-        }
-
-        /// <summary>
-        /// 从指定分页恢复数据到当前 ViewModel
-        /// </summary>
-        private void RestoreTabState(WorkflowTab tab)
-        {
-            TaskCards = new ObservableCollection<TaskCardBase>(tab.TaskCards);
-            NextTaskNumber = tab.NextTaskNumber;
-            // 仅当分页有关联路径时才更新全局路径，避免新分页的 null 覆盖已有路径
-            if (!string.IsNullOrEmpty(tab.FilePath))
-            {
-                _currentFilePath = tab.FilePath;
-            }
-            SelectedTask = null;
-            DisplayImage = null;
-            RecalculateIndentLevels();
-            RecalculateCollapseStates();
         }
 
         /// <summary>
@@ -74,8 +62,17 @@ namespace TaskFlow.ViewModels
         /// </summary>
         private void RecalculateCollapseStates()
         {
+            RecalculateCollapseStatesFor(TaskCards);
+        }
+
+        /// <summary>
+        /// 对指定集合根据 IsCollapsed 状态重新计算 IsHiddenByCollapse
+        /// （用于文件加载时处理所有分页）
+        /// </summary>
+        internal static void RecalculateCollapseStatesFor(IList<TaskCardBase> cards)
+        {
             // 找到所有已折叠的分支头（IfStart / ForLoopStart）
-            var collapsedHeads = TaskCards
+            var collapsedHeads = cards
                 .Where(t => t.IsCollapsed &&
                             t.BranchGroupId.HasValue &&
                             (t.BranchRole == BranchRole.IfStart || t.BranchRole == BranchRole.ForLoopStart))
@@ -83,31 +80,31 @@ namespace TaskFlow.ViewModels
 
             foreach (var head in collapsedHeads)
             {
-                var headIndex = TaskCards.IndexOf(head);
+                var headIndex = cards.IndexOf(head);
                 if (headIndex < 0) continue;
 
                 // 找到对应的结束卡片
                 int endIndex = -1;
-                var branchCards = TaskCards
+                var branchCards = cards
                     .Where(t => t.BranchGroupId == head.BranchGroupId && t != head)
                     .ToList();
 
                 if (head.BranchRole == BranchRole.IfStart)
                 {
                     var elseEnd = branchCards.FirstOrDefault(t => t.BranchRole == BranchRole.ElseEnd);
-                    if (elseEnd != null) endIndex = TaskCards.IndexOf(elseEnd);
+                    if (elseEnd != null) endIndex = cards.IndexOf(elseEnd);
                 }
                 else if (head.BranchRole == BranchRole.ForLoopStart)
                 {
                     var loopEnd = branchCards.FirstOrDefault(t => t.BranchRole == BranchRole.ForLoopEnd);
-                    if (loopEnd != null) endIndex = TaskCards.IndexOf(loopEnd);
+                    if (loopEnd != null) endIndex = cards.IndexOf(loopEnd);
                 }
 
                 if (endIndex > headIndex)
                 {
                     for (int i = headIndex + 1; i <= endIndex; i++)
                     {
-                        TaskCards[i].IsHiddenByCollapse = true;
+                        cards[i].IsHiddenByCollapse = true;
                     }
                 }
             }

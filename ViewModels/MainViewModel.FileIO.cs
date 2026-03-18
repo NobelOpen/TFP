@@ -17,6 +17,9 @@ namespace TaskFlow.ViewModels
         [RelayCommand]
         private void NewProject()
         {
+            // 忙碌状态禁止操作
+            if (IsBusy) return;
+
             // 清空当前界面
             TaskCards.Clear();
             VariableStore.Variables.Clear();
@@ -24,6 +27,9 @@ namespace TaskFlow.ViewModels
             _currentFilePath = null;
             SelectedTask = null;
             DisplayImage = null;
+
+            // 通知 View 清空所有缓存的 ListBox
+            FlowListBoxResetRequested?.Invoke(this, EventArgs.Empty);
 
             // 清空全部分页，重置索引
             _isSwitchingTab = true;
@@ -47,6 +53,9 @@ namespace TaskFlow.ViewModels
         [RelayCommand]
         private void Save()
         {
+            // 忙碌状态禁止操作
+            if (IsBusy) return;
+
             try
             {
                 if (!string.IsNullOrEmpty(_currentFilePath))
@@ -74,6 +83,9 @@ namespace TaskFlow.ViewModels
         [RelayCommand]
         private void SaveAs()
         {
+            // 忙碌状态禁止操作
+            if (IsBusy) return;
+
             try
             {
                 var dialog = new SaveFileDialog
@@ -117,6 +129,9 @@ namespace TaskFlow.ViewModels
         [RelayCommand]
         private void Load()
         {
+            // 忙碌状态禁止操作
+            if (IsBusy) return;
+
             try
             {
                 var dialog = new OpenFileDialog
@@ -159,6 +174,9 @@ namespace TaskFlow.ViewModels
             // 更新窗口标题
             WindowTitle = $"TaskFlow - {System.IO.Path.GetFileNameWithoutExtension(filePath)}";
 
+            // 通知 View 清空所有缓存的 ListBox
+            FlowListBoxResetRequested?.Invoke(this, EventArgs.Empty);
+
             // 恢复全部分页
             _isSwitchingTab = true;
             try
@@ -172,10 +190,11 @@ namespace TaskFlow.ViewModels
                     Tabs.Add(tab);
                 }
 
-                // 选中第一个分页
+                // 选中第一个分页，设置 ViewModel 状态
                 SelectedTab = Tabs[0];
                 SelectedTab.IsSelected = true;
-                RestoreTabState(SelectedTab);
+                TaskCards = SelectedTab.TaskCards;
+                NextTaskNumber = SelectedTab.NextTaskNumber;
             }
             finally
             {
@@ -201,7 +220,12 @@ namespace TaskFlow.ViewModels
                 }
             }
 
-            RecalculateIndentLevels();
+            // 对所有分页执行缩进和折叠状态重算（反序列化创建新对象，IndentLevel 和 IsHiddenByCollapse 为默认值）
+            foreach (var tab in Tabs)
+            {
+                RecalculateIndentLevelsFor(tab.TaskCards);
+                RecalculateCollapseStatesFor(tab.TaskCards);
+            }
         }
 
         /// <summary>

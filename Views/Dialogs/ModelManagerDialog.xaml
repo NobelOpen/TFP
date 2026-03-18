@@ -73,6 +73,65 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- Anthropic 浅色极简滚动条样式 -->
+        <SolidColorBrush x:Key="ScrollBar.Static.Background" Color="#f0efe8"/>
+        <SolidColorBrush x:Key="ScrollBar.Static.Border" Color="Transparent"/>
+        <SolidColorBrush x:Key="ScrollBar.Static.Thumb" Color="#c8c6be"/>
+        <SolidColorBrush x:Key="ScrollBar.MouseOver.Thumb" Color="#b0aea5"/>
+        <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="#8a8880"/>
+
+        <Style x:Key="DarkScrollThumbStyle" TargetType="Thumb">
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border CornerRadius="4" 
+                                Background="{TemplateBinding Background}"
+                                Margin="2" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="{StaticResource ScrollBar.Static.Background}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource ScrollBar.Static.Border}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <!-- 减小滚动条宽度到 10px -->
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="MinWidth" Value="10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid x:Name="Bg" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                            <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
+                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="true">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="false"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="false"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource DarkScrollThumbStyle}" Background="{StaticResource ScrollBar.Static.Thumb}" x:Name="Thumb"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.MouseOver.Thumb}"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="true" SourceName="Thumb">
+                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.Pressed.Thumb}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="16">
@@ -195,10 +254,10 @@
                     HorizontalAlignment="Left" 
                     Margin="0,12,0,0">
             <Button x:Name="BtnAdd" Content="添加模型" Click="AddBtn_Click" Style="{StaticResource ModelButtonGreen}" Margin="0,0,8,0"/>
-            <Button x:Name="BtnEdit" Content="修改模型" Click="EditBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0" IsEnabled="False"/>
             <Button x:Name="BtnDelete" Content="删除模型" Click="DeleteBtn_Click" Style="{StaticResource ModelButtonRed}" Margin="0,0,8,0" IsEnabled="False"/>
-            <Button x:Name="BtnTest" Content="测试连接" Click="TestBtn_Click" Style="{StaticResource ModelButtonBlue}" Margin="0,0,8,0" IsEnabled="False"/>
-            <Button x:Name="BtnReset" Content="重置统计" Click="ResetStatsBtn_Click" Style="{StaticResource ModelButtonBlue}" Margin="0,0,8,0" IsEnabled="False"/>
+            <Button x:Name="BtnEdit" Content="修改模型" Click="EditBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0" IsEnabled="False"/>
+            <Button x:Name="BtnTest" Content="测试连接" Click="TestBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0" IsEnabled="False"/>
+            <Button x:Name="BtnReset" Content="重置统计" Click="ResetStatsBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0" IsEnabled="False"/>
         </StackPanel>
 
         <Button Grid.Row="2" 

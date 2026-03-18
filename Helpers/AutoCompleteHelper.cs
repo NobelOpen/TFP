@@ -300,6 +300,12 @@ namespace TaskFlow.Helpers
                 outputs.Add(new TaskOutput(Strings.AC_MatchValue, "匹配值"));
             }
 
+            // Win路径查找输出：查找路径
+            if (task.TaskType == TaskType.WinFindFile)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_FilePath, "查找路径"));
+            }
+
             return outputs;
         }
 

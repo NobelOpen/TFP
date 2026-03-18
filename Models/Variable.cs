@@ -23,8 +23,18 @@ namespace TaskFlow.Models
     /// </summary>
     public partial class Variable : ObservableObject
     {
-        [ObservableProperty]
         private string _name = string.Empty;
+
+        public string Name
+        {
+            get => _name;
+            set
+            {
+                value ??= "";
+                value = new string(value.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c)).ToArray());
+                SetProperty(ref _name, value);
+            }
+        }
 
         [ObservableProperty]
         private VariableType _type = VariableType.Int;
@@ -234,30 +244,47 @@ namespace TaskFlow.Models
             var variable = Variables.FirstOrDefault(v => v.Name == varName);
             if (variable == null) return false;
 
-            string finalVal = resolvedRightSide.Trim().Trim('"');
+            // 获取去引号前的值，用于判断字符串是否是被双引号包裹的原生字面量
+            string originalVal = resolvedRightSide.Trim();
+            string finalVal = originalVal.Trim('"');
 
             // 类型校验
             switch (variable.Type)
             {
                 case VariableType.Int:
-                    // 支持 "1.0" 这样的整数浮点表示，转为 int
+                    if (originalVal.StartsWith("\"") && originalVal.EndsWith("\"") && originalVal.Length >= 2)
+                        throw new InvalidOperationException($"类型不匹配：无法将字符串赋给 Int（整数）类型变量 @{varName}");
+
+                    // 支持从浮点数强制转换为证书（直接截取整数部分）
                     if (double.TryParse(finalVal, out double dForInt))
                     {
-                        if (dForInt != Math.Floor(dForInt))
-                            throw new InvalidOperationException($"无法将值 \"{finalVal}\" 赋给 Int 类型变量 @{varName}，值必须为整数");
+                        finalVal = ((int)dForInt).ToString();
                     }
                     else if (!int.TryParse(finalVal, out _))
                     {
-                        throw new InvalidOperationException($"无法将值 \"{finalVal}\" 赋给 Int 类型变量 @{varName}，值必须为整数");
+                        throw new InvalidOperationException($"无法将值 \"{finalVal}\" 赋给 Int 类型变量 @{varName}，值必须为数字");
                     }
                     break;
                 case VariableType.Double:
+                    if (originalVal.StartsWith("\"") && originalVal.EndsWith("\"") && originalVal.Length >= 2)
+                        throw new InvalidOperationException($"类型不匹配：无法将字符串赋给 Double（小数）类型变量 @{varName}");
+
                     if (!double.TryParse(finalVal, out _))
                         throw new InvalidOperationException($"无法将值 \"{finalVal}\" 赋给 Double 类型变量 @{varName}，值必须为数字");
                     break;
                 case VariableType.Bool:
+                    if (originalVal.StartsWith("\"") && originalVal.EndsWith("\"") && originalVal.Length >= 2)
+                        throw new InvalidOperationException($"类型不匹配：无法将字符串赋给 Bool（布尔）类型变量 @{varName}");
+
                     if (!bool.TryParse(finalVal, out _))
                         throw new InvalidOperationException($"无法将值 \"{finalVal}\" 赋给 Bool 类型变量 @{varName}，值必须为 True 或 False");
+                    break;
+                case VariableType.String:
+                    // 向 String 变量赋值时，必须显式以双引号包裹，或者它是由其他返回值为字符串的表达式产生的
+                    if (!originalVal.StartsWith("\"") || !originalVal.EndsWith("\""))
+                    {
+                        throw new InvalidOperationException($"无法将内容赋给 String 类型变量 @{varName}，字符串必须使用双引号包裹，例如：@A = \"内容\"");
+                    }
                     break;
             }
 

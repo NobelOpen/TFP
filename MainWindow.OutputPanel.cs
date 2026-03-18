@@ -146,7 +146,8 @@ namespace TaskFlow
                 nameof(LlmFileTranslateTaskCard.OutputTranslatedFilePath) or
                 nameof(FileReadTaskCard.OutputArrayCount) or
                 nameof(ArraySearchTaskCard.OutputMatchIndex) or
-                nameof(ArraySearchTaskCard.OutputMatchValue))
+                nameof(ArraySearchTaskCard.OutputMatchValue) or
+                nameof(WinFindFileTaskCard.OutputFilePath))
             {
                 Dispatcher.BeginInvoke(() => ScheduleOutputPanelUpdate());
             }
@@ -380,6 +381,12 @@ namespace TaskFlow
                     AddOutputRow(TaskFlow.Resources.Strings.AC_MatchValue, asCard.OutputMatchValue);
             }
 
+            // WinFindFile specific
+            if (task is WinFindFileTaskCard findFileCard)
+            {
+                AddOutputRow(TaskFlow.Resources.Strings.AC_FilePath, findFileCard.OutputFilePath ?? "");
+            }
+
             // ErrorMessage
             if (!string.IsNullOrEmpty(task.ErrorMessage))
             {
@@ -499,7 +506,7 @@ namespace TaskFlow
                 if (targetWidth <= 0) return;
 
                 var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
-                var duration = TimeSpan.FromMilliseconds(200);
+                var duration = TimeSpan.FromMilliseconds(130);
 
                 // 动画化 X 位移
                 var xAnim = new DoubleAnimation(targetX, duration) { EasingFunction = ease };

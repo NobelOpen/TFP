@@ -154,15 +154,27 @@ namespace TaskFlow.Services
                 return Task.FromResult(false);
             }
 
-            // 加载模板图像
+            // 加载模板图像：支持动态模板（引用其他任务输出）和静态模板（文件路径）
             Mat? templateImage = null;
-            if (!string.IsNullOrEmpty(task.TemplateImagePath) && System.IO.File.Exists(task.TemplateImagePath))
+            bool shouldDisposeTemplate = true;
+            if (task.UseSourceTaskTemplate && task.SourceTaskIdForTemplate.HasValue)
+            {
+                // 从其他任务的输出图像获取动态模板
+                var templateTask = allTasks.FirstOrDefault(t => t.Id == task.SourceTaskIdForTemplate.Value);
+                if (templateTask?.OutputImage != null && !templateTask.OutputImage.Empty())
+                {
+                    templateImage = templateTask.OutputImage;
+                    shouldDisposeTemplate = false; // 引用其他任务的Mat不能释放
+                }
+            }
+            else if (!string.IsNullOrEmpty(task.TemplateImagePath) && System.IO.File.Exists(task.TemplateImagePath))
             {
                 templateImage = Cv2.ImRead(task.TemplateImagePath);
             }
 
             if (templateImage == null || templateImage.Empty())
             {
+                if (shouldDisposeTemplate) templateImage?.Dispose();
                 if (shouldDispose) sourceImage.Dispose();
                 task.ErrorMessage = "无法加载模板图像";
                 return Task.FromResult(false);
@@ -263,12 +275,12 @@ namespace TaskFlow.Services
                     }
                 }
 
-                templateImage.Dispose();
+                if (shouldDisposeTemplate) templateImage.Dispose();
                 return Task.FromResult(task.OutputResult.GetValueOrDefault());
             }
             catch (Exception ex)
             {
-                templateImage?.Dispose();
+                if (shouldDisposeTemplate) templateImage?.Dispose();
                 task.ErrorMessage = ex.Message;
                 return Task.FromResult(false);
             }
@@ -902,10 +914,17 @@ namespace TaskFlow.Services
 
         /// <summary>
         /// 尝试计算简单的整数加减表达式（用于变量赋值场景）
+        /// 支持显式带双引号的字符串字面量
         /// </summary>
         private string EvaluateArithmetic(string expression)
         {
             string trimmed = expression.Trim();
+
+            // 如果是被双引号整个包裹的字符串字面量，为了在后续 TryAssign 中正确判断它确实是原生字面量，保留其双引号并直接返回
+            if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.Length >= 2)
+            {
+                return trimmed;
+            }
 
             // 如果是纯数字或已经是字符串，直接返回
             if (int.TryParse(trimmed, out _) || double.TryParse(trimmed, out _))
@@ -920,6 +939,7 @@ namespace TaskFlow.Services
             }
             catch
             {
+                // 如果不仅不是数字/数学表达式，也没有被双引号包裹，则直接返回原始文本
                 return trimmed;
             }
         }
@@ -1282,6 +1302,187 @@ namespace TaskFlow.Services
             }
 
             return (double)dp[a.Length, b.Length] / maxLen;
+        }
+
+        #endregion
+
+        #region Win Find File
+
+        /// <summary>
+        /// 执行Win路径查找：在指定目录或全盘搜索文件，返回第一个匹配的完整路径
+        /// </summary>
+        private async Task<bool> ExecuteWinFindFileAsync(
+            WinFindFileTaskCard task, IList<TaskCardBase> allTasks, CancellationToken ct)
+        {
+            try
+            {
+                // 1. 解析表达式
+                string fileName = _variableStore.ResolveVariableReferences(task.FileName);
+                fileName = ExpressionEvaluator.ResolveExpression(fileName, allTasks, _variableStore);
+                fileName = fileName.Trim().Trim('"');
+
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    task.ErrorMessage = "文件名称不能为空";
+                    return false;
+                }
+
+                string searchRoot = task.SearchRootPath;
+                if (!string.IsNullOrWhiteSpace(searchRoot))
+                {
+                    searchRoot = _variableStore.ResolveVariableReferences(searchRoot);
+                    searchRoot = ExpressionEvaluator.ResolveExpression(searchRoot, allTasks, _variableStore);
+                    searchRoot = searchRoot.Trim().Trim('"');
+                }
+
+                int maxDepth = task.MaxDepth;
+                bool useWildcard = task.UseWildcard;
+
+                // 2. 确定搜索根目录列表
+                var searchRoots = new List<string>();
+                if (!string.IsNullOrWhiteSpace(searchRoot))
+                {
+                    if (!System.IO.Directory.Exists(searchRoot))
+                    {
+                        task.ErrorMessage = $"搜索根目录不存在: {searchRoot}";
+                        return false;
+                    }
+                    searchRoots.Add(searchRoot);
+                }
+                else
+                {
+                    // 枚举所有就绪的逻辑驱动器
+                    foreach (var drive in System.IO.DriveInfo.GetDrives())
+                    {
+                        if (drive.IsReady)
+                        {
+                            searchRoots.Add(drive.RootDirectory.FullName);
+                        }
+                    }
+                }
+
+                Log($"[{DateTime.Now:HH:mm:ss}] Win路径查找: 文件名={fileName}, 根目录={string.Join(";", searchRoots)}, 最大深度={maxDepth}, 通配符={useWildcard}");
+
+                // 3. 在后台线程执行搜索
+                string? foundPath = await Task.Run(() =>
+                {
+                    foreach (var root in searchRoots)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        var result = SearchFileRecursive(root, fileName, useWildcard, maxDepth, 1, ct);
+                        if (result != null) return result;
+                    }
+                    return null;
+                }, ct);
+
+                // 4. 输出结果
+                if (foundPath != null)
+                {
+                    task.OutputFilePath = foundPath;
+                    task.OutputResult = true;
+                    Log($"[{DateTime.Now:HH:mm:ss}] Win路径查找: 找到文件 {foundPath}");
+                    return true;
+                }
+                else
+                {
+                    task.OutputFilePath = string.Empty;
+                    task.OutputResult = false;
+                    Log($"[{DateTime.Now:HH:mm:ss}] Win路径查找: 未找到文件 {fileName}");
+                    return true; // 任务本身执行成功，只是没找到文件
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw; // 交给上层处理取消
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 递归搜索文件，支持深度限制、通配符、权限异常跳过
+        /// </summary>
+        /// <param name="directory">当前搜索目录</param>
+        /// <param name="fileName">要查找的文件名</param>
+        /// <param name="useWildcard">是否启用通配符匹配</param>
+        /// <param name="maxDepth">最大深度（0=不限）</param>
+        /// <param name="currentDepth">当前深度（从1开始）</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>找到的文件完整路径，未找到返回 null</returns>
+        private static string? SearchFileRecursive(
+            string directory, string fileName, bool useWildcard,
+            int maxDepth, int currentDepth, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                // 搜索当前目录下的文件
+                IEnumerable<string> files;
+                if (useWildcard)
+                {
+                    // 通配符模式：直接使用 fileName 作为搜索模式
+                    files = System.IO.Directory.EnumerateFiles(directory, fileName);
+                }
+                else
+                {
+                    // 精确匹配模式：列出所有文件，逐一比较文件名（忽略大小写）
+                    files = System.IO.Directory.EnumerateFiles(directory);
+                }
+
+                foreach (var file in files)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    if (useWildcard)
+                    {
+                        // 通配符模式下 EnumerateFiles 已经做了匹配
+                        return file;
+                    }
+                    else
+                    {
+                        // 精确匹配：比较文件名（忽略大小写）
+                        var name = System.IO.Path.GetFileName(file);
+                        if (string.Equals(name, fileName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return file;
+                        }
+                    }
+                }
+
+                // 如果达到最大深度则不再递归
+                if (maxDepth > 0 && currentDepth >= maxDepth)
+                    return null;
+
+                // 递归搜索子目录
+                IEnumerable<string> subDirs;
+                try
+                {
+                    subDirs = System.IO.Directory.EnumerateDirectories(directory);
+                }
+                catch (UnauthorizedAccessException) { return null; }
+                catch (System.IO.IOException) { return null; }
+
+                foreach (var subDir in subDirs)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        var result = SearchFileRecursive(subDir, fileName, useWildcard, maxDepth, currentDepth + 1, ct);
+                        if (result != null) return result;
+                    }
+                    catch (UnauthorizedAccessException) { /* 跳过无权限目录 */ }
+                    catch (System.IO.IOException) { /* 跳过IO异常目录 */ }
+                }
+            }
+            catch (UnauthorizedAccessException) { /* 跳过无权限目录 */ }
+            catch (System.IO.IOException) { /* 跳过IO异常目录 */ }
+
+            return null;
         }
 
         #endregion

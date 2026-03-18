@@ -20,6 +20,14 @@ namespace TaskFlow.Services
         #region Win32 API
 
         [DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
+
+        private const int SM_XVIRTUALSCREEN = 76;
+        private const int SM_YVIRTUALSCREEN = 77;
+        private const int SM_CXVIRTUALSCREEN = 78;
+        private const int SM_CYVIRTUALSCREEN = 79;
+
+        [DllImport("user32.dll")]
         private static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 
         [DllImport("user32.dll")]
@@ -66,6 +74,48 @@ namespace TaskFlow.Services
             {
                 try
                 {
+                    if (string.IsNullOrWhiteSpace(processName)
+                        || processName.Equals("windows", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 截取整个桌面（包含所有显示器）
+                        int deskLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
+                        int deskTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
+                        int deskWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+                        int deskHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+                        if (deskWidth <= 0 || deskHeight <= 0)
+                        {
+                            return (false, null, "无法获取屏幕尺寸");
+                        }
+
+                        using var deskBitmap = new Bitmap(deskWidth, deskHeight, PixelFormat.Format32bppArgb);
+                        using var deskGraphics = Graphics.FromImage(deskBitmap);
+                        deskGraphics.CopyFromScreen(deskLeft, deskTop, 0, 0, new System.Drawing.Size(deskWidth, deskHeight));
+
+                        var deskBmpData = deskBitmap.LockBits(
+                            new System.Drawing.Rectangle(0, 0, deskWidth, deskHeight),
+                            ImageLockMode.ReadOnly,
+                            PixelFormat.Format32bppArgb);
+                        Mat deskMat;
+                        try
+                        {
+                            using var bgraMat = Mat.FromPixelData(deskHeight, deskWidth, MatType.CV_8UC4, deskBmpData.Scan0);
+                            deskMat = new Mat();
+                            Cv2.CvtColor(bgraMat, deskMat, ColorConversionCodes.BGRA2BGR);
+                        }
+                        finally
+                        {
+                            deskBitmap.UnlockBits(deskBmpData);
+                        }
+
+                        if (deskMat.Empty())
+                        {
+                            return (false, null, "图像转换失败");
+                        }
+
+                        return (true, deskMat, (string?)null);
+                    }
+
                     // 查找进程
                     var processes = Process.GetProcessesByName(processName);
                     if (processes.Length == 0)
