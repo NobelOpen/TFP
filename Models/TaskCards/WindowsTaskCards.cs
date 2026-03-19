@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
+using TaskFlow.Models.AiFlow;
 
 namespace TaskFlow.Models.TaskCards
 {
@@ -20,6 +22,23 @@ namespace TaskFlow.Models.TaskCards
         public WinLaunchAppTaskCard()
         {
             Name = "Win启动应用";
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("exePath", out var exePath) && !string.IsNullOrEmpty(exePath))
+                ExePath = exePath;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "ExePath", Hint = "可执行文件路径" });
+
+            if (props.TryGetValue("arguments", out var args))
+                Arguments = args;
+
+            return missing;
         }
     }
 
@@ -57,6 +76,20 @@ namespace TaskFlow.Models.TaskCards
         }
 
         public override bool OutputsImage => true;
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("processName", out var procName) && !string.IsNullOrEmpty(procName))
+                ProcessName = procName;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "ProcessName", Hint = "目标进程名称" });
+
+            return missing;
+        }
     }
 
     /// <summary>
@@ -140,6 +173,40 @@ namespace TaskFlow.Models.TaskCards
         }
 
         public override bool OutputsCoordinates => true;
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            // 通过表达式引用其他任务的坐标输出
+            if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var sourceCard))
+            {
+                if (sourceCard.OutputsCoordinates)
+                {
+                    StartXExpression = $"#{sourceCard.Order} {sourceCard.Name}.X";
+                    StartYExpression = $"#{sourceCard.Order} {sourceCard.Name}.Y";
+                }
+            }
+
+            // 设置点击类型
+            if (props.TryGetValue("clickType", out var clickTypeStr)
+                && Enum.TryParse<ClickType>(clickTypeStr, true, out var clickType))
+                ClickType = clickType;
+
+            // 设置静态坐标
+            if (props.TryGetValue("startX", out var sxStr) && int.TryParse(sxStr, out var sx))
+                StartX = sx;
+            if (props.TryGetValue("startY", out var syStr) && int.TryParse(syStr, out var sy))
+                StartY = sy;
+
+            // 设置进程名
+            if (props.TryGetValue("processName", out var clickProc))
+                ProcessName = clickProc;
+
+            return missing;
+        }
     }
 
     /// <summary>
@@ -155,6 +222,20 @@ namespace TaskFlow.Models.TaskCards
         public WinCloseAppTaskCard()
         {
             Name = "Win关闭应用";
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("processName", out var closeProc) && !string.IsNullOrEmpty(closeProc))
+                ProcessName = closeProc;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "ProcessName", Hint = "目标进程名称" });
+
+            return missing;
         }
     }
 
@@ -198,6 +279,25 @@ namespace TaskFlow.Models.TaskCards
         public WinUiAutomationTaskCard()
         {
             Name = "WinUI自动化";
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("processName", out var uiProc) && !string.IsNullOrEmpty(uiProc))
+                ProcessName = uiProc;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "ProcessName", Hint = "目标进程名称" });
+
+            if (props.TryGetValue("buttonName", out var btnName) && !string.IsNullOrEmpty(btnName))
+                ButtonName = btnName;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "ButtonName", Hint = "按钮名称" });
+
+            return missing;
         }
     }
 
@@ -295,6 +395,20 @@ namespace TaskFlow.Models.TaskCards
         public WinSubtitleTaskCard()
         {
             Name = "Win字幕提示";
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("processName", out var subProc))
+                ProcessName = subProc;
+            if (props.TryGetValue("displayText", out var displayText))
+                DisplayText = displayText;
+
+            return missing;
         }
     }
 
@@ -421,6 +535,29 @@ namespace TaskFlow.Models.TaskCards
         {
             base.Reset();
             OutputFilePath = string.Empty;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("fileName", out var findFileName) && !string.IsNullOrEmpty(findFileName))
+                FileName = findFileName;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "FileName", Hint = "要查找的文件名称" });
+
+            if (props.TryGetValue("searchRootPath", out var searchRoot) && !string.IsNullOrEmpty(searchRoot))
+                SearchRootPath = searchRoot;
+
+            if (props.TryGetValue("maxDepth", out var maxDepthStr) && int.TryParse(maxDepthStr, out var maxDepth))
+                MaxDepth = maxDepth;
+
+            if (props.TryGetValue("useWildcard", out var useWild) && bool.TryParse(useWild, out var wildcard))
+                UseWildcard = wildcard;
+
+            return missing;
         }
     }
 }

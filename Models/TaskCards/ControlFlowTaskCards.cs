@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
+using TaskFlow.Models.AiFlow;
 
 namespace TaskFlow.Models.TaskCards
 {
@@ -208,6 +210,15 @@ namespace TaskFlow.Models.TaskCards
         }
 
         public override bool CanBeReferenced => false;
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            if (step.Properties.TryGetValue("pauseMs", out var pauseMs) && int.TryParse(pauseMs, out var ms))
+                PauseDurationMs = ms;
+            return missing;
+        }
     }
 
     /// <summary>

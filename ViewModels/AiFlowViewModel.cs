@@ -23,6 +23,7 @@ namespace TaskFlow.ViewModels
         private readonly MainViewModel _mainViewModel;
         private readonly AiFlowGeneratorService _service = new();
         private readonly Services.ScreenshotService _aiScreenshotService = new();
+        private readonly PowerShellExecutorService _psService = new();
 
         /// <summary>
         /// Orchid 直接截屏：截取全屏并返回 base64 编码和分辨率
@@ -190,9 +191,21 @@ namespace TaskFlow.ViewModels
         /// </summary>
         public event Action? ClosePanelRequested;
 
+        /// <summary>
+        /// AI 方案执行器
+        /// </summary>
+        private readonly AiPlanExecutor _planExecutor;
+
+        /// <summary>
+        /// AI 流程序列化器
+        /// </summary>
+        private readonly AiFlowSerializer _serializer;
+
         public AiFlowViewModel(MainViewModel mainViewModel)
         {
             _mainViewModel = mainViewModel;
+            _planExecutor = new AiPlanExecutor(mainViewModel);
+            _serializer = new AiFlowSerializer(mainViewModel);
             // 从磁盘加载历史会话
             var saved = AiChatSessionStore.Load();
             foreach (var s in saved)
@@ -334,7 +347,7 @@ namespace TaskFlow.ViewModels
                     AiFlowLogger.Info($"执行结果: {statusText}");
 
                     // 序列化输出信息
-                    var resultInfo = SerializeCardResults(new List<int> { order });
+                    var resultInfo = _serializer.SerializeCardResults(new List<int> { order });
                     if (!string.IsNullOrWhiteSpace(resultInfo))
                         AiFlowLogger.Info($"输出详情:\n{resultInfo}");
                 }
@@ -393,10 +406,10 @@ namespace TaskFlow.ViewModels
                 AiFlowLogger.Info("正在生成流程方案...");
 
                 // 序列化当前画布卡片作为上下文
-                var currentFlowContext = SerializeCurrentFlow();
+                var currentFlowContext = _serializer.SerializeCurrentFlow();
 
                 // 构建最近对话历史（最多取最近 3 轮用户+助手消息）
-                var history = BuildConversationHistory();
+                var history = _serializer.BuildConversationHistory(Messages);
 
                 // 收集图片数据（附件 + 卡片输出图像）
                 var imageBase64List = new List<string>();
@@ -448,19 +461,7 @@ namespace TaskFlow.ViewModels
                     }
                 }
 
-                // Orchid 直接截屏：如果没有已有截图，自动截全屏让 AI 看到当前画面
-                if (imageBase64List.Count == 0)
-                {
-                    AiFlowLogger.Info("Orchid 自动截屏中...");
-                    var (screenBase64, sw, sh) = await CaptureScreenForAiAsync();
-                    if (screenBase64 != null)
-                    {
-                        imageBase64List.Add(screenBase64);
-                        lastImageWidth = sw;
-                        lastImageHeight = sh;
-                        AiFlowLogger.Info($"已附加屏幕截图 ({sw}x{sh})");
-                    }
-                }
+                // 截屏已改为由 AI 通过 needsScreenshot 按需请求，初始消息不自动截屏
 
                 // 存在截图时，注入标定校正信息
                 if (imageBase64List.Count > 0 && lastImageWidth.HasValue && lastImageHeight.HasValue
@@ -485,13 +486,12 @@ namespace TaskFlow.ViewModels
                     }
                     if (cal != null)
                     {
-                        // 将校正公式注入 prompt，让 AI 在回答坐标时自动应用
-                        userInput += $"\n\n[坐标校正] 你在此分辨率({cal.Width}x{cal.Height})下的坐标估算存在系统偏差，" +
-                                     $"请对你估算的所有坐标应用以下校正公式：" +
-                                     $"correctedX = {cal.ScaleX:F4} * rawX + {cal.OffsetX:F1}，" +
-                                     $"correctedY = {cal.ScaleY:F4} * rawY + {cal.OffsetY:F1}。" +
-                                     $"请直接回复校正后的坐标，不要回复原始估算值。";
-                        AiFlowLogger.Info($"[标定] 已注入校正公式到 prompt");
+                        // 将校正公式注入到流程上下文中（而非用户消息），避免污染用户输入
+                        currentFlowContext += $"\n\n[坐标校正] 当前模型在分辨率({cal.Width}x{cal.Height})下的坐标估算存在系统偏差，" +
+                                             $"当需要设置坐标时请应用校正公式：" +
+                                             $"correctedX = {cal.ScaleX:F4} * rawX + {cal.OffsetX:F1}，" +
+                                             $"correctedY = {cal.ScaleY:F4} * rawY + {cal.OffsetY:F1}。";
+                        AiFlowLogger.Info($"[标定] 已注入校正公式到流程上下文");
                     }
                 }
 
@@ -508,11 +508,12 @@ namespace TaskFlow.ViewModels
                 bool hasCardDeletes = plan.DeleteCards != null && plan.DeleteCards.Count > 0;
                 bool hasRunCards = plan.RunCards != null && plan.RunCards.Count > 0;
                 bool hasInsertCards = plan.InsertCards != null && plan.InsertCards.Count > 0;
-                bool hasFlowOps = (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
+                bool hasFlowOps2 = (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
                     || (plan.DeleteFlows != null && plan.DeleteFlows.Count > 0)
                     || !string.IsNullOrWhiteSpace(plan.SwitchFlow);
+                bool hasShellCmds2 = plan.ShellCommands != null && plan.ShellCommands.Count > 0;
 
-                if (!hasSteps && !hasVariables && !hasDeletes && !hasModifies && !hasCardModifies && !hasCardDeletes && !hasRunCards && !hasInsertCards && !hasFlowOps)
+                if (!hasSteps && !hasVariables && !hasDeletes && !hasModifies && !hasCardModifies && !hasCardDeletes && !hasRunCards && !hasInsertCards && !hasFlowOps2 && !hasShellCmds2)
                 {
                     // 分析模式：AI 仅返回了分析结果（无需创建卡片或变量）
                     if (!string.IsNullOrEmpty(plan.Summary))
@@ -533,9 +534,24 @@ namespace TaskFlow.ViewModels
                 // 移除思考中提示
                 RemoveLastSystemMessage();
 
-                // 显示方案
+                // 纯 shellCommands 方案（无卡片/变量操作）：自主模式下直接执行，无需"确认创建"
+                bool isShellOnly = hasShellCmds2 && !hasSteps && !hasVariables && !hasDeletes
+                    && !hasModifies && !hasCardModifies && !hasCardDeletes && !hasRunCards
+                    && !hasInsertCards && !hasFlowOps2;
+
+                if (isShellOnly && CurrentMode == AiAssistantMode.Autonomous)
+                {
+                    if (!string.IsNullOrEmpty(plan.Summary))
+                        AddMessage(AiChatRole.Assistant, plan.Summary);
+
+                    AiFlowLogger.Info("纯 PowerShell 命令方案，直接执行...");
+                    await ExecuteAutonomousLoopAsync(plan);
+                    return;
+                }
+
+                // 显示方案（含确认/拒绝按钮）
                 PendingPlan = plan;
-                var planMsg = FormatPlanAsText(plan);
+                var planMsg = _serializer.FormatPlanAsText(plan);
                 AddMessage(AiChatRole.Assistant, planMsg, plan);
             }
             catch (OperationCanceledException)
@@ -588,13 +604,14 @@ namespace TaskFlow.ViewModels
             bool hasFlowOps = (PendingPlan.CreateFlows != null && PendingPlan.CreateFlows.Count > 0)
                 || (PendingPlan.DeleteFlows != null && PendingPlan.DeleteFlows.Count > 0)
                 || !string.IsNullOrWhiteSpace(PendingPlan.SwitchFlow);
-            if (!hasSteps && !hasVariables && !hasDeletes && !hasModifies && !hasCardModifies && !hasCardDeletes && !hasRunCards && !hasInsertCards && !hasFlowOps)
+            bool hasShellCmds = PendingPlan.ShellCommands != null && PendingPlan.ShellCommands.Count > 0;
+            if (!hasSteps && !hasVariables && !hasDeletes && !hasModifies && !hasCardModifies && !hasCardDeletes && !hasRunCards && !hasInsertCards && !hasFlowOps && !hasShellCmds)
                 return;
 
             try
             {
                 AiFlowLogger.Info($"用户确认方案，开始创建（{PendingPlan.Plan.Count} 个步骤, {PendingPlan.Variables?.Count ?? 0} 个变量）");
-                var (createdCount, reports) = CreateTaskCardsFromPlan(PendingPlan);
+                var (createdCount, reports) = _planExecutor.CreateTaskCardsFromPlan(PendingPlan, CurrentMode, SelectedModelId);
 
                 // 显示报告（仅有待配置项时）
                 ReportItems.Clear();
@@ -604,7 +621,7 @@ namespace TaskFlow.ViewModels
                 // 自主模式下不显示待配置报告（避免打断自动执行流程）
                 if (reports.Count > 0 && CurrentMode != AiAssistantMode.Autonomous)
                 {
-                    var reportText = FormatReportAsText(createdCount, reports);
+                    var reportText = _serializer.FormatReportAsText(createdCount, reports);
                     AddMessage(AiChatRole.System, reportText, reportItems: reports);
                 }
 
@@ -658,6 +675,12 @@ namespace TaskFlow.ViewModels
 
                     currentPlan.RunCards = newOrders;
                     AiFlowLogger.Info($"自主模式：自动运行新创建的 {createdCount} 张卡片...");
+                    await ExecuteAutonomousLoopAsync(currentPlan);
+                }
+                // 自主模式下：仅有 shellCommands 时，直接执行并进入自主循环
+                else if (CurrentMode == AiAssistantMode.Autonomous && hasShellCmds)
+                {
+                    AiFlowLogger.Info("自主模式：执行 PowerShell 命令...");
                     await ExecuteAutonomousLoopAsync(currentPlan);
                 }
             }
@@ -774,995 +797,7 @@ namespace TaskFlow.ViewModels
             return result;
         }
 
-        /// <summary>
-        /// 将 AI 方案转化为实际的任务卡片（支持嵌套控制流区块）
-        /// </summary>
-        private (int CreatedCount, List<AiFlowReportItem> Reports) CreateTaskCardsFromPlan(AiFlowPlanResponse plan)
-        {
-            var stepToCard = new Dictionary<int, TaskCardBase>();
-            var reports = new List<AiFlowReportItem>();
-            int createdCount = 0;
 
-            // 预填充已有卡片映射：方案中新步骤的 sourceStep 可能引用已有卡片的序号
-            // 例如 sourceStep=1 引用画布上 Order=1 的截图卡片
-            foreach (var existingCard in _mainViewModel.TaskCards)
-            {
-                if (!stepToCard.ContainsKey(existingCard.Order))
-                    stepToCard[existingCard.Order] = existingCard;
-            }
-
-            // ===== 流程（Tab）级操作 =====
-
-            // 创建新流程
-            if (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
-            {
-                foreach (var newFlow in plan.CreateFlows)
-                {
-                    if (string.IsNullOrWhiteSpace(newFlow.Name)) continue;
-                    // 检查是否已存在同名流程
-                    if (_mainViewModel.Tabs.Any(t => t.Name == newFlow.Name))
-                    {
-                        AiFlowLogger.Warn($"流程 \"{newFlow.Name}\" 已存在，跳过创建");
-                        continue;
-                    }
-                    var tab = new WorkflowTab { Name = newFlow.Name };
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _mainViewModel.Tabs.Add(tab);
-                    });
-                    AiFlowLogger.Info($"已创建流程: {newFlow.Name}");
-                }
-            }
-
-            // 删除流程
-            if (plan.DeleteFlows != null && plan.DeleteFlows.Count > 0)
-            {
-                foreach (var flowName in plan.DeleteFlows)
-                {
-                    if (string.IsNullOrWhiteSpace(flowName)) continue;
-                    var tab = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == flowName);
-                    if (tab == null)
-                    {
-                        AiFlowLogger.Warn($"流程 \"{flowName}\" 不存在，跳过删除");
-                        continue;
-                    }
-                    if (_mainViewModel.Tabs.Count <= 1)
-                    {
-                        AiFlowLogger.Warn("至少保留一个流程，跳过删除");
-                        continue;
-                    }
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        // 如果要删除的是当前选中的流程，先切换到其他流程
-                        if (_mainViewModel.SelectedTab == tab)
-                        {
-                            var idx = _mainViewModel.Tabs.IndexOf(tab);
-                            _mainViewModel.SelectedTab = idx > 0
-                                ? _mainViewModel.Tabs[idx - 1]
-                                : _mainViewModel.Tabs[idx + 1];
-                        }
-                        _mainViewModel.Tabs.Remove(tab);
-                    });
-                    AiFlowLogger.Info($"已删除流程: {flowName}");
-                }
-            }
-
-            // 切换到目标流程（在创建卡片之前，确保卡片添加到正确的流程）
-            if (!string.IsNullOrWhiteSpace(plan.SwitchFlow))
-            {
-                var targetTab = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == plan.SwitchFlow);
-                if (targetTab != null)
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _mainViewModel.SelectedTab = targetTab;
-                    });
-                    AiFlowLogger.Info($"已切换到流程: {plan.SwitchFlow}");
-                }
-                else
-                {
-                    AiFlowLogger.Warn($"目标流程 \"{plan.SwitchFlow}\" 不存在，保持当前流程");
-                }
-            }
-
-            // ===== 变量和卡片操作 =====
-
-            var varStore = _mainViewModel.VariableStore;
-
-            // 删除方案指定的变量
-            if (plan.DeleteVariables != null && plan.DeleteVariables.Count > 0)
-            {
-                int varDeleted = 0;
-                foreach (var name in plan.DeleteVariables)
-                {
-                    if (varStore.RemoveVariable(name))
-                    {
-                        varDeleted++;
-                        AiFlowLogger.Info($"删除变量: @{name}");
-                    }
-                    else
-                    {
-                        AiFlowLogger.Warn($"变量 @{name} 不存在，跳过删除");
-                    }
-                }
-                if (varDeleted > 0)
-                    _mainViewModel.AddLog($"[AI] 已删除 {varDeleted} 个变量");
-            }
-
-            // 修改方案指定的变量值
-            if (plan.ModifyVariables != null && plan.ModifyVariables.Count > 0)
-            {
-                int varModified = 0;
-                foreach (var v in plan.ModifyVariables)
-                {
-                    if (varStore.SetValue(v.Name, v.Value))
-                    {
-                        varModified++;
-                        AiFlowLogger.Info($"修改变量: @{v.Name} = {v.Value}");
-                    }
-                    else
-                    {
-                        AiFlowLogger.Warn($"变量 @{v.Name} 不存在，跳过修改");
-                    }
-                }
-                if (varModified > 0)
-                    _mainViewModel.AddLog($"[AI] 已修改 {varModified} 个变量");
-            }
-
-            // 创建方案声明的变量
-            if (plan.Variables != null && plan.Variables.Count > 0)
-            {
-                int varCreated = 0;
-                foreach (var v in plan.Variables)
-                {
-                    if (!Enum.TryParse<VariableType>(v.Type, true, out var varType))
-                        varType = VariableType.String;
-
-                    if (varStore.AddVariable(v.Name, varType, v.Value))
-                    {
-                        varCreated++;
-                        AiFlowLogger.Info($"创建变量: @{v.Name} ({varType}) = {v.Value} - {v.Description}");
-                    }
-                    else
-                    {
-                        AiFlowLogger.Warn($"变量 @{v.Name} 已存在，跳过创建");
-                    }
-                }
-                if (varCreated > 0)
-                    _mainViewModel.AddLog($"[AI] 已创建 {varCreated} 个变量");
-            }
-
-            // 修改已有卡片属性
-            if (plan.ModifyCards != null && plan.ModifyCards.Count > 0)
-            {
-                int cardModified = 0;
-                foreach (var mod in plan.ModifyCards)
-                {
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == mod.Order);
-                    if (card == null)
-                    {
-                        AiFlowLogger.Warn($"卡片 #{mod.Order} 不存在，跳过修改");
-                        continue;
-                    }
-                    foreach (var kv in mod.Properties)
-                    {
-                        var prop = card.GetType().GetProperty(kv.Key,
-                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                        if (prop != null && prop.CanWrite && prop.PropertyType == typeof(string))
-                        {
-                            prop.SetValue(card, kv.Value);
-                            AiFlowLogger.Info($"修改卡片 #{mod.Order} {card.Name}: {kv.Key} = {kv.Value}");
-                        }
-                        else if (prop != null && prop.CanWrite && prop.PropertyType == typeof(int) && int.TryParse(kv.Value, out var intVal))
-                        {
-                            prop.SetValue(card, intVal);
-                            AiFlowLogger.Info($"修改卡片 #{mod.Order} {card.Name}: {kv.Key} = {kv.Value}");
-                        }
-                        else if (prop != null && prop.CanWrite && prop.PropertyType == typeof(double) && double.TryParse(kv.Value, out var dblVal))
-                        {
-                            prop.SetValue(card, dblVal);
-                            AiFlowLogger.Info($"修改卡片 #{mod.Order} {card.Name}: {kv.Key} = {kv.Value}");
-                        }
-                        else if (prop != null && prop.CanWrite && prop.PropertyType == typeof(bool) && bool.TryParse(kv.Value, out var boolVal))
-                        {
-                            prop.SetValue(card, boolVal);
-                            AiFlowLogger.Info($"修改卡片 #{mod.Order} {card.Name}: {kv.Key} = {kv.Value}");
-                        }
-                        else
-                        {
-                            AiFlowLogger.Warn($"卡片 #{mod.Order} 属性 {kv.Key} 无法设置");
-                        }
-                    }
-                    cardModified++;
-                }
-                if (cardModified > 0)
-                    _mainViewModel.AddLog($"[AI] 已修改 {cardModified} 个卡片属性");
-            }
-
-            // 删除指定卡片（按序号从大到小删除，避免索引偏移）
-            if (plan.DeleteCards != null && plan.DeleteCards.Count > 0)
-            {
-                int cardDeleted = 0;
-                foreach (var order in plan.DeleteCards.OrderByDescending(o => o))
-                {
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
-                    if (card != null)
-                    {
-                        _mainViewModel.TaskCards.Remove(card);
-                        cardDeleted++;
-                        AiFlowLogger.Info($"删除卡片 #{order}: {card.Name}");
-                    }
-                    else
-                    {
-                        AiFlowLogger.Warn($"卡片 #{order} 不存在，跳过删除");
-                    }
-                }
-                if (cardDeleted > 0)
-                    _mainViewModel.AddLog($"[AI] 已删除 {cardDeleted} 个卡片");
-            }
-
-            // 向已有分支/循环中插入卡片
-            if (plan.InsertCards != null && plan.InsertCards.Count > 0)
-            {
-                foreach (var insertReq in plan.InsertCards)
-                {
-                    var blockStartCard = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == insertReq.TargetBlockOrder);
-                    if (blockStartCard == null)
-                    {
-                        AiFlowLogger.Warn($"插入目标 #{insertReq.TargetBlockOrder} 不存在，跳过");
-                        continue;
-                    }
-
-                    if (!blockStartCard.BranchGroupId.HasValue)
-                    {
-                        AiFlowLogger.Warn($"#{insertReq.TargetBlockOrder} 不是 Block 卡片，跳过插入");
-                        continue;
-                    }
-
-                    var groupId = blockStartCard.BranchGroupId.Value;
-                    var branchTarget = insertReq.Branch?.ToLower() ?? "if";
-
-                    // 定位插入位置：找到目标分支范围
-                    int insertIndex = -1;
-                    var groupCards = _mainViewModel.TaskCards
-                        .Where(c => c.BranchGroupId == groupId)
-                        .OrderBy(c => _mainViewModel.TaskCards.IndexOf(c))
-                        .ToList();
-
-                    if (branchTarget == "if")
-                    {
-                        // If 分支：在 IfStart 之后、ElseStart 或 ElseEnd 之前
-                        var ifStart = groupCards.FirstOrDefault(c => c.BranchRole == BranchRole.IfStart);
-                        var nextMarker = groupCards.FirstOrDefault(c =>
-                            c.BranchRole == BranchRole.ElseStart || c.BranchRole == BranchRole.ElseEnd);
-                        if (ifStart != null && nextMarker != null)
-                            insertIndex = _mainViewModel.TaskCards.IndexOf(nextMarker);
-                    }
-                    else if (branchTarget == "else")
-                    {
-                        // Else 分支：在 ElseStart 之后、ElseEnd 之前
-                        var elseStart = groupCards.FirstOrDefault(c => c.BranchRole == BranchRole.ElseStart);
-                        var elseEnd = groupCards.FirstOrDefault(c => c.BranchRole == BranchRole.ElseEnd);
-                        if (elseStart != null && elseEnd != null)
-                            insertIndex = _mainViewModel.TaskCards.IndexOf(elseEnd);
-                    }
-                    else if (branchTarget == "loop")
-                    {
-                        // 循环体：在 ForLoopStart 之后、ForLoopEnd 之前
-                        var loopStart = groupCards.FirstOrDefault(c => c.BranchRole == BranchRole.ForLoopStart);
-                        var loopEnd = groupCards.FirstOrDefault(c => c.BranchRole == BranchRole.ForLoopEnd);
-                        if (loopStart != null && loopEnd != null)
-                            insertIndex = _mainViewModel.TaskCards.IndexOf(loopEnd);
-                    }
-
-                    if (insertIndex < 0)
-                    {
-                        AiFlowLogger.Warn($"无法定位 #{insertReq.TargetBlockOrder} 的 {branchTarget} 分支插入位置");
-                        continue;
-                    }
-
-                    // 在目标位置逐个插入卡片
-                    int insertedCount = 0;
-                    foreach (var step in insertReq.Cards)
-                    {
-                        var card = CreateSingleCardFromStep(step, stepToCard, reports);
-                        if (card != null)
-                        {
-                            _mainViewModel.TaskCards.Insert(insertIndex + insertedCount, card);
-                            stepToCard[step.Step] = card;
-                            insertedCount++;
-                            createdCount++;
-                            AiFlowLogger.Info($"插入卡片 #{card.Order} {card.Name} 到 #{insertReq.TargetBlockOrder} 的 {branchTarget} 分支");
-                        }
-                    }
-                }
-            }
-
-            // 批量创建时，将 SelectedTask 置 null，使所有 AddTaskCommand 调用
-            // 回退到 TaskCards.Add() 追加模式，确保卡片按声明顺序排列
-            var savedSelectedTask = _mainViewModel.SelectedTask;
-            _mainViewModel.SelectedTask = null;
-
-            ProcessSteps(plan.Plan, stepToCard, reports, ref createdCount);
-
-            // 恢复 SelectedTask（选中最后创建的卡片）
-            if (_mainViewModel.TaskCards.Count > 0)
-                _mainViewModel.SelectedTask = _mainViewModel.TaskCards[^1];
-
-            _mainViewModel.AddLog($"[AI] 已创建 {createdCount} 个任务卡片");
-            return (createdCount, reports);
-        }
-
-        /// <summary>
-        /// 递归处理步骤列表（支持嵌套的 IfElseBlock 和 ForLoopBlock）
-        /// </summary>
-        private void ProcessSteps(
-            List<AiFlowPlanStep> steps,
-            Dictionary<int, TaskCardBase> stepToCard,
-            List<AiFlowReportItem> reports,
-            ref int createdCount)
-        {
-            foreach (var step in steps)
-            {
-                if (step.TaskType == "IfElseBlock")
-                {
-                    ProcessIfElseBlock(step, stepToCard, reports, ref createdCount);
-                }
-                else if (step.TaskType == "ForLoopBlock")
-                {
-                    ProcessForLoopBlock(step, stepToCard, reports, ref createdCount);
-                }
-                else
-                {
-                    ProcessNormalStep(step, stepToCard, reports, ref createdCount);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 处理 IfElseBlock 区块：展开为 IfStart + IfBody + ElseStart + ElseBody + ElseEnd
-        /// </summary>
-        private void ProcessIfElseBlock(
-            AiFlowPlanStep step,
-            Dictionary<int, TaskCardBase> stepToCard,
-            List<AiFlowReportItem> reports,
-            ref int createdCount)
-        {
-            var branchGroupId = Guid.NewGuid();
-
-            // 创建 IfStart
-            var ifStart = new IfElseBranchTaskCard(BranchRole.IfStart)
-            {
-                BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
-            };
-
-            // 设置条件表达式
-            if (step.Properties.TryGetValue("conditionExpression", out var condExpr) && !string.IsNullOrEmpty(condExpr))
-                ifStart.ConditionExpression = condExpr;
-
-            if (!string.IsNullOrEmpty(step.Name))
-                ifStart.Name = step.Name;
-
-            _mainViewModel.TaskCards.Add(ifStart);
-            _mainViewModel.SelectedTask = null;
-            stepToCard[step.Step] = ifStart;
-            createdCount++;
-            AiFlowLogger.LogCardCreated("IfStart", ifStart.Name, ifStart.Order,
-                $"BranchGroupId={branchGroupId}, Condition={ifStart.ConditionExpression}");
-
-            // 递归处理 IfBody
-            if (step.IfBody != null && step.IfBody.Count > 0)
-                ProcessSteps(step.IfBody, stepToCard, reports, ref createdCount);
-
-            // 创建 ElseStart
-            var elseStart = new IfElseBranchTaskCard(BranchRole.ElseStart)
-            {
-                BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
-            };
-
-            bool hasElseBody = step.ElseBody != null && step.ElseBody.Count > 0;
-
-            // 如果没有 ElseBody，默认隐藏 Else 分支
-            if (!hasElseBody)
-            {
-                ifStart.IsElseHidden = true;
-                elseStart.IsHiddenByCollapse = true;
-            }
-            else
-            {
-                ifStart.IsElseHidden = false;
-            }
-
-            _mainViewModel.TaskCards.Add(elseStart);
-            _mainViewModel.SelectedTask = null;
-            createdCount++;
-
-            // 递归处理 ElseBody
-            if (hasElseBody)
-                ProcessSteps(step.ElseBody!, stepToCard, reports, ref createdCount);
-
-            // 创建 ElseEnd（分支结束标记）
-            var elseEnd = new IfElseBranchTaskCard(BranchRole.ElseEnd)
-            {
-                BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
-            };
-
-            if (!hasElseBody)
-                elseEnd.IsHiddenByCollapse = true;
-
-            _mainViewModel.TaskCards.Add(elseEnd);
-            _mainViewModel.SelectedTask = null;
-            createdCount++;
-        }
-
-        /// <summary>
-        /// 处理 ForLoopBlock 区块：展开为 ForLoopStart + LoopBody + ForLoopEnd
-        /// </summary>
-        private void ProcessForLoopBlock(
-            AiFlowPlanStep step,
-            Dictionary<int, TaskCardBase> stepToCard,
-            List<AiFlowReportItem> reports,
-            ref int createdCount)
-        {
-            var branchGroupId = Guid.NewGuid();
-
-            // 创建 ForLoopStart
-            var loopStart = new ForLoopTaskCard(BranchRole.ForLoopStart)
-            {
-                BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
-            };
-
-            // 设置循环次数
-            if (step.Properties.TryGetValue("loopCount", out var loopCountStr) && int.TryParse(loopCountStr, out var loopCount))
-                loopStart.LoopCount = loopCount;
-            else
-                reports.Add(new AiFlowReportItem
-                {
-                    TaskCardId = loopStart.Id,
-                    CardName = $"#{loopStart.Order} {step.Name}",
-                    PropertyName = "LoopCount",
-                    Hint = "循环次数"
-                });
-
-            if (!string.IsNullOrEmpty(step.Name))
-                loopStart.Name = step.Name;
-
-            _mainViewModel.TaskCards.Add(loopStart);
-            _mainViewModel.SelectedTask = null;
-            stepToCard[step.Step] = loopStart;
-            createdCount++;
-            AiFlowLogger.LogCardCreated("ForLoopStart", loopStart.Name, loopStart.Order,
-                $"BranchGroupId={branchGroupId}, LoopCount={loopStart.LoopCount}");
-
-            // 递归处理 LoopBody
-            if (step.LoopBody != null && step.LoopBody.Count > 0)
-                ProcessSteps(step.LoopBody, stepToCard, reports, ref createdCount);
-
-            // 创建 ForLoopEnd
-            var loopEnd = new ForLoopTaskCard(BranchRole.ForLoopEnd)
-            {
-                BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
-            };
-
-            _mainViewModel.TaskCards.Add(loopEnd);
-            _mainViewModel.SelectedTask = null;
-            createdCount++;
-        }
-
-        /// <summary>
-        /// 处理普通（线性）步骤
-        /// </summary>
-        private void ProcessNormalStep(
-            AiFlowPlanStep step,
-            Dictionary<int, TaskCardBase> stepToCard,
-            List<AiFlowReportItem> reports,
-            ref int createdCount)
-        {
-            // 解析 TaskType
-            if (!Enum.TryParse<Models.TaskCards.TaskType>(step.TaskType, out var taskType))
-            {
-                _mainViewModel.AddLog($"[AI] 跳过未知卡片类型: {step.TaskType}");
-                return;
-            }
-
-            // 创建卡片（通过 ViewModel 的 AddTask 命令）
-            _mainViewModel.AddTaskCommand.Execute(taskType);
-            var newCard = _mainViewModel.SelectedTask;
-            if (newCard == null) return;
-
-            // 设置名称
-            if (!string.IsNullOrEmpty(step.Name))
-                newCard.Name = step.Name;
-
-            stepToCard[step.Step] = newCard;
-            _mainViewModel.SelectedTask = null;
-            createdCount++;
-            AiFlowLogger.LogCardCreated(step.TaskType, newCard.Name, newCard.Order);
-
-            // 尝试填充属性
-            var missingProps = TryFillProperties(newCard, step, stepToCard);
-            foreach (var missing in missingProps)
-            {
-                reports.Add(new AiFlowReportItem
-                {
-                    TaskCardId = newCard.Id,
-                    CardName = $"#{newCard.Order} {newCard.Name}",
-                    PropertyName = missing.PropertyName,
-                    Hint = missing.Hint
-                });
-            }
-        }
-
-        /// <summary>
-        /// 创建单张卡片（不追加到 TaskCards），供 insertCards 使用
-        /// </summary>
-        private TaskCardBase? CreateSingleCardFromStep(
-            AiFlowPlanStep step,
-            Dictionary<int, TaskCardBase> stepToCard,
-            List<AiFlowReportItem> reports)
-        {
-            if (!Enum.TryParse<Models.TaskCards.TaskType>(step.TaskType, out var taskType))
-            {
-                AiFlowLogger.Warn($"跳过未知卡片类型: {step.TaskType}");
-                return null;
-            }
-
-            var card = _mainViewModel.CreateTaskCard(taskType);
-            if (card == null) return null;
-
-            card.Order = _mainViewModel.NextTaskNumber++;
-            if (!string.IsNullOrEmpty(step.Name))
-                card.Name = step.Name;
-
-            AiFlowLogger.LogCardCreated(step.TaskType, card.Name, card.Order);
-
-            // 填充属性
-            var missingProps = TryFillProperties(card, step, stepToCard);
-            foreach (var missing in missingProps)
-            {
-                reports.Add(new AiFlowReportItem
-                {
-                    TaskCardId = card.Id,
-                    CardName = $"#{card.Order} {card.Name}",
-                    PropertyName = missing.PropertyName,
-                    Hint = missing.Hint
-                });
-            }
-
-            return card;
-        }
-
-        /// <summary>
-        /// 尝试填充卡片属性，返回未填写的必要属性列表
-        /// </summary>
-        private List<AiFlowReportItem> TryFillProperties(
-            TaskCardBase card, AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
-        {
-            var missing = new List<AiFlowReportItem>();
-            var props = step.Properties;
-
-            switch (card)
-            {
-                case WinLaunchAppTaskCard launch:
-                    if (props.TryGetValue("exePath", out var exePath) && !string.IsNullOrEmpty(exePath))
-                        launch.ExePath = exePath;
-                    else
-                        missing.Add(new AiFlowReportItem { PropertyName = "ExePath", Hint = "可执行文件路径" });
-
-                    if (props.TryGetValue("arguments", out var args))
-                        launch.Arguments = args;
-                    break;
-
-                case WinScreenshotTaskCard screenshot:
-                    if (props.TryGetValue("processName", out var procName) && !string.IsNullOrEmpty(procName))
-                        screenshot.ProcessName = procName;
-                    else
-                        missing.Add(new AiFlowReportItem { PropertyName = "ProcessName", Hint = "目标进程名称" });
-                    break;
-
-                case WinClickTaskCard click:
-                    // 坐标通过表达式引用其他任务的输出（与用户手动配置方式一致）
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var sourceCard))
-                    {
-                        if (sourceCard.OutputsCoordinates)
-                        {
-                            // 使用表达式引用：#N 卡片名.X / #N 卡片名.Y
-                            click.StartXExpression = $"#{sourceCard.Order} {sourceCard.Name}.X";
-                            click.StartYExpression = $"#{sourceCard.Order} {sourceCard.Name}.Y";
-                        }
-                    }
-                    // 设置点击类型（Single/Double/Swipe）
-                    if (props.TryGetValue("clickType", out var clickTypeStr)
-                        && Enum.TryParse<ClickType>(clickTypeStr, true, out var clickType))
-                        click.ClickType = clickType;
-                    // 设置静态坐标（仅当用户明确提供或无 sourceStep 时）
-                    if (props.TryGetValue("startX", out var sxStr) && int.TryParse(sxStr, out var sx))
-                        click.StartX = sx;
-                    if (props.TryGetValue("startY", out var syStr) && int.TryParse(syStr, out var sy))
-                        click.StartY = sy;
-                    // 自主模式下自动校正 AI 估算坐标（使用标定数据）
-                    if (CurrentMode == AiAssistantMode.Autonomous
-                        && click.StartX != 0 && click.StartY != 0
-                        && !step.SourceStep.HasValue)
-                    {
-                        var screenshotCard = _mainViewModel.TaskCards
-                            .LastOrDefault(c => c is WinScreenshotTaskCard && c.OutputImage != null && !c.OutputImage.Empty());
-                        if (screenshotCard?.OutputImage != null)
-                        {
-                            int imgW = screenshotCard.OutputImage.Width;
-                            int imgH = screenshotCard.OutputImage.Height;
-                            var cal = CalibrationService.GetCalibration(SelectedModelId, imgW, imgH);
-                            if (cal != null)
-                            {
-                                var (cx, cy) = CalibrationService.CalibrateCoordinates(cal, click.StartX, click.StartY);
-                                AiFlowLogger.Info($"标定校正: ({click.StartX},{click.StartY}) → ({cx},{cy})");
-                                click.StartX = cx;
-                                click.StartY = cy;
-                            }
-                        }
-                    }
-                    // 设置进程名
-                    if (props.TryGetValue("processName", out var clickProc))
-                        click.ProcessName = clickProc;
-                    break;
-
-                case WinCloseAppTaskCard close:
-                    if (props.TryGetValue("processName", out var closeProc) && !string.IsNullOrEmpty(closeProc))
-                        close.ProcessName = closeProc;
-                    else
-                        missing.Add(new AiFlowReportItem { PropertyName = "ProcessName", Hint = "目标进程名称" });
-                    break;
-
-                case WinUiAutomationTaskCard uiAuto:
-                    if (props.TryGetValue("processName", out var uiProc) && !string.IsNullOrEmpty(uiProc))
-                        uiAuto.ProcessName = uiProc;
-                    else
-                        missing.Add(new AiFlowReportItem { PropertyName = "ProcessName", Hint = "目标进程名称" });
-
-                    if (props.TryGetValue("buttonName", out var btnName) && !string.IsNullOrEmpty(btnName))
-                        uiAuto.ButtonName = btnName;
-                    else
-                        missing.Add(new AiFlowReportItem { PropertyName = "ButtonName", Hint = "按钮名称" });
-                    break;
-
-                case ImgOcrTaskCard ocr:
-                    // 设置图像来源引用
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var ocrSource))
-                    {
-                        if (ocrSource.OutputsImage)
-                        {
-                            ocr.UseSourceTaskImage = true;
-                            ocr.SourceTaskIdForImage = ocrSource.Id;
-                        }
-                    }
-                    else
-                    {
-                        missing.Add(new AiFlowReportItem { PropertyName = "图像来源", Hint = "需要绑定一个输出图像的任务（如截图卡片）" });
-                    }
-                    break;
-
-                case ImgTemplateMatchTaskCard tmMatch:
-                    // 搜索图来源（sourceStep）
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var tmSource))
-                    {
-                        if (tmSource.OutputsImage)
-                        {
-                            tmMatch.UseSourceTaskImage = true;
-                            tmMatch.SourceTaskIdForImage = tmSource.Id;
-                        }
-                    }
-                    else
-                    {
-                        missing.Add(new AiFlowReportItem { PropertyName = "图像来源", Hint = "需要绑定一个输出图像的任务" });
-                    }
-                    // 模板来源（templateSourceStep）—— 引用其他步骤（如 ImgCrop）的输出作为模板
-                    if (step.TemplateSourceStep.HasValue && stepToCard.TryGetValue(step.TemplateSourceStep.Value, out var tmplSource))
-                    {
-                        if (tmplSource.OutputsImage)
-                        {
-                            tmMatch.UseSourceTaskTemplate = true;
-                            tmMatch.SourceTaskIdForTemplate = tmplSource.Id;
-                        }
-                    }
-                    else if (props.TryGetValue("templateImagePath", out var tmplPath) && !string.IsNullOrEmpty(tmplPath))
-                    {
-                        tmMatch.TemplateImagePath = tmplPath;
-                    }
-                    else
-                    {
-                        missing.Add(new AiFlowReportItem { PropertyName = "模板来源", Hint = "需要绑定模板图来源或指定模板图路径" });
-                    }
-                    // 设置匹配阈值（兼容 threshold 和 matchThreshold 两种属性名）
-                    if ((props.TryGetValue("matchThreshold", out var threshStr) || props.TryGetValue("threshold", out threshStr))
-                        && double.TryParse(threshStr, out var thresh))
-                        tmMatch.MatchThreshold = thresh;
-                    break;
-
-                case ImgCropTaskCard crop:
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var cropSource))
-                    {
-                        if (cropSource.OutputsImage)
-                        {
-                            crop.UseSourceTaskImage = true;
-                            crop.SourceTaskIdForImage = cropSource.Id;
-                        }
-                    }
-                    // 设置 ROI 区域
-                    if (props.TryGetValue("roiX", out var cropRxStr) && int.TryParse(cropRxStr, out var cropRx))
-                        crop.RoiX = cropRx;
-                    if (props.TryGetValue("roiY", out var cropRyStr) && int.TryParse(cropRyStr, out var cropRy))
-                        crop.RoiY = cropRy;
-                    if (props.TryGetValue("roiWidth", out var cropRwStr) && int.TryParse(cropRwStr, out var cropRw))
-                        crop.RoiWidth = cropRw;
-                    if (props.TryGetValue("roiHeight", out var cropRhStr) && int.TryParse(cropRhStr, out var cropRh))
-                        crop.RoiHeight = cropRh;
-                    if (crop.RoiWidth <= 0 || crop.RoiHeight <= 0)
-                        missing.Add(new AiFlowReportItem { PropertyName = "ROI区域", Hint = "裁剪区域坐标和尺寸" });
-                    break;
-
-                case WinFindFileTaskCard findFile:
-                    if (props.TryGetValue("fileName", out var findFileName) && !string.IsNullOrEmpty(findFileName))
-                        findFile.FileName = findFileName;
-                    else
-                        missing.Add(new AiFlowReportItem { PropertyName = "FileName", Hint = "要查找的文件名称" });
-
-                    if (props.TryGetValue("searchRootPath", out var searchRoot) && !string.IsNullOrEmpty(searchRoot))
-                        findFile.SearchRootPath = searchRoot;
-
-                    if (props.TryGetValue("maxDepth", out var maxDepthStr) && int.TryParse(maxDepthStr, out var maxDepth))
-                        findFile.MaxDepth = maxDepth;
-
-                    if (props.TryGetValue("useWildcard", out var useWild) && bool.TryParse(useWild, out var wildcard))
-                        findFile.UseWildcard = wildcard;
-                    break;
-
-                case PauseTaskCard pause:
-                    if (props.TryGetValue("pauseMs", out var pauseMs) && int.TryParse(pauseMs, out var ms))
-                        pause.PauseDurationMs = ms;
-                    break;
-
-                case WinSubtitleTaskCard subtitle:
-                    if (props.TryGetValue("processName", out var subProc))
-                        subtitle.ProcessName = subProc;
-                    if (props.TryGetValue("displayText", out var displayText))
-                        subtitle.DisplayText = displayText;
-                    break;
-
-                case LlmTranslateTaskCard translate:
-                    missing.Add(new AiFlowReportItem { PropertyName = "ModelId", Hint = "选择翻译模型" });
-                    if (props.TryGetValue("targetLanguage", out var lang))
-                        translate.TargetLanguage = lang;
-                    break;
-
-                case LlmVisionTaskCard vision:
-                    missing.Add(new AiFlowReportItem { PropertyName = "ModelId", Hint = "选择多模态模型" });
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var visionSource))
-                    {
-                        if (visionSource.OutputsImage)
-                        {
-                            vision.UseSourceTaskImage = true;
-                            vision.SourceTaskIdForImage = visionSource.Id;
-                        }
-                    }
-                    break;
-
-                // === 补全图像类卡片的 sourceStep 映射 ===
-                case ImgColorDetectTaskCard colorDetect:
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var cdSource))
-                    {
-                        if (cdSource.OutputsImage)
-                        {
-                            colorDetect.UseSourceTaskImage = true;
-                            colorDetect.SourceTaskIdForImage = cdSource.Id;
-                        }
-                    }
-                    else
-                    {
-                        missing.Add(new AiFlowReportItem { PropertyName = "图像来源", Hint = "需要绑定一个输出图像的任务" });
-                    }
-                    break;
-
-                case ImgColorSegmentTaskCard colorSeg:
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var csSource))
-                    {
-                        if (csSource.OutputsImage)
-                        {
-                            colorSeg.UseSourceTaskImage = true;
-                            colorSeg.SourceTaskIdForImage = csSource.Id;
-                        }
-                    }
-                    else
-                    {
-                        missing.Add(new AiFlowReportItem { PropertyName = "图像来源", Hint = "需要绑定一个输出图像的任务" });
-                    }
-                    break;
-
-                case ImgPreprocessTaskCard preprocess:
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var ppSource))
-                    {
-                        if (ppSource.OutputsImage)
-                        {
-                            preprocess.UseSourceTaskImage = true;
-                            preprocess.SourceTaskIdForImage = ppSource.Id;
-                        }
-                    }
-                    else
-                    {
-                        missing.Add(new AiFlowReportItem { PropertyName = "图像来源", Hint = "需要绑定一个输出图像的任务" });
-                    }
-                    break;
-
-                case ImgBlobAnalysisTaskCard blob:
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var baSource))
-                    {
-                        if (baSource.OutputsImage)
-                        {
-                            blob.UseSourceTaskImage = true;
-                            blob.SourceTaskIdForImage = baSource.Id;
-                        }
-                    }
-                    else
-                    {
-                        missing.Add(new AiFlowReportItem { PropertyName = "图像来源", Hint = "需要绑定一个输出图像的任务" });
-                    }
-                    break;
-
-                case ImgResizeTaskCard resize:
-                    if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var rsSource))
-                    {
-                        if (rsSource.OutputsImage)
-                        {
-                            resize.UseSourceTaskImage = true;
-                            resize.SourceTaskIdForImage = rsSource.Id;
-                        }
-                    }
-                    else
-                    {
-                        missing.Add(new AiFlowReportItem { PropertyName = "图像来源", Hint = "需要绑定一个输出图像的任务" });
-                    }
-                    break;
-            }
-
-            return missing;
-        }
-
-        /// <summary>
-        /// 将方案格式化为可读文本（支持嵌套缩进）
-        /// </summary>
-        private string FormatPlanAsText(AiFlowPlanResponse plan)
-        {
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"📋 {plan.Summary}\n");
-
-            // 显示流程操作
-            if (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
-            {
-                sb.AppendLine("📁 将创建的流程：");
-                foreach (var f in plan.CreateFlows)
-                    sb.AppendLine($"  • {f.Name}");
-                sb.AppendLine();
-            }
-            if (plan.DeleteFlows != null && plan.DeleteFlows.Count > 0)
-            {
-                sb.AppendLine("🗑️ 将删除的流程：");
-                foreach (var f in plan.DeleteFlows)
-                    sb.AppendLine($"  • {f}");
-                sb.AppendLine();
-            }
-            if (!string.IsNullOrWhiteSpace(plan.SwitchFlow))
-            {
-                sb.AppendLine($"🔀 将切换到流程：{plan.SwitchFlow}\n");
-            }
-
-            // 显示要删除的变量
-            if (plan.DeleteVariables != null && plan.DeleteVariables.Count > 0)
-            {
-                sb.AppendLine("🗑️ 将删除的变量：");
-                foreach (var name in plan.DeleteVariables)
-                    sb.AppendLine($"  • @{name}");
-                sb.AppendLine();
-            }
-
-            // 显示要创建的变量
-            if (plan.Variables != null && plan.Variables.Count > 0)
-            {
-                sb.AppendLine("📦 需要创建的变量：");
-                foreach (var v in plan.Variables)
-                    sb.AppendLine($"  • @{v.Name} ({v.Type}) = {v.Value}  — {v.Description}");
-                sb.AppendLine();
-            }
-
-            // 显示要修改的变量
-            if (plan.ModifyVariables != null && plan.ModifyVariables.Count > 0)
-            {
-                sb.AppendLine("✏️ 将修改的变量：");
-                foreach (var v in plan.ModifyVariables)
-                    sb.AppendLine($"  • @{v.Name} → {v.Value}");
-                sb.AppendLine();
-            }
-
-            // 显示要修改的卡片
-            if (plan.ModifyCards != null && plan.ModifyCards.Count > 0)
-            {
-                sb.AppendLine("🔧 将修改的卡片属性：");
-                foreach (var mod in plan.ModifyCards)
-                {
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == mod.Order);
-                    var cardName = card?.Name ?? $"卡片#{mod.Order}";
-                    foreach (var kv in mod.Properties)
-                        sb.AppendLine($"  • #{mod.Order} {cardName}: {kv.Key} → {kv.Value}");
-                }
-                sb.AppendLine();
-            }
-
-            // 显示要删除的卡片
-            if (plan.DeleteCards != null && plan.DeleteCards.Count > 0)
-            {
-                sb.AppendLine("🗑️ 将删除的卡片：");
-                foreach (var order in plan.DeleteCards)
-                {
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
-                    var cardName = card?.Name ?? $"未知卡片";
-                    sb.AppendLine($"  • #{order} {cardName}");
-                }
-                sb.AppendLine();
-            }
-
-            // 显示要插入到分支中的卡片
-            if (plan.InsertCards != null && plan.InsertCards.Count > 0)
-            {
-                sb.AppendLine("📥 将插入到已有分支的卡片：");
-                foreach (var ins in plan.InsertCards)
-                {
-                    var branchLabel = ins.Branch?.ToLower() switch
-                    {
-                        "else" => "ELSE 分支",
-                        "loop" => "循环体",
-                        _ => "IF 分支"
-                    };
-                    var targetCard = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == ins.TargetBlockOrder);
-                    var targetName = targetCard?.Name ?? $"Block#{ins.TargetBlockOrder}";
-                    sb.AppendLine($"  → #{ins.TargetBlockOrder} {targetName} 的 {branchLabel}：");
-                    foreach (var card in ins.Cards)
-                        sb.AppendLine($"    • [{card.TaskType}] {card.Name}");
-                }
-                sb.AppendLine();
-            }
-
-            // 显示要运行的卡片
-            if (plan.RunCards != null && plan.RunCards.Count > 0)
-            {
-                sb.AppendLine("▶️ 将运行的卡片：");
-                foreach (var order in plan.RunCards)
-                {
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
-                    var cardName = card?.Name ?? $"未知卡片";
-                    sb.AppendLine($"  • #{order} {cardName}");
-                }
-                sb.AppendLine();
-            }
-
-            // 显示步骤
-            if (plan.Plan.Count > 0)
-            {
-                sb.AppendLine("方案步骤：");
-                FormatSteps(sb, plan.Plan, "  ");
-            }
-
-            bool isAutoMode = plan.RunCards != null && plan.RunCards.Count > 0;
-            bool isFlowOp = (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
-                || (plan.DeleteFlows != null && plan.DeleteFlows.Count > 0)
-                || !string.IsNullOrWhiteSpace(plan.SwitchFlow);
-            bool isExecMode = isAutoMode || (isFlowOp && plan.Plan.Count == 0);
-            var confirmText = isExecMode ? "确认执行」" : "确认创建」";
-            sb.AppendLine($"\n✅ 确认无误后点击「{confirmText}，或点击「重新生成」。");
-            return sb.ToString();
-        }
 
         /// <summary>
         /// AI 自主执行循环：运行指定卡片 → 读取结果 → 再调 LLM 决策 → 重复直到完成
@@ -1791,12 +826,14 @@ namespace TaskFlow.ViewModels
 
                     // 没有要运行的卡片且没有其他操作，退出循环
                     bool hasRunCards = currentPlan.RunCards != null && currentPlan.RunCards.Count > 0;
+                    bool hasShellCommands = currentPlan.ShellCommands != null && currentPlan.ShellCommands.Count > 0;
                     bool hasOtherActions = (currentPlan.Plan?.Count > 0) ||
                         (currentPlan.Variables?.Count > 0) ||
                         (currentPlan.DeleteVariables?.Count > 0) ||
                         (currentPlan.ModifyVariables?.Count > 0) ||
                         (currentPlan.ModifyCards?.Count > 0) ||
-                        (currentPlan.DeleteCards?.Count > 0);
+                        (currentPlan.DeleteCards?.Count > 0) ||
+                        hasShellCommands;
 
                     if (!hasRunCards && !hasOtherActions)
                     {
@@ -1808,6 +845,13 @@ namespace TaskFlow.ViewModels
                     {
                         // 有其他操作但没有 runCards，继续下一轮让 AI 决策
                         AiFlowLogger.Info("AI 执行了操作，继续决策...");
+                    }
+
+                    // ===== PowerShell 命令执行 =====
+                    string shellResultsText = "";
+                    if (hasShellCommands)
+                    {
+                        shellResultsText = await ExecuteShellCommandsAsync(currentPlan.ShellCommands!, _cts.Token);
                     }
 
                     string resultsText = "";
@@ -1902,13 +946,13 @@ namespace TaskFlow.ViewModels
                         if (_cts.Token.IsCancellationRequested) break;
 
                         // 序列化运行结果
-                        resultsText = SerializeCardResults(currentPlan.RunCards);
+                        resultsText = _serializer.SerializeCardResults(currentPlan.RunCards);
                         AiFlowLogger.Info($"运行结果:\n{resultsText}");
                     }
 
                     // 构建上下文：当前流程 + 运行结果 + 对话历史
-                    var flowContext = SerializeCurrentFlow();
-                    var history = BuildConversationHistory();
+                    var flowContext = _serializer.SerializeCurrentFlow();
+                    var history = _serializer.BuildConversationHistory(Messages);
 
                     // 获取原始用户请求
                     var originalRequest = Messages.LastOrDefault(m => m.Role == AiChatRole.User)?.Content ?? "执行流程";
@@ -1934,6 +978,11 @@ namespace TaskFlow.ViewModels
                     {
                         autonomousPrompt.AppendLine($"=== 第 {round} 轮运行结果 ===");
                         autonomousPrompt.AppendLine(resultsText);
+                    }
+
+                    if (!string.IsNullOrEmpty(shellResultsText))
+                    {
+                        autonomousPrompt.AppendLine(shellResultsText);
                     }
 
                     autonomousPrompt.AppendLine("请根据以上信息决定下一步：");
@@ -1973,11 +1022,12 @@ namespace TaskFlow.ViewModels
                     // 自主模式下传入空 categories，GeneratePlanAsync 会使用所有类别
                     var categories = new List<string>();
 
-                    // Orchid 直接截屏：每轮决策前自动截全屏，让 AI 看到最新画面
+                    // Orchid 按需截屏：仅当 AI 请求时截取屏幕
                     List<string>? autoImageList = null;
                     int autoScreenW = 0, autoScreenH = 0;
+                    if (currentPlan.NeedsScreenshot)
                     {
-                        AiFlowLogger.Info("Orchid 自主循环截屏中...");
+                        AiFlowLogger.Info("Orchid 按需截屏中...");
                         var (scrBase64, sw, sh) = await CaptureScreenForAiAsync();
                         if (scrBase64 != null)
                         {
@@ -1985,6 +1035,7 @@ namespace TaskFlow.ViewModels
                             autoScreenW = sw;
                             autoScreenH = sh;
                             AiFlowLogger.Info($"已附加屏幕截图 ({sw}x{sh})");
+                            AddMessage(AiChatRole.System, $"📸 已截取全屏 ({sw}x{sh})");
                         }
                     }
 
@@ -2027,6 +1078,14 @@ namespace TaskFlow.ViewModels
                     AiFlowLogger.Info($"AI 决策完成（Token: {tokensIn}+{tokensOut}）");
 
                     // 处理 AI 的新操作（创建、修改、删除等）
+                    // 处理后续轮次的 PowerShell 命令
+                    if (nextPlan.ShellCommands != null && nextPlan.ShellCommands.Count > 0)
+                    {
+                        var nextShellResults = await ExecuteShellCommandsAsync(nextPlan.ShellCommands, _cts.Token);
+                        if (!string.IsNullOrEmpty(nextShellResults))
+                            shellResultsText = nextShellResults;
+                    }
+
                     bool hasNewActions = (nextPlan.Plan?.Count > 0) ||
                         (nextPlan.Variables?.Count > 0) ||
                         (nextPlan.DeleteVariables?.Count > 0) ||
@@ -2036,7 +1095,7 @@ namespace TaskFlow.ViewModels
 
                     if (hasNewActions)
                     {
-                        var (count, reports) = CreateTaskCardsFromPlan(nextPlan);
+                        var (count, reports) = _planExecutor.CreateTaskCardsFromPlan(nextPlan, CurrentMode, SelectedModelId);
                         _mainViewModel.RecalculateIndentLevels();
 
                         if (!string.IsNullOrEmpty(nextPlan.Summary))
@@ -2063,7 +1122,7 @@ namespace TaskFlow.ViewModels
                             if (nextPlan.FallbackPlan?.Count > 0)
                             {
                                 var fallbackResponse = new AiFlowPlanResponse { Plan = nextPlan.FallbackPlan };
-                                var (fbCount, fbReports) = CreateTaskCardsFromPlan(fallbackResponse);
+                                var (fbCount, fbReports) = _planExecutor.CreateTaskCardsFromPlan(fallbackResponse, CurrentMode, SelectedModelId);
                                 _mainViewModel.RecalculateIndentLevels();
                                 AiFlowLogger.Info($"已创建 {fbCount} 张替代卡片");
                             }
@@ -2098,156 +1157,6 @@ namespace TaskFlow.ViewModels
             }
         }
 
-        /// <summary>
-        /// 序列化指定卡片的运行结果为 AI 可理解的文本
-        /// </summary>
-        private string SerializeCardResults(List<int> orders)
-        {
-            var sb = new System.Text.StringBuilder();
-
-            foreach (var order in orders)
-            {
-                var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
-                if (card == null)
-                {
-                    sb.AppendLine($"卡片 #{order}: 不存在");
-                    continue;
-                }
-
-                sb.AppendLine($"卡片 #{order} {card.Name} [{card.TaskType}]:");
-                sb.AppendLine($"  状态: {card.Status}");
-
-                if (!string.IsNullOrEmpty(card.ErrorMessage))
-                    sb.AppendLine($"  错误: {card.ErrorMessage}");
-
-                if (!string.IsNullOrEmpty(card.OutputText))
-                    sb.AppendLine($"  文本输出: {card.OutputText}");
-
-                if (card.OutputX.HasValue || card.OutputY.HasValue)
-                    sb.AppendLine($"  坐标: ({card.OutputX}, {card.OutputY})");
-
-                // 布尔结果通过反射获取（不同卡片的属性名可能不同）
-                var matchResultProp = card.GetType().GetProperty("MatchResult");
-                if (matchResultProp != null)
-                {
-                    var matchVal = matchResultProp.GetValue(card);
-                    if (matchVal != null)
-                        sb.AppendLine($"  匹配结果: {matchVal}");
-                }
-
-                if (card.OutputImage != null && !card.OutputImage.Empty())
-                    sb.AppendLine($"  图像分辨率: {card.OutputImage.Width}x{card.OutputImage.Height}");
-
-                // 通过反射提取路径等其他输出属性
-                foreach (var propName in new[] { "OutputPath", "OutputFilePath", "OutputSavePath", "OutputTranslatedFilePath" })
-                {
-                    var pathProp = card.GetType().GetProperty(propName);
-                    if (pathProp != null)
-                    {
-                        var pathVal = pathProp.GetValue(card) as string;
-                        if (!string.IsNullOrEmpty(pathVal))
-                        {
-                            sb.AppendLine($"  路径输出: {pathVal}");
-                            break; // 只显示第一个有值的路径
-                        }
-                    }
-                }
-
-                sb.AppendLine();
-            }
-
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// 从当前 Messages 中提取最近的 User + Assistant 对话历史
-        /// 最多取最近 3 轮，排除 System 消息和方案 JSON
-        /// </summary>
-        private List<(string Role, string Content)> BuildConversationHistory()
-        {
-            var history = new List<(string Role, string Content)>();
-
-            // 从 Messages 中提取 User 和 Assistant 消息（排除 System 消息）
-            var relevantMessages = Messages
-                .Where(m => m.Role != AiChatRole.System)
-                .ToList();
-
-            // 取最近 20 条（约 10 轮对话）
-            var recent = relevantMessages.Skip(Math.Max(0, relevantMessages.Count - 20)).ToList();
-
-            foreach (var msg in recent)
-            {
-                var role = msg.Role == AiChatRole.User ? "user" : "assistant";
-                string content;
-                if (msg.Role == AiChatRole.User)
-                {
-                    // 用户消息通常较短，保留全文
-                    content = msg.Content;
-                }
-                else
-                {
-                    // 助手回复（方案文本）通常较长，截断以控制 Token
-                    content = msg.Content.Length > 300
-                        ? msg.Content[..300] + "..."
-                        : msg.Content;
-                }
-                history.Add((role, content));
-            }
-
-            return history;
-        }
-
-        /// <summary>
-        /// 递归格式化步骤列表（带缩进）
-        /// </summary>
-        private void FormatSteps(System.Text.StringBuilder sb, List<AiFlowPlanStep> steps, string indent)
-        {
-            foreach (var step in steps)
-            {
-                sb.AppendLine($"{indent}{step.Step}. [{step.TaskType}] {step.Name}");
-                sb.AppendLine($"{indent}   {step.Description}");
-
-                if (step.SourceStep.HasValue)
-                    sb.AppendLine($"{indent}   ↩ 图像来源: 第 {step.SourceStep} 步");
-                if (step.TemplateSourceStep.HasValue)
-                    sb.AppendLine($"{indent}   🖼️ 模板来源: 第 {step.TemplateSourceStep} 步");
-
-                if (step.Properties.Count > 0)
-                {
-                    foreach (var kv in step.Properties)
-                        sb.AppendLine($"{indent}   • {kv.Key} = {kv.Value}");
-                }
-
-                // 递归显示嵌套区块
-                if (step.IfBody != null && step.IfBody.Count > 0)
-                {
-                    sb.AppendLine($"{indent}   ┣━ If 分支：");
-                    FormatSteps(sb, step.IfBody, indent + "   ┃  ");
-                }
-                if (step.ElseBody != null && step.ElseBody.Count > 0)
-                {
-                    sb.AppendLine($"{indent}   ┗━ Else 分支：");
-                    FormatSteps(sb, step.ElseBody, indent + "      ");
-                }
-                if (step.LoopBody != null && step.LoopBody.Count > 0)
-                {
-                    sb.AppendLine($"{indent}   ┗━ 循环体：");
-                    FormatSteps(sb, step.LoopBody, indent + "      ");
-                }
-            }
-        }
-
-        /// <summary>
-        /// 格式化报告
-        /// </summary>
-        private string FormatReportAsText(int createdCount, List<AiFlowReportItem> reports)
-        {
-            if (reports.Count == 0)
-                return ""; // 无待配置项，不显示消息
-
-            // 只显示简洁的配置提示标题
-            return $"⚠️ {reports.Count} 项需要手动配置：";
-        }
 
         /// <summary>
         /// 添加消息到列表
@@ -2350,123 +1259,80 @@ namespace TaskFlow.ViewModels
                 _thinkingTimer = null;
             });
         }
+
         /// <summary>
-        /// 将当前画布上的任务卡片序列化为 AI 可理解的文本摘要
+        /// 执行 AI 请求的 PowerShell 命令列表（含安全检查和用户批准流程）
         /// </summary>
-        private string SerializeCurrentFlow()
+        private async Task<string> ExecuteShellCommandsAsync(
+            List<Models.AiFlow.AiShellCommand> commands, CancellationToken ct)
         {
-            var cards = _mainViewModel.TaskCards;
-            var variables = _mainViewModel.VariableStore.Variables;
-            bool hasCards = cards != null && cards.Count > 0;
-            bool hasVars = variables != null && variables.Count > 0;
+            var results = new List<(Models.AiFlow.AiShellCommand Cmd, PowerShellExecutorService.ShellResult Result)>();
 
-            var sb = new System.Text.StringBuilder();
-
-            // 序列化流程列表
-            var tabs = _mainViewModel.Tabs;
-            if (tabs.Count > 1)
+            foreach (var cmd in commands)
             {
-                sb.AppendLine($"当前共有 {tabs.Count} 个流程：");
-                foreach (var tab in tabs)
+                if (ct.IsCancellationRequested) break;
+
+                // 安全检查
+                var safety = _psService.CheckCommandSafety(cmd);
+
+                if (!string.IsNullOrEmpty(safety.BlockReason))
                 {
-                    var marker = tab == _mainViewModel.SelectedTab ? "（当前）" : "";
-                    var cardCount = tab == _mainViewModel.SelectedTab
-                        ? (cards?.Count ?? 0)
-                        : tab.TaskCards.Count;
-                    sb.AppendLine($"  • {tab.Name}{marker} - {cardCount} 个卡片");
+                    // 被拦截的危险命令
+                    AiFlowLogger.Warn($"[PowerShell] 拦截: {cmd.Command} — {safety.BlockReason}");
+                    AddMessage(AiChatRole.System, $"🚫 PowerShell 已拦截: {safety.BlockReason}\n`{cmd.Command}`");
+                    results.Add((cmd, safety));
+                    continue;
                 }
-                sb.AppendLine();
-            }
 
-            // 序列化变量
-            if (hasVars)
-            {
-                sb.AppendLine($"当前变量管理器中已有 {variables!.Count} 个变量：");
-                foreach (var v in variables)
-                    sb.AppendLine($"  @{v.Name} ({v.Type}) = {v.Value}");
-                sb.AppendLine();
-            }
-
-            // 序列化当前流程卡片（详细信息）
-            if (hasCards)
-            {
-                var currentTabName = _mainViewModel.SelectedTab?.Name ?? "当前流程";
-                sb.AppendLine($"当前流程「{currentTabName}」已有 {cards!.Count} 个任务卡片：");
-
-                // 需要排除的基类属性名
-                var excludeProps = new HashSet<string> { "Id", "Name", "Order", "Status", "ErrorMessage",
-                    "IndentLevel", "BranchRole", "BranchGroupId", "IsCollapsed", "IsHiddenByCollapse",
-                    "TaskType", "OutputsImage", "OutputsText", "OutputsCoordinates", "OutputsBoolResult" };
-
-                foreach (var card in cards)
+                if (safety.NeedsApproval)
                 {
-                    var indent = new string(' ', card.IndentLevel * 2);
-                    var typeName = card.GetType().Name.Replace("TaskCard", "");
+                    // 非白名单命令，需要用户批准
+                    AiFlowLogger.Info($"[PowerShell] 需要批准: {cmd.Command}");
+                    var approved = await WaitForApprovalAsync(
+                        $"💻 PowerShell 执行请求:\n{cmd.Command}\n用途: {cmd.Description}", ct);
 
-                    // 控制流卡片特殊处理
-                    if (card is IfElseBranchTaskCard ifCard)
+                    if (!approved)
                     {
-                        var roleStr = ifCard.BranchRole switch
+                        AiFlowLogger.Info("[PowerShell] 用户拒绝执行");
+                        results.Add((cmd, new PowerShellExecutorService.ShellResult
                         {
-                            BranchRole.IfStart => "If开始",
-                            BranchRole.ElseStart => "Else开始",
-                            BranchRole.ElseEnd => "分支结束",
-                            _ => ifCard.BranchRole.ToString()
-                        };
-                        sb.AppendLine($"{indent}#{card.Order} [{roleStr}] {card.Name}");
-                        if (ifCard.BranchRole == BranchRole.IfStart && !string.IsNullOrEmpty(ifCard.ConditionExpression))
-                            sb.AppendLine($"{indent}  条件: {ifCard.ConditionExpression}");
-                    }
-                    else if (card is ForLoopTaskCard loopCard)
-                    {
-                        var roleStr = loopCard.BranchRole == BranchRole.ForLoopStart ? "循环开始" : "循环结束";
-                        sb.AppendLine($"{indent}#{card.Order} [{roleStr}] {card.Name}");
-                        if (loopCard.BranchRole == BranchRole.ForLoopStart)
-                            sb.AppendLine($"{indent}  循环次数: {loopCard.LoopCount}");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"{indent}#{card.Order} [{typeName}] {card.Name}");
-                    }
-
-                    // 序列化卡片的关键属性值（通过反射提取非空字符串属性）
-                    var cardType = card.GetType();
-                    foreach (var prop in cardType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
-                    {
-                        if (excludeProps.Contains(prop.Name)) continue;
-                        if (prop.PropertyType != typeof(string)) continue;
-                        if (prop.GetCustomAttributes(typeof(Newtonsoft.Json.JsonIgnoreAttribute), true).Length > 0) continue;
-
-                        try
-                        {
-                            var val = prop.GetValue(card) as string;
-                            if (!string.IsNullOrEmpty(val))
-                                sb.AppendLine($"{indent}  {prop.Name}: {val}");
-                        }
-                        catch { /* 忽略反射异常 */ }
+                            Success = false,
+                            Error = "用户拒绝执行"
+                        }));
+                        continue;
                     }
                 }
-            }
-
-            // 序列化其他流程的卡片摘要
-            if (tabs.Count > 1)
-            {
-                foreach (var tab in tabs)
+                else
                 {
-                    if (tab == _mainViewModel.SelectedTab) continue;
-                    if (tab.TaskCards.Count == 0) continue;
+                    // 白名单命令，自动执行
+                    AiFlowLogger.Info($"[PowerShell] 🟢 白名单自动执行: {cmd.Command}");
+                }
 
-                    sb.AppendLine();
-                    sb.AppendLine($"流程「{tab.Name}」有 {tab.TaskCards.Count} 个卡片：");
-                    foreach (var card in tab.TaskCards)
-                    {
-                        var typeName = card.GetType().Name.Replace("TaskCard", "");
-                        sb.AppendLine($"  #{card.Order} [{typeName}] {card.Name}");
-                    }
+                // 面板提示
+                AddMessage(AiChatRole.System, $"💻 执行 PowerShell: `{cmd.Command}`");
+
+                // 执行命令
+                var result = await _psService.ExecuteAsync(cmd, ct);
+                results.Add((cmd, result));
+
+                // 显示结果摘要
+                if (result.Success)
+                {
+                    var outputPreview = result.Output.Length > 100
+                        ? result.Output[..100] + "..."
+                        : result.Output;
+                    if (!string.IsNullOrWhiteSpace(outputPreview))
+                        AddMessage(AiChatRole.System, $"📋 输出: {outputPreview}");
+                }
+                else
+                {
+                    AddMessage(AiChatRole.System, $"❌ PowerShell 执行失败: {result.Error}");
                 }
             }
 
-            return sb.ToString();
+            return results.Count > 0
+                ? PowerShellExecutorService.SerializeResults(results)
+                : "";
         }
     }
 }

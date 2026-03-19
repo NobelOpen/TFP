@@ -15,7 +15,7 @@
         </Grid.RowDefinitions>
 
         <!-- 标题 -->
-        <TextBlock Text="🎯 Vision 坐标标定记录" Foreground="#d97757" FontSize="14"
+        <TextBlock Text="Vision 坐标标定记录" Foreground="#d97757" FontSize="14"
                    FontWeight="SemiBold" Margin="0,0,0,8"/>
 
         <!-- 列表 -->
@@ -51,7 +51,7 @@
 
         <!-- 按钮区 -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Content="🗑 删除所选" Click="DeleteSelected_Click"
+            <Button Content="删除所选" Click="DeleteSelected_Click"
                     Padding="12,6" Margin="0,0,8,0" Cursor="Hand"
                     Background="#e8e6dc" Foreground="#141413" BorderThickness="0">
                 <Button.Template>
@@ -68,7 +68,7 @@
                     </ControlTemplate>
                 </Button.Template>
             </Button>
-            <Button Content="🧹 全部清除" Click="ClearAll_Click"
+            <Button Content="全部清除" Click="ClearAll_Click"
                     Padding="12,6" Margin="0,0,8,0" Cursor="Hand"
                     Background="#e8e6dc" Foreground="#141413" BorderThickness="0">
                 <Button.Template>

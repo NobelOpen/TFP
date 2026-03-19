@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
 using OpenCvSharp;
+using TaskFlow.Models.AiFlow;
 
 namespace TaskFlow.Models.TaskCards
 {
@@ -388,5 +390,45 @@ namespace TaskFlow.Models.TaskCards
         /// 是否输出字符串数组（如 FileRead、ArrayBuilder）
         /// </summary>
         public virtual bool OutputsStringArray => false;
+
+        /// <summary>
+        /// AI 方案属性填充（子类覆写以处理自身特有属性）。
+        /// 返回未填写的必要属性列表，供 UI 提示用户手动配置。
+        /// </summary>
+        /// <param name="step">AI 方案中的步骤定义</param>
+        /// <param name="stepToCard">步骤编号到已创建卡片的映射表</param>
+        public virtual List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step,
+            Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return new List<AiFlowReportItem>();
+        }
+
+        /// <summary>
+        /// 绑定图像来源（有 SourceTaskIdForImage 属性的图像类卡片覆写此方法）
+        /// </summary>
+        public virtual void BindImageSource(TaskCardBase sourceCard) { }
+
+        /// <summary>
+        /// 辅助方法：尝试绑定图像来源，返回缺失项列表。
+        /// 图像类卡片在 FillFromAiPlan 中调用此方法简化代码。
+        /// </summary>
+        protected List<AiFlowReportItem> TryBindImageSource(
+            AiFlowPlanStep step,
+            Dictionary<int, TaskCardBase> stepToCard,
+            string hint = "需要绑定一个输出图像的任务")
+        {
+            var missing = new List<AiFlowReportItem>();
+            if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var source))
+            {
+                if (source.OutputsImage)
+                    BindImageSource(source);
+            }
+            else
+            {
+                missing.Add(new AiFlowReportItem { PropertyName = "图像来源", Hint = hint });
+            }
+            return missing;
+        }
     }
 }

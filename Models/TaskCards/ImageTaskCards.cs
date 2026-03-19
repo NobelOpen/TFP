@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
+using TaskFlow.Models.AiFlow;
 
 namespace TaskFlow.Models.TaskCards
 {
@@ -53,6 +54,33 @@ namespace TaskFlow.Models.TaskCards
         }
 
         public override bool OutputsImage => true;
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = TryBindImageSource(step, stepToCard);
+            var props = step.Properties;
+
+            // 设置 ROI 区域
+            if (props.TryGetValue("roiX", out var rxStr) && int.TryParse(rxStr, out var rx))
+                RoiX = rx;
+            if (props.TryGetValue("roiY", out var ryStr) && int.TryParse(ryStr, out var ry))
+                RoiY = ry;
+            if (props.TryGetValue("roiWidth", out var rwStr) && int.TryParse(rwStr, out var rw))
+                RoiWidth = rw;
+            if (props.TryGetValue("roiHeight", out var rhStr) && int.TryParse(rhStr, out var rh))
+                RoiHeight = rh;
+            if (RoiWidth <= 0 || RoiHeight <= 0)
+                missing.Add(new AiFlowReportItem { PropertyName = "ROI区域", Hint = "裁剪区域坐标和尺寸" });
+
+            return missing;
+        }
     }
 
     /// <summary>
@@ -158,6 +186,44 @@ namespace TaskFlow.Models.TaskCards
             OutputMatchCount = 0;
             OutputMatchResults = new();
         }
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            // 搜索图来源
+            var missing = TryBindImageSource(step, stepToCard);
+
+            // 模板来源（templateSourceStep）
+            if (step.TemplateSourceStep.HasValue && stepToCard.TryGetValue(step.TemplateSourceStep.Value, out var tmplSource))
+            {
+                if (tmplSource.OutputsImage)
+                {
+                    UseSourceTaskTemplate = true;
+                    SourceTaskIdForTemplate = tmplSource.Id;
+                }
+            }
+            else if (step.Properties.TryGetValue("templateImagePath", out var tmplPath) && !string.IsNullOrEmpty(tmplPath))
+            {
+                TemplateImagePath = tmplPath;
+            }
+            else
+            {
+                missing.Add(new AiFlowReportItem { PropertyName = "模板来源", Hint = "需要绑定模板图来源或指定模板图路径" });
+            }
+
+            // 设置匹配阈值
+            if ((step.Properties.TryGetValue("matchThreshold", out var threshStr) || step.Properties.TryGetValue("threshold", out threshStr))
+                && double.TryParse(threshStr, out var thresh))
+                MatchThreshold = thresh;
+
+            return missing;
+        }
     }
 
     /// <summary>
@@ -223,6 +289,18 @@ namespace TaskFlow.Models.TaskCards
 
         public override bool OutputsText => true;
         public override bool OutputsBoolResult => true;
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return TryBindImageSource(step, stepToCard, "需要绑定一个输出图像的任务（如截图卡片）");
+        }
     }
 
     /// <summary>
@@ -299,6 +377,18 @@ namespace TaskFlow.Models.TaskCards
 
         public override bool OutputsImage => true;
         public override bool OutputsBoolResult => true;
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return TryBindImageSource(step, stepToCard);
+        }
     }
 
     /// <summary>
@@ -343,6 +433,18 @@ namespace TaskFlow.Models.TaskCards
         }
 
         public override bool OutputsImage => true;
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return TryBindImageSource(step, stepToCard);
+        }
     }
 
     /// <summary>
@@ -432,6 +534,18 @@ namespace TaskFlow.Models.TaskCards
         }
 
         public override bool OutputsImage => true;
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return TryBindImageSource(step, stepToCard);
+        }
     }
 
     /// <summary>
@@ -534,6 +648,18 @@ namespace TaskFlow.Models.TaskCards
             OutputBlobCount = 0;
             OutputBlobResults = new();
         }
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return TryBindImageSource(step, stepToCard);
+        }
     }
 
     /// <summary>
@@ -582,6 +708,18 @@ namespace TaskFlow.Models.TaskCards
         {
             base.Reset();
             OutputScaleRatio = 0;
+        }
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return TryBindImageSource(step, stepToCard);
         }
     }
 }

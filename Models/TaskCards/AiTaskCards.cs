@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
+using TaskFlow.Models.AiFlow;
 
 namespace TaskFlow.Models.TaskCards
 {
@@ -23,6 +25,18 @@ namespace TaskFlow.Models.TaskCards
         public LlmTranslateTaskCard()
         {
             Name = "LLM翻译";
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            missing.Add(new AiFlowReportItem { PropertyName = "ModelId", Hint = "选择翻译模型" });
+
+            if (step.Properties.TryGetValue("targetLanguage", out var lang))
+                TargetLanguage = lang;
+
+            return missing;
         }
     }
 
@@ -61,6 +75,28 @@ namespace TaskFlow.Models.TaskCards
         public LlmVisionTaskCard()
         {
             Name = "多模态识图";
+        }
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            missing.Add(new AiFlowReportItem { PropertyName = "ModelId", Hint = "选择多模态模型" });
+
+            // 绑定图像来源
+            if (step.SourceStep.HasValue && stepToCard.TryGetValue(step.SourceStep.Value, out var visionSource))
+            {
+                if (visionSource.OutputsImage)
+                    BindImageSource(visionSource);
+            }
+
+            return missing;
         }
     }
 

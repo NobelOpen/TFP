@@ -113,6 +113,9 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>AI 标记自主任务已完成</summary>
         public bool Done { get; set; }
 
+        /// <summary>AI 请求截取当前屏幕（自主模式，按需使用）</summary>
+        public bool NeedsScreenshot { get; set; }
+
         /// <summary>失败回退策略：retry / fallback / abort（自主模式卡片失败时使用）</summary>
         public string? FailureStrategy { get; set; }
 
@@ -132,6 +135,26 @@ namespace TaskFlow.Models.AiFlow
 
         /// <summary>创建完成后切换到的目标流程名（可选）</summary>
         public string? SwitchFlow { get; set; }
+
+        // ===== PowerShell 后台能力（自主模式） =====
+
+        /// <summary>需要执行的 PowerShell 命令列表（可选，仅自主模式）</summary>
+        public List<AiShellCommand>? ShellCommands { get; set; }
+    }
+
+    /// <summary>
+    /// AI 请求执行的 PowerShell 命令
+    /// </summary>
+    public class AiShellCommand
+    {
+        /// <summary>要执行的 PowerShell 命令</summary>
+        public string Command { get; set; } = "";
+
+        /// <summary>命令用途说明</summary>
+        public string Description { get; set; } = "";
+
+        /// <summary>超时时间（秒），默认 10，最大 30</summary>
+        public int Timeout { get; set; } = 10;
     }
 
     /// <summary>

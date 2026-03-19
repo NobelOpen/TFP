@@ -158,15 +158,17 @@ namespace TaskFlow.Views.Dialogs
             {
                 _settings.WeChatOcrVerified = false;
                 UpdateOcrStatus();
-                MessageBox.Show(string.Format(Strings.Dlg_AutoDetectSuccessMsg, ocrExePath, ocrDirPath),
-                    Strings.Dlg_AutoDetectSuccess, MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowStyledMessage(Strings.Dlg_AutoDetectSuccess, 
+                    string.Format(Strings.Dlg_AutoDetectSuccessMsg, ocrExePath, ocrDirPath), 
+                    "✨", System.Windows.Media.Color.FromRgb(120, 140, 93), System.Windows.Media.Color.FromRgb(140, 158, 115));
             }
             else
             {
                 string msg = Strings.Dlg_AutoDetectFailed;
                 if (ocrExePath != null) msg = string.Format(Strings.Dlg_AutoDetectPartialExe, ocrExePath);
                 else if (ocrDirPath != null) msg = string.Format(Strings.Dlg_AutoDetectPartialDir, ocrDirPath);
-                MessageBox.Show(msg, Strings.Dlg_AutoDetect, MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowStyledMessage(Strings.Dlg_AutoDetect, msg, 
+                    "⚠️", System.Windows.Media.Color.FromRgb(217, 119, 87), System.Windows.Media.Color.FromRgb(224, 136, 104));
             }
         }
 
@@ -186,7 +188,8 @@ namespace TaskFlow.Views.Dialogs
 
             if (string.IsNullOrEmpty(exePath) || string.IsNullOrEmpty(dirPath))
             {
-                MessageBox.Show(Strings.Dlg_ConfigureOcrFirst, Strings.Dlg_Hint, MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowStyledMessage(Strings.Dlg_Hint, Strings.Dlg_ConfigureOcrFirst, 
+                    "💡", System.Windows.Media.Color.FromRgb(217, 119, 87), System.Windows.Media.Color.FromRgb(224, 136, 104));
                 return;
             }
 
@@ -208,7 +211,8 @@ namespace TaskFlow.Views.Dialogs
                     TxtOcrStatus.Text = Strings.Dlg_OcrStatusAvailable;
                     TxtOcrStatus.Foreground = new System.Windows.Media.SolidColorBrush(
                         System.Windows.Media.Color.FromRgb(120, 140, 93));
-                    MessageBox.Show(message, Strings.Dlg_TestSuccess, MessageBoxButton.OK, MessageBoxImage.Information);
+                    ShowStyledMessage(Strings.Dlg_TestSuccess, message, 
+                        "✅", System.Windows.Media.Color.FromRgb(120, 140, 93), System.Windows.Media.Color.FromRgb(140, 158, 115));
                 }
                 else
                 {
@@ -216,7 +220,8 @@ namespace TaskFlow.Views.Dialogs
                     TxtOcrStatus.Text = Strings.Dlg_OcrStatusUnavailable;
                     TxtOcrStatus.Foreground = new System.Windows.Media.SolidColorBrush(
                         System.Windows.Media.Color.FromRgb(200, 80, 80));
-                    MessageBox.Show(message, Strings.Dlg_TestFailed, MessageBoxButton.OK, MessageBoxImage.Error);
+                    ShowStyledMessage(Strings.Dlg_TestFailed, message, 
+                        "❌", System.Windows.Media.Color.FromRgb(200, 80, 80), System.Windows.Media.Color.FromRgb(214, 104, 104));
                 }
             }
             catch (Exception ex)
@@ -225,7 +230,8 @@ namespace TaskFlow.Views.Dialogs
                 TxtOcrStatus.Text = Strings.Dlg_OcrStatusError;
                 TxtOcrStatus.Foreground = new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(200, 80, 80));
-                MessageBox.Show(string.Format(Strings.Dlg_TestError, ex.Message), Strings.Dlg_Error, MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowStyledMessage(Strings.Dlg_Error, string.Format(Strings.Dlg_TestError, ex.Message), 
+                    "❌", System.Windows.Media.Color.FromRgb(200, 80, 80), System.Windows.Media.Color.FromRgb(214, 104, 104));
             }
             finally
             {
@@ -239,12 +245,14 @@ namespace TaskFlow.Views.Dialogs
             // 验证数字输入
             if (!int.TryParse(TxtFlowInterval.Text.Trim(), out int interval) || interval < 0)
             {
-                MessageBox.Show(Strings.Dlg_IntervalMustBeNonNeg, Strings.Dlg_FormatError, MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowStyledMessage(Strings.Dlg_FormatError, Strings.Dlg_IntervalMustBeNonNeg, 
+                    "⚠️", System.Windows.Media.Color.FromRgb(217, 119, 87), System.Windows.Media.Color.FromRgb(224, 136, 104));
                 return;
             }
             if (!int.TryParse(TxtMaxLogLines.Text.Trim(), out int maxLines) || maxLines < 10)
             {
-                MessageBox.Show(Strings.Dlg_LogLinesMustBe10, Strings.Dlg_FormatError, MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowStyledMessage(Strings.Dlg_FormatError, Strings.Dlg_LogLinesMustBe10, 
+                    "⚠️", System.Windows.Media.Color.FromRgb(217, 119, 87), System.Windows.Media.Color.FromRgb(224, 136, 104));
                 return;
             }
 
@@ -262,7 +270,8 @@ namespace TaskFlow.Views.Dialogs
 
             if (!int.TryParse(TxtRepeatInterval.Text.Trim(), out int repeatInterval) || repeatInterval < 0)
             {
-                MessageBox.Show(Strings.Dlg_RepeatIntervalMustBeNonNeg, Strings.Dlg_FormatError, MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowStyledMessage(Strings.Dlg_FormatError, Strings.Dlg_RepeatIntervalMustBeNonNeg, 
+                    "⚠️", System.Windows.Media.Color.FromRgb(217, 119, 87), System.Windows.Media.Color.FromRgb(224, 136, 104));
                 return;
             }
             _settings.RepeatIntervalMs = repeatInterval;
@@ -292,15 +301,14 @@ namespace TaskFlow.Views.Dialogs
             // 应用开机自启动
             ApplyAutoStart(_settings.AutoStartWithOS);
 
-            DialogResult = true;
-
-            // 语言变更时提示重启（使用自定义弹窗，与整体风格一致）
+            // 语言变更时提示重启（必须在 DialogResult = true 之前，否则窗口已关闭无法作为 Owner）
             if (languageChanged)
             {
-                ShowLanguageChangedDialog();
+                ShowStyledMessage(Strings.UI_Language, Strings.Dlg_LangChangedMsg, 
+                    "🌐", System.Windows.Media.Color.FromRgb(217, 119, 87), System.Windows.Media.Color.FromRgb(224, 136, 104));
             }
 
-            Close();
+            DialogResult = true;
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
@@ -357,32 +365,39 @@ namespace TaskFlow.Views.Dialogs
         }
 
         /// <summary>
-        /// 显示语言变更提示弹窗（自定义样式，与整体设计风格一致）
+        /// 显示自定义样式的提示框
         /// </summary>
-        private void ShowLanguageChangedDialog()
+        private void ShowStyledMessage(string title, string message, string icon, System.Windows.Media.Color themeColor, System.Windows.Media.Color hoverColor)
         {
             var dialog = new Window
             {
-                Title = Strings.UI_Language,
+                Title = title,
                 Width = 380,
-                Height = 190,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
                 Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(250, 249, 245)), // #faf9f5
+                    System.Windows.Media.Color.FromArgb(0, 0, 0, 0)),
                 ResizeMode = ResizeMode.NoResize,
                 WindowStyle = WindowStyle.None,
                 AllowsTransparency = true,
-                FontFamily = (System.Windows.Media.FontFamily)FindResource("FontBody")
+                FontFamily = (System.Windows.Media.FontFamily)FindResource("FontBody"),
+                Topmost = true
             };
 
-            // 主容器（带圆角边框和阴影）
+            var shadowBorder = new System.Windows.Controls.Border
+            {
+                Padding = new Thickness(16),
+                Background = System.Windows.Media.Brushes.Transparent
+            };
+
             var outerBorder = new System.Windows.Controls.Border
             {
                 CornerRadius = new CornerRadius(10),
                 Background = new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(250, 249, 245)),
                 BorderBrush = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(232, 230, 220)), // #e8e6dc
+                    System.Windows.Media.Color.FromRgb(232, 230, 220)),
                 BorderThickness = new Thickness(1),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect
                 {
@@ -398,7 +413,6 @@ namespace TaskFlow.Views.Dialogs
                 Margin = new Thickness(24, 20, 24, 20)
             };
 
-            // 标题行（带图标）
             var titlePanel = new System.Windows.Controls.StackPanel
             {
                 Orientation = System.Windows.Controls.Orientation.Horizontal,
@@ -406,49 +420,44 @@ namespace TaskFlow.Views.Dialogs
             };
             titlePanel.Children.Add(new System.Windows.Controls.TextBlock
             {
-                Text = "🌐",
+                Text = icon,
                 FontSize = 20,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 8, 0)
             });
             titlePanel.Children.Add(new System.Windows.Controls.TextBlock
             {
-                Text = Strings.UI_Language,
+                Text = title,
                 FontSize = 15,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(217, 119, 87)), // #d97757
+                Foreground = new System.Windows.Media.SolidColorBrush(themeColor),
                 VerticalAlignment = VerticalAlignment.Center,
                 FontFamily = (System.Windows.Media.FontFamily)FindResource("FontTitle")
             });
             mainStack.Children.Add(titlePanel);
 
-            // 提示文本
             mainStack.Children.Add(new System.Windows.Controls.TextBlock
             {
-                Text = Strings.Dlg_LangChangedMsg,
+                Text = message,
                 FontSize = 13,
                 Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(20, 20, 19)), // #141413
+                    System.Windows.Media.Color.FromRgb(20, 20, 19)),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 20)
             });
 
-            // 确认按钮
             var okButton = new System.Windows.Controls.Button
             {
                 Content = Strings.UI_Confirm,
                 Width = 90,
                 Height = 32,
                 HorizontalAlignment = HorizontalAlignment.Right,
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(217, 119, 87)), // #d97757
+                Background = new System.Windows.Media.SolidColorBrush(themeColor),
                 Foreground = System.Windows.Media.Brushes.White,
                 BorderThickness = new Thickness(0),
                 Cursor = System.Windows.Input.Cursors.Hand
             };
 
-            // 按钮模板（圆角 + hover 效果）
             var btnTemplate = new ControlTemplate(typeof(System.Windows.Controls.Button));
             var btnBorder = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
             btnBorder.Name = "Bd";
@@ -461,16 +470,13 @@ namespace TaskFlow.Views.Dialogs
             btnBorder.AppendChild(btnContent);
             btnTemplate.VisualTree = btnBorder;
 
-            // Hover 触发器
             var hoverTrigger = new Trigger
             {
                 Property = System.Windows.Controls.Control.IsMouseOverProperty,
                 Value = true
             };
             hoverTrigger.Setters.Add(new Setter(System.Windows.Controls.Border.BackgroundProperty,
-                new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(224, 136, 104)), // #e08868
-                "Bd"));
+                new System.Windows.Media.SolidColorBrush(hoverColor), "Bd"));
             btnTemplate.Triggers.Add(hoverTrigger);
             okButton.Template = btnTemplate;
 
@@ -478,9 +484,9 @@ namespace TaskFlow.Views.Dialogs
 
             mainStack.Children.Add(okButton);
             outerBorder.Child = mainStack;
-            dialog.Content = outerBorder;
+            shadowBorder.Child = outerBorder;
+            dialog.Content = shadowBorder;
 
-            // 支持拖动
             dialog.MouseLeftButtonDown += (s, args) => { try { dialog.DragMove(); } catch { } };
 
             dialog.ShowDialog();

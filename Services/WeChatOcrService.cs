@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TaskFlow.Resources;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -15,6 +15,7 @@ namespace TaskFlow.Services
     public class WeChatOcrService : IDisposable
     {
         // P/Invoke 委托
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void SetResultDelegate(IntPtr result);
 
         [DllImport("wcocr.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -29,6 +30,23 @@ namespace TaskFlow.Services
 
         private readonly AppSettings _settings;
         private bool _disposed;
+
+        // 全局静态锁和回调委托，防止委托被垃圾回收导致非托管代码崩溃（AccessViolationException）
+        private static readonly object _ocrLock = new object();
+        private static string _currentOcrResult = string.Empty;
+        private static readonly SetResultDelegate _staticCallback = (IntPtr ptr) =>
+        {
+            if (ptr == IntPtr.Zero) return;
+            try
+            {
+                int length = 0;
+                while (Marshal.ReadByte(ptr, length) != 0) length++;
+                byte[] byteArray = new byte[length];
+                Marshal.Copy(ptr, byteArray, 0, length);
+                _currentOcrResult = Encoding.UTF8.GetString(byteArray);
+            }
+            catch { }
+        };
 
         public WeChatOcrService(AppSettings settings)
         {
@@ -64,23 +82,20 @@ namespace TaskFlow.Services
                     // 保存 Mat 为临时文件
                     Cv2.ImWrite(tempPath, image);
 
-                    // 调用微信 OCR
                     string ocrResult = string.Empty;
-                    SetResultDelegate callback = (IntPtr ptr) =>
-                    {
-                        // 从非托管内存中读取 UTF-8 字符串
-                        int length = 0;
-                        while (Marshal.ReadByte(ptr, length) != 0) length++;
-                        byte[] byteArray = new byte[length];
-                        Marshal.Copy(ptr, byteArray, 0, length);
-                        ocrResult = Encoding.UTF8.GetString(byteArray);
-                    };
+                    bool success = false;
 
-                    bool success = wechat_ocr(
-                        _settings.WeChatOcrExePath!,
-                        _settings.WeChatOcrDirPath!,
-                        Encoding.UTF8.GetBytes(tempPath + "\0"),
-                        callback);
+                    lock (_ocrLock)
+                    {
+                        _currentOcrResult = string.Empty;
+                        success = wechat_ocr(
+                            _settings.WeChatOcrExePath!,
+                            _settings.WeChatOcrDirPath!,
+                            Encoding.UTF8.GetBytes(tempPath + "\0"),
+                            _staticCallback);
+                        
+                        ocrResult = _currentOcrResult;
+                    }
 
                     if (!success)
                         return (false, string.Empty, "微信 OCR 调用失败");
@@ -125,17 +140,16 @@ namespace TaskFlow.Services
 
                     // 调用微信 OCR
                     string ocrResult = string.Empty;
-                    SetResultDelegate callback = (IntPtr ptr) =>
-                    {
-                        int length = 0;
-                        while (Marshal.ReadByte(ptr, length) != 0) length++;
-                        byte[] byteArray = new byte[length];
-                        Marshal.Copy(ptr, byteArray, 0, length);
-                        ocrResult = Encoding.UTF8.GetString(byteArray);
-                    };
+                    bool success = false;
 
-                    bool success = wechat_ocr(ocrExePath, ocrDirPath,
-                        Encoding.UTF8.GetBytes(tempPath + "\0"), callback);
+                    lock (_ocrLock)
+                    {
+                        _currentOcrResult = string.Empty;
+                        success = wechat_ocr(ocrExePath, ocrDirPath,
+                            Encoding.UTF8.GetBytes(tempPath + "\0"), _staticCallback);
+                            
+                        ocrResult = _currentOcrResult;
+                    }
 
                     if (success && !string.IsNullOrEmpty(ocrResult))
                     {
@@ -304,11 +318,10 @@ namespace TaskFlow.Services
             if (_disposed) return;
             _disposed = true;
 
-            try
-            {
-                stop_ocr();
-            }
-            catch { }
+            // 不要在这里调用 stop_ocr()。如果在验证设置后立刻调用 stop_ocr() 销毁进程，
+            // 之后用户通过卡片再次发起 wechat_ocr() 请求时，动态库可能会遇到 IPC 状态损坏或双重释放，
+            // 进而过几秒后在后台抛出访问违例导致整个程序无报错硬闪退。
+            // 真正的清理应该放在应用退出时（Shutdown()）。
         }
     }
 }

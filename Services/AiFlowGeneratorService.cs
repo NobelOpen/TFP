@@ -223,7 +223,22 @@ namespace TaskFlow.Services
 1. 第一步：创建或运行 WinScreenshot 截图卡片（processName 留空截全屏），通过 runCards 执行
 2. 第二步：在收到截图结果后，你能直接看到截图图像，结合图像分辨率估算目标元素的坐标
 3. 第三步：创建 WinClick 卡片，在 startX/startY 中设置估算的坐标，设置 clickType
-不要使用 WinUiAutomation 来点击桌面图标或视觉元素，它对桌面图标和很多应用不可靠。" : @"
+不要使用 WinUiAutomation 来点击桌面图标或视觉元素，它对桌面图标和很多应用不可靠。
+
+屏幕截图（按需请求）：
+- 系统不会自动截屏，你需要通过 needsScreenshot: true 来请求截取当前屏幕
+- 只在需要查看屏幕内容时才设置 needsScreenshot: true（如需要估算坐标、分析界面状态时）
+- 不需要视觉信息时不要请求截图（如执行 PowerShell 查询、打开应用等）
+
+PowerShell 后台能力（当前已启用）：
+当任务卡片的功能无法满足需求时，你可以通过 shellCommands 执行 PowerShell 命令：
+- 在 shellCommands 数组中指定要执行的命令、用途说明和超时时间（秒）
+- 系统会执行命令并将输出结果反馈给你
+- 只读查询类命令（如 Get-Process、Get-ChildItem、Test-Path）会自动执行
+- 写操作命令需要用户批准
+- 危险命令（如递归删除等）会被拦截，拦截结果会反馈给你，请改用其他方式
+- 优先使用任务卡片，只有卡片无法实现时才用 PowerShell
+- 常见用途：查询系统信息、检查环境、文件操作、安装依赖、运行脚本、打开应用等" : @"
 
 设计模式（当前已启用）：
 你处于设计模式，主要职责是帮用户设计和优化流程蓝图：
@@ -265,6 +280,13 @@ namespace TaskFlow.Services
       ""cards"": [
         {{ ""step"": 10, ""taskType"": ""WinClick"", ""name"": ""点击目标"", ""properties"": {{}} }}
       ]
+    }}
+  ],
+  ""shellCommands"": [
+    {{
+      ""command"": ""Get-Process | Select-Object -First 5 Name, CPU"",
+      ""description"": ""查询CPU占用最高的进程"",
+      ""timeout"": 10
     }}
   ]
 }}
@@ -325,7 +347,9 @@ namespace TaskFlow.Services
 12. 流程管理：用户可拥有多个流程（Tab），每个流程包含独立的卡片集合。创建新流程用 createFlows 数组（格式 [{{""name"":""流程名""}}]），删除流程用 deleteFlows 数组（格式 [""流程名""]），切换流程用 switchFlow 字符串。系统先处理 switchFlow 再添加 plan 步骤。
 13. 点击界面元素时，结合图像分辨率信息直接估算坐标，在 WinClick 的 startX/startY 中设置。无需创建额外的裁剪或模板匹配步骤。
 14. 你已经能直接看到用户的屏幕截图（系统自动附加），无需创建 WinScreenshot 卡片来获取屏幕信息。直接根据看到的截图内容进行分析和决策。
-15. 只返回 JSON，不要返回其他任何文字。";
+14. needsScreenshot 字段：在自主模式下，设置 needsScreenshot: true 来请求截取屏幕。只在需要查看屏幕内容时使用（如估算坐标、分析界面变化），不需要视觉信息时不要请求。
+15. shellCommands 仅在自主模式下可用，优先使用任务卡片完成工作，只有卡片无法实现时才使用 PowerShell。每次最多 3 条命令。
+16. 只返回 JSON，不要返回其他任何文字。";
 
             // 构建消息数组（含历史对话）
             var messages = new List<object> { new { role = "system", content = systemPrompt } };
