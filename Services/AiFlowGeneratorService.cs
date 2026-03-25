@@ -1355,11 +1355,11 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
             ApplyCustomHeaders(requestMessage, modelConfig);
 
             // 使用 ResponseHeadersRead 以便逐行读取流
-            var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(cts.Token);
+                var errorBody = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
                 throw new HttpRequestException($"API 请求失败: {response.StatusCode} - {errorBody}");
             }
 
@@ -1373,12 +1373,12 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
             var toolCallNames = new Dictionary<int, string>();
             var toolCallArgs = new Dictionary<int, StringBuilder>();
 
-            using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
+            using var stream = await response.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
             using var reader = new System.IO.StreamReader(stream);
 
             while (!reader.EndOfStream && !cts.Token.IsCancellationRequested)
             {
-                var line = await reader.ReadLineAsync();
+                var line = await reader.ReadLineAsync().ConfigureAwait(false);
                 if (line == null) break;
                 line = line.Trim();
 

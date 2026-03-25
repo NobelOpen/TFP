@@ -23,7 +23,7 @@ const server = http.createServer((req, res) => {
       'Content-Type': 'application/json',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       'Accept': 'application/json, text/event-stream',
-      'Accept-Encoding': 'gzip, deflate, br',
+      'Accept-Encoding': 'identity',
     };
 
     // 转发 Authorization 头
@@ -44,14 +44,24 @@ const server = http.createServer((req, res) => {
     };
 
     const proxyReq = https.request(options, (proxyRes) => {
-      console.log(`[${new Date().toLocaleTimeString()}] <- ${proxyRes.statusCode}`);
+      console.log(`[${new Date().toLocaleTimeString()}] <- ${proxyRes.statusCode} ${proxyRes.headers['content-type'] || ''}`);
       
       const respHeaders = { ...proxyRes.headers };
+      // 只删除 content-encoding（因为我们已要求 identity 不压缩）
+      // 保留 transfer-encoding 以支持 chunked 流式传输
       delete respHeaders['content-encoding'];
-      delete respHeaders['transfer-encoding'];
       
       res.writeHead(proxyRes.statusCode, respHeaders);
-      proxyRes.pipe(res);
+      // 禁用 Nagle 算法，减少小数据包的合并延迟（对 SSE 逐事件推送至关重要）
+      res.socket?.setNoDelay(true);
+
+      // 手动逐块转发，每收到一个 chunk 立即写入并 flush，不使用 pipe（pipe 有内部缓冲）
+      proxyRes.on('data', (chunk) => {
+        res.write(chunk);
+      });
+      proxyRes.on('end', () => {
+        res.end();
+      });
     });
 
     proxyReq.on('error', (err) => {
