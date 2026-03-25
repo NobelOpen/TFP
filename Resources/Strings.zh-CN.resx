@@ -130,7 +130,7 @@
   <data name="Main_Minimize" xml:space="preserve"><value>最小化</value></data>
   <data name="Main_Maximize" xml:space="preserve"><value>最大化</value></data>
   <data name="Main_Restore" xml:space="preserve"><value>还原</value></data>
-  <data name="Main_LiveStartHint" xml:space="preserve"><value>点击 ⚙ 设置按钮 → ▶ 开始</value></data>
+  <data name="Main_LiveStartHint" xml:space="preserve"><value>定位目标进程以开启实时捕获...</value></data>
   <data name="Main_StartLive" xml:space="preserve"><value>开始实时显示</value></data>
   <data name="Main_StopLive" xml:space="preserve"><value>停止实时显示</value></data>
   <data name="Main_LiveSettings" xml:space="preserve"><value>设置进程</value></data>
@@ -249,6 +249,9 @@
   <data name="Msg_ConfirmDeleteBranchGroup" xml:space="preserve"><value>确定删除整个分支组吗？</value></data>
   <data name="Msg_ConfirmDeleteTask" xml:space="preserve"><value>确定删除任务 "{0}" 吗？</value></data>
   <data name="Msg_NoImageToSave" xml:space="preserve"><value>没有可保存的图像</value></data>
+  <data name="Main_OrchidDisclaimer" xml:space="preserve"><value>Orchid 可能会犯错。请核对重要信息。</value></data>
+  <data name="Main_NoImageHint" xml:space="preserve"><value>静候视觉信号接入...</value></data>
+  <data name="Main_NoLogsHint" xml:space="preserve"><value>系统就绪，静待执行踪迹...</value></data>
   <data name="Msg_ImageSaved" xml:space="preserve"><value>图像已保存: {0}</value></data>
   <data name="Msg_SaveFailed" xml:space="preserve"><value>保存失败: {0}</value></data>
   <data name="Msg_NoLogToExport" xml:space="preserve"><value>当前没有日志内容可导出</value></data>
@@ -287,7 +290,11 @@
   <data name="Output_BlobCoordsArray" xml:space="preserve"><value>Blob坐标数组</value></data>
   <data name="Output_BlobSizeArray" xml:space="preserve"><value>Blob尺寸数组</value></data>
   <data name="Output_BlobAreaArray" xml:space="preserve"><value>Blob面积数组</value></data>
-  <data name="Output_ScaleRatio" xml:space="preserve"><value>缩放倍率</value></data>
+  <data name="Output_WidthScale" xml:space="preserve"><value>宽度缩放倍率</value></data>
+  <data name="Output_HeightScale" xml:space="preserve"><value>高度缩放倍率</value></data>
+  <data name="Output_Resolution" xml:space="preserve"><value>图像分辨率</value></data>
+  <data name="Output_ImgWidth" xml:space="preserve"><value>宽度分辨率</value></data>
+  <data name="Output_ImgHeight" xml:space="preserve"><value>高度分辨率</value></data>
   <data name="Output_ConvertResult" xml:space="preserve"><value>转换结果 (Int)</value></data>
   <data name="Output_ParseResultInt" xml:space="preserve"><value>解析结果 (Int)</value></data>
   <data name="Output_ParseResultString" xml:space="preserve"><value>解析结果 (String)</value></data>
@@ -900,4 +907,26 @@
     <value>语言已更改，请重启应用以使更改生效。</value>
   </data>
   <data name="UI_Confirm" xml:space="preserve"><value>确认</value></data>
+  <data name="Settings_OrchidSection" xml:space="preserve"><value>✦ Orchid 设置</value></data>
+  <data name="Settings_SingleStage" xml:space="preserve"><value>开启单层调用（提高输出速度，但会增加Token消耗）</value></data>
+  <data name="Settings_ViewCalibration" xml:space="preserve"><value>查看标定结果</value></data>
+  <data name="TaskType_RestartFlow" xml:space="preserve"><value>重开当前流程</value></data>
+  <data name="TaskType_InputCombo" xml:space="preserve"><value>Win输入组合</value></data>
+  <data name="Prop_InputComboActions" xml:space="preserve"><value>按键动作列表</value></data>
+  <data name="Prop_InputComboAddAction" xml:space="preserve"><value>+ 添加按键</value></data>
+  <data name="Prop_InputComboTap" xml:space="preserve"><value>单击</value></data>
+  <data name="Prop_InputComboHold" xml:space="preserve"><value>长按</value></data>
+  <data name="Prop_InputComboRepeat" xml:space="preserve"><value>重复次数 (0=无限)</value></data>
+  <data name="Prop_InputComboStop" xml:space="preserve"><value>终止条件表达式</value></data>
+  <data name="Prop_InputComboDuration" xml:space="preserve"><value>最大时长 (ms, 0=不限)</value></data>
+  <data name="TaskType_WinTextInput" xml:space="preserve"><value>Win文本输入</value></data>
+  <data name="Prop_WinTextInputText" xml:space="preserve"><value>输入文本</value></data>
+  <data name="Prop_WinTextInputMode" xml:space="preserve"><value>输入方式</value></data>
+  <data name="Prop_WinTextInputCharByChar" xml:space="preserve"><value>逐字符模拟</value></data>
+  <data name="Prop_WinTextInputClipboard" xml:space="preserve"><value>剪贴板粘贴</value></data>
+  <data name="Prop_WinTextInputInterval" xml:space="preserve"><value>按键间隔 (ms)</value></data>
+  <data name="AiPanel_InputPlaceholder" xml:space="preserve"><value>今天我能帮你什么？</value></data>
+  <data name="AiPanel_HistoryTitle" xml:space="preserve"><value>历史对话</value></data>
+  <data name="AiPanel_NoHistory" xml:space="preserve"><value>暂无历史对话</value></data>
+  <data name="AiPanel_DeleteTooltip" xml:space="preserve"><value>删除</value></data>
 </root>

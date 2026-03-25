@@ -4,15 +4,17 @@
         Title="变量管理" 
         Height="500" Width="500"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="Transparent"
+        AllowsTransparency="True"
         FontFamily="{StaticResource FontBody}"
         ResizeMode="NoResize"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        WindowStyle="None">
 
     <Window.Resources>
         <Style x:Key="VarButton" TargetType="Button">
-            <Setter Property="Background" Value="#f0efe8"/>
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Padding" Value="14,6"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -30,44 +32,69 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#e8e6dc"/>
+                    <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="VarButtonRed" TargetType="Button" BasedOn="{StaticResource VarButton}">
-            <Setter Property="Background" Value="#c45b4a"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource DangerButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource DangerButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#d06b5a"/>
+                    <Setter Property="Background" Value="{DynamicResource DangerButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="VarButtonDark" TargetType="Button" BasedOn="{StaticResource VarButton}">
-            <Setter Property="Background" Value="#141413"/>
-            <Setter Property="Foreground" Value="#faf9f5"/>
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2a2a28"/>
+                    <Setter Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <!-- 外层阴影边框 -->
+    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Margin="16"
+            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18" Color="{DynamicResource CardShadowColor}"/>
+        </Border.Effect>
+
+        <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 标题 -->
-        <TextBlock x:Name="TxtVarsTitle" Text="全局变量管理" 
-                   Foreground="#d97757" 
-                   FontSize="16" 
-                   FontWeight="SemiBold"
-                   FontFamily="{StaticResource FontTitle}"
-                   Margin="0,0,0,12"/>
+        <!-- 标题区域 -->
+        <Grid Margin="0,0,0,12">
+            <TextBlock x:Name="TxtVarsTitle" Text="全局变量管理" 
+                       Foreground="{DynamicResource DialogTitleBrush}" 
+                       FontSize="16" 
+                       FontWeight="SemiBold"
+                       FontFamily="{StaticResource FontTitle}"
+                       VerticalAlignment="Center"/>
+            <Button Content="✕" Width="32" Height="32" Background="Transparent" BorderThickness="0" 
+                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="16" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,-8,-8,0"
+                    Click="Close_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="16">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
 
         <!-- 变量列表 -->
         <DataGrid x:Name="VariableGrid" 
@@ -78,9 +105,9 @@
                   CanUserReorderColumns="False"
                   SelectionMode="Single"
                   Background="Transparent"
-                  Foreground="#141413"
-                  RowBackground="#faf9f5"
-                  AlternatingRowBackground="#f5f4ee"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  RowBackground="{DynamicResource AppBackgroundBrush}"
+                  AlternatingRowBackground="{DynamicResource SurfaceBrush}"
                   BorderThickness="0"
                   GridLinesVisibility="None"
                   HeadersVisibility="Column"
@@ -95,8 +122,8 @@
             </DataGrid.Resources>
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#f0efe8"/>
-                    <Setter Property="Foreground" Value="#8a8880"/>
+                    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                     <Setter Property="Padding" Value="12,8"/>
                     <Setter Property="BorderThickness" Value="0"/>
                     <Setter Property="FontWeight" Value="Normal"/>
@@ -106,7 +133,7 @@
                             <ControlTemplate TargetType="DataGridColumnHeader">
                                 <Border Background="{TemplateBinding Background}" 
                                         Padding="{TemplateBinding Padding}"
-                                        BorderBrush="#e8e6dc" BorderThickness="0,0,0,1">
+                                        BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="0,0,0,1">
                                     <ContentPresenter VerticalAlignment="Center"/>
                                 </Border>
                             </ControlTemplate>
@@ -116,7 +143,7 @@
             </DataGrid.ColumnHeaderStyle>
             <DataGrid.CellStyle>
                 <Style TargetType="DataGridCell">
-                    <Setter Property="Foreground" Value="#141413"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                     <Setter Property="BorderThickness" Value="0"/>
                     <Setter Property="Padding" Value="12,0"/>
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -132,8 +159,8 @@
                     </Setter>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#e6ddd5"/>
-                            <Setter Property="Foreground" Value="#141413"/>
+                            <Setter Property="Background" Value="{DynamicResource ActiveTabBgBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -144,10 +171,10 @@
                     <Setter Property="Margin" Value="0"/>
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#ede9e2"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#e6ddd5"/>
+                            <Setter Property="Background" Value="{DynamicResource ActiveTabBgBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -158,8 +185,8 @@
                 <DataGridTextColumn x:Name="ColValue" Header="当前值" Binding="{Binding Value}" Width="*">
                     <DataGridTextColumn.EditingElementStyle>
                         <Style TargetType="TextBox">
-                            <Setter Property="Background" Value="White"/>
-                            <Setter Property="Foreground" Value="#d97757"/>
+                            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                             <Setter Property="BorderThickness" Value="0"/>
                             <Setter Property="Padding" Value="4,2"/>
                         </Style>
@@ -175,7 +202,7 @@
                     Margin="0,12,0,0">
             <Button x:Name="BtnAdd" Content="添加" Click="AddVariable_Click" Style="{StaticResource VarButton}" Margin="0,0,8,0"/>
             <Button x:Name="BtnRename" Content="重命名" Click="RenameVariable_Click" Style="{StaticResource VarButton}" Margin="0,0,8,0"/>
-            <Button x:Name="BtnDelete" Content="删除" Click="DeleteVariable_Click" Style="{StaticResource VarButtonRed}" Margin="0,0,8,0"/>
+            <Button x:Name="BtnDelete" Content="删除" Click="DeleteVariable_Click" Style="{StaticResource VarButton}" Margin="0,0,8,0"/>
         </StackPanel>
 
         <Button Grid.Row="2" 
@@ -185,5 +212,6 @@
                 Margin="0,12,0,0"
                 Style="{StaticResource VarButtonDark}"/>
     </Grid>
+    </Border>
 </Window>
 

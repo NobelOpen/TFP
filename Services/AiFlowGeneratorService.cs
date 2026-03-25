@@ -21,7 +21,15 @@ namespace TaskFlow.Services
     /// </summary>
     public class AiFlowGeneratorService
     {
-        private static readonly HttpClient _httpClient = new();
+        private static readonly HttpClient _httpClient;
+
+        static AiFlowGeneratorService()
+        {
+            // 使用 WinHttpHandler（与 PowerShell 共享 WinHTTP 栈），避免 Cloudflare TLS 指纹拦截
+            var handler = new System.Net.Http.WinHttpHandler();
+            _httpClient = new HttpClient(handler);
+            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+        }
         private List<CardDescriptionDef>? _cardDescriptions;
 
         /// <summary>
@@ -143,7 +151,7 @@ namespace TaskFlow.Services
             var requestJson = JsonConvert.SerializeObject(requestBody, Formatting.Indented);
             AiFlowLogger.LogLlmRequest("阶段1-类别判断", modelId, modelConfig.ApiEndpoint, requestJson);
 
-            var (responseText, inputTokens, outputTokens) = await CallLlmAsync(modelConfig, requestBody, cancellationToken);
+            var (responseText, inputTokens, outputTokens, _) = await CallLlmAsync(modelConfig, requestBody, cancellationToken);
 
             AiFlowLogger.LogLlmResponse("阶段1-类别判断", responseText, inputTokens, outputTokens);
 
@@ -174,13 +182,162 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 阶段2：生成详细的流程方案
+        /// 构建 Tool Use 工具定义（analyze_flow + submit_plan）
+        /// </summary>
+        private static JArray BuildToolDefinitions(AiAssistantMode mode)
+        {
+            var tools = new JArray();
+
+            // 工具1: analyze_flow —— 查看流程详情（支持分页）
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
+                {
+                    ["name"] = "analyze_flow",
+                    ["description"] = "查看指定流程的详细卡片结构。支持分页：默认返回前 80 个卡片，可通过 start_order 和 count 获取后续卡片。当返回结果提示'已截断'时，使用 start_order 继续查看。",
+                    ["parameters"] = new JObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject
+                        {
+                            ["flow_name"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "要查看的流程名称"
+                            },
+                            ["start_order"] = new JObject
+                            {
+                                ["type"] = "integer",
+                                ["description"] = "从第几号卡片开始查看（默认从头开始）"
+                            },
+                            ["count"] = new JObject
+                            {
+                                ["type"] = "integer",
+                                ["description"] = "最多返回多少个卡片（默认 2000，用于超大流程分页）"
+                            }
+                        },
+                        ["required"] = new JArray("flow_name")
+                    }
+                }
+            });
+
+            // 工具2: submit_plan —— 提交操作方案
+            var planProps = new JObject
+            {
+                ["plan"] = new JObject { ["type"] = "array", ["description"] = "新建任务卡片列表。每个元素: {step, taskType, name, description, properties, sourceStep?, templateSourceStep?, ifBody?, elseBody?, loopBody?}", ["items"] = new JObject { ["type"] = "object" } },
+                ["variables"] = new JObject { ["type"] = "array", ["description"] = "需要声明的变量。每个元素: {name, type(Int/String/Bool/Double), value, description}", ["items"] = new JObject { ["type"] = "object" } },
+                ["deleteVariables"] = new JObject { ["type"] = "array", ["description"] = "要删除的变量名列表（不带@前缀）", ["items"] = new JObject { ["type"] = "string" } },
+                ["modifyVariables"] = new JObject { ["type"] = "array", ["description"] = "要修改的变量", ["items"] = new JObject { ["type"] = "object" } },
+                ["modifyCards"] = new JObject { ["type"] = "array", ["description"] = "修改已有卡片属性: [{order, properties:{key:val}}]", ["items"] = new JObject { ["type"] = "object" } },
+                ["deleteCards"] = new JObject { ["type"] = "array", ["description"] = "要删除的卡片序号列表", ["items"] = new JObject { ["type"] = "integer" } },
+                ["insertCards"] = new JObject { ["type"] = "array", ["description"] = "向已有分支/循环插入卡片: [{targetBlockOrder, branch(if/else/loop), cards:[...]}]", ["items"] = new JObject { ["type"] = "object" } },
+                ["createFlows"] = new JObject { ["type"] = "array", ["description"] = "创建新流程: [{name}]", ["items"] = new JObject { ["type"] = "object" } },
+                ["deleteFlows"] = new JObject { ["type"] = "array", ["description"] = "删除的流程名列表", ["items"] = new JObject { ["type"] = "string" } },
+                ["switchFlow"] = new JObject { ["type"] = "string", ["description"] = "切换到的目标流程名" }
+            };
+
+            // 自主模式额外参数（submit_plan 内）
+            if (mode == AiAssistantMode.Autonomous)
+            {
+                planProps["runCards"] = new JObject { ["type"] = "array", ["description"] = "要运行的卡片序号", ["items"] = new JObject { ["type"] = "integer" } };
+                planProps["done"] = new JObject { ["type"] = "boolean", ["description"] = "自主任务是否全部完成" };
+                planProps["failureStrategy"] = new JObject { ["type"] = "string", ["description"] = "失败策略: retry/fallback/abort" };
+                planProps["fallbackPlan"] = new JObject { ["type"] = "array", ["description"] = "回退备选方案", ["items"] = new JObject { ["type"] = "object" } };
+            }
+
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
+                {
+                    ["name"] = "submit_plan",
+                    ["description"] = "提交流程操作方案。包括创建/修改/删除卡片和变量、管理流程等。纯对话回复不需要调用此工具。",
+                    ["parameters"] = new JObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = planProps
+                    }
+                }
+            });
+
+            // 自主模式独有工具
+            if (mode == AiAssistantMode.Autonomous)
+            {
+                // 工具3: execute_shell —— 执行 PowerShell 命令
+                tools.Add(new JObject
+                {
+                    ["type"] = "function",
+                    ["function"] = new JObject
+                    {
+                        ["name"] = "execute_shell",
+                        ["description"] = "执行 PowerShell 命令。当任务卡片的功能无法满足需求时使用（如查询系统信息、文件操作、安装依赖等）。优先使用任务卡片，只有卡片无法实现时才调用此工具。每次最多 3 条命令。",
+                        ["parameters"] = new JObject
+                        {
+                            ["type"] = "object",
+                            ["properties"] = new JObject
+                            {
+                                ["commands"] = new JObject
+                                {
+                                    ["type"] = "array",
+                                    ["description"] = "要执行的命令列表",
+                                    ["items"] = new JObject
+                                    {
+                                        ["type"] = "object",
+                                        ["properties"] = new JObject
+                                        {
+                                            ["command"] = new JObject { ["type"] = "string", ["description"] = "PowerShell 命令" },
+                                            ["description"] = new JObject { ["type"] = "string", ["description"] = "命令用途说明" },
+                                            ["timeout"] = new JObject { ["type"] = "integer", ["description"] = "超时时间（秒），默认 10，最大 30" }
+                                        },
+                                        ["required"] = new JArray("command", "description")
+                                    }
+                                }
+                            },
+                            ["required"] = new JArray("commands")
+                        }
+                    }
+                });
+
+                // 工具4: request_screenshot —— 请求截取屏幕
+                tools.Add(new JObject
+                {
+                    ["type"] = "function",
+                    ["function"] = new JObject
+                    {
+                        ["name"] = "request_screenshot",
+                        ["description"] = "请求截取屏幕或指定窗口的截图。只在需要查看屏幕内容时使用（如估算坐标、分析界面状态）。不需要视觉信息时不要调用。",
+                        ["parameters"] = new JObject
+                        {
+                            ["type"] = "object",
+                            ["properties"] = new JObject
+                            {
+                                ["target"] = new JObject
+                                {
+                                    ["type"] = "string",
+                                    ["description"] = "截图目标进程名（如 msedge、notepad），留空或省略则截全屏"
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            return tools;
+        }
+
+        /// <summary>
+        /// 阶段2：生成详细的流程方案（Tool Use 模式）
         /// </summary>
         public async Task<(AiFlowPlanResponse Plan, int InputTokens, int OutputTokens)> GeneratePlanAsync(
             string userPrompt, List<string> categories, string modelId, CancellationToken cancellationToken,
             string currentFlowContext = "", List<(string Role, string Content)>? conversationHistory = null,
             AiAssistantMode mode = AiAssistantMode.Design,
-            List<string>? imageBase64List = null)
+            List<string>? imageBase64List = null,
+            Action<string>? onDelta = null,
+            Action<string>? onThinking = null,
+            Func<string, int, int, string?>? getFlowDetail = null,
+            Func<string, Task<(string? Base64, int Width, int Height)>>? captureScreenshot = null)
         {
             var modelConfig = LlmModelManager.GetModelById(modelId);
             if (modelConfig == null)
@@ -193,28 +350,28 @@ namespace TaskFlow.Services
                 ? ""
                 : $@"
 
-用户当前画布上已有的流程如下（供你参考和分析）：
+用户当前画布上的流程摘要如下：
 {currentFlowContext}
-如果用户在询问关于已有流程的问题（如分析、审查、解释），请在 summary 中给出回答，plan 可以为空数组。
-如果用户想在已有流程基础上追加新步骤，请只生成新增的步骤（不要重复已有步骤），step 编号从已有流程之后继续。
-如果用户要求删除变量，请在 deleteVariables 数组中列出要删除的变量名（不带 @ 前缀）。
-如果用户要求修改变量的值，请在 modifyVariables 数组中列出要修改的变量。
-如果用户要求修改已有卡片属性，请在 modifyCards 数组中指定卡片序号和要修改的属性，例如: ""modifyCards"": [{{ ""order"": 3, ""properties"": {{ ""Delay"": ""2000"" }} }}]。
-如果用户要求删除已有卡片，请在 deleteCards 数组中列出要删除的卡片序号。";
+注意：以上仅为流程列表摘要（流程名和卡片数），不包含卡片属性详情。
+如果需要查看某个流程的详细卡片结构（例如要修改、追加、分析卡片），必须先调用 analyze_flow 工具获取详情。
+收到详情后，你才能正确生成操作方案（通过 submit_plan 工具提交）。
+如果用户只是普通对话（如问候、提问），直接用自然语言回答即可。
+如果用户在询问关于已有流程的问题（如分析、审查、解释），先调用 analyze_flow 获取详情再回答。
+如果用户想在已有流程基础上追加新步骤，请只生成新增的步骤（不要重复已有步骤），step 编号从已有流程之后继续。";
 
             // 自主模式专属指令
             var autonomousSection = mode == AiAssistantMode.Autonomous ? @"
 
 自主执行模式（当前已启用）：
 你处于自主模式，应优先考虑直接运行已有卡片来完成用户任务：
-- 在 runCards 数组中指定要运行的已有卡片序号（即 order 值）
+- 在 submit_plan 工具的 runCards 参数中指定要运行的已有卡片序号（即 order 值）
 - 系统会运行这些卡片并将结果（状态、路径输出、文本输出等）反馈给你
-- 收到运行结果后，如果还有后续卡片需要运行，必须在下一轮返回 runCards 继续运行它们
+- 收到运行结果后，如果还有后续卡片需要运行，必须在下一轮调用 submit_plan 继续运行它们
 - 绝对不要在还有后续步骤需要执行时就设置 done 为 true
 - 只有当所有需要的操作真正全部完成后，才设置 done 为 true
 - 每次 runCards 只放一个批次，不要把所有步骤放在一次中
 - 可以混合使用 modifyCards 和 runCards（如先修改卡片属性再运行）
-- 如果需要创建新卡片后再运行，先返回 plan 创建，下一轮再用 runCards 运行
+- 如果需要创建新卡片后再运行，先用 submit_plan 创建，下一轮再用 runCards 运行
 - 当卡片运行失败时，必须指定 failureStrategy（retry/fallback/abort）
 - 可使用 deleteCards 删除失败卡片，再用 plan 或 fallbackPlan 创建替代方案
 
@@ -226,13 +383,15 @@ namespace TaskFlow.Services
 不要使用 WinUiAutomation 来点击桌面图标或视觉元素，它对桌面图标和很多应用不可靠。
 
 屏幕截图（按需请求）：
-- 系统不会自动截屏，你需要通过 needsScreenshot: true 来请求截取当前屏幕
-- 只在需要查看屏幕内容时才设置 needsScreenshot: true（如需要估算坐标、分析界面状态时）
+- 系统不会自动截屏，你需要调用 request_screenshot 工具来请求截取屏幕
+- 可在 target 参数中指定截取特定窗口的进程名（如 ""msedge""、""notepad""），留空则截全屏
+- 操作浏览器网页时建议指定浏览器进程名以获得更精确的窗口内容
+- 只在需要查看屏幕内容时才调用 request_screenshot（如需要估算坐标、分析界面状态时）
 - 不需要视觉信息时不要请求截图（如执行 PowerShell 查询、打开应用等）
 
 PowerShell 后台能力（当前已启用）：
-当任务卡片的功能无法满足需求时，你可以通过 shellCommands 执行 PowerShell 命令：
-- 在 shellCommands 数组中指定要执行的命令、用途说明和超时时间（秒）
+当任务卡片的功能无法满足需求时，你可以调用 execute_shell 工具执行 PowerShell 命令：
+- 在 commands 数组中指定要执行的命令、用途说明和超时时间（秒）
 - 系统会执行命令并将输出结果反馈给你
 - 只读查询类命令（如 Get-Process、Get-ChildItem、Test-Path）会自动执行
 - 写操作命令需要用户批准
@@ -242,7 +401,7 @@ PowerShell 后台能力（当前已启用）：
 
 设计模式（当前已启用）：
 你处于设计模式，主要职责是帮用户设计和优化流程蓝图：
-- 优先生成 plan（创建卡片蓝图），而不是直接运行
+- 优先通过 submit_plan 工具的 plan 参数生成卡片蓝图，而不是直接运行
 - 不要主动使用 runCards，除非用户明确要求执行/运行";
 
             flowContextSection += autonomousSection;
@@ -251,52 +410,19 @@ PowerShell 后台能力（当前已启用）：
 
 {detailedCards}
 
-请以纯 JSON 格式输出你的方案，格式如下：
-{{
-  ""summary"": ""方案摘要（一句话描述整体流程）"",
-  ""variables"": [
-    {{
-      ""name"": ""变量名（不带@前缀）"",
-      ""type"": ""Int"",
-      ""value"": ""0"",
-      ""description"": ""用途说明""
-    }}
-  ],
-  ""plan"": [
-    {{
-      ""step"": 1,
-      ""taskType"": ""卡片类型枚举名（必须与上面的 TaskType 完全一致）"",
-      ""name"": ""步骤名称"",
-      ""description"": ""为什么需要这一步"",
-      ""properties"": {{ ""属性名"": ""值"" }},
-      ""sourceStep"": null,
-      ""templateSourceStep"": null
-    }}
-  ],
-  ""insertCards"": [
-    {{
-      ""targetBlockOrder"": 4,
-      ""branch"": ""if"",
-      ""cards"": [
-        {{ ""step"": 10, ""taskType"": ""WinClick"", ""name"": ""点击目标"", ""properties"": {{}} }}
-      ]
-    }}
-  ],
-  ""shellCommands"": [
-    {{
-      ""command"": ""Get-Process | Select-Object -First 5 Name, CPU"",
-      ""description"": ""查询CPU占用最高的进程"",
-      ""timeout"": 10
-    }}
-  ]
-}}
+请用自然语言回复用户的问题和需求。当你需要执行具体操作时，调用提供的工具：
+- 需要查看某个流程的详细卡片结构时，调用 analyze_flow 工具
+- 需要创建/修改/删除卡片或变量、管理流程等操作时，调用 submit_plan 工具
+- 纯对话回复（如回答问题、解释方案）不需要调用工具，直接用自然语言回答
+
+submit_plan 工具的 plan 参数中每个卡片步骤格式：
+{{ ""step"": 1, ""taskType"": ""卡片类型枚举名"", ""name"": ""步骤名称"", ""description"": ""为什么需要这一步"", ""properties"": {{ ""属性名"": ""值"" }}, ""sourceStep"": null, ""templateSourceStep"": null }}
 
 变量系统：
 - variables 数组用于声明流程需要的变量，type 可选值：Int、String、Bool、Double
 - 当流程需要计数器、状态标记、循环条件等场景时，应声明变量
 - 在卡片属性中可使用 @变量名 引用变量，如 @retryCount
 - 使用 ExpressionEval 卡片可以对变量赋值，格式：@变量名 = 表达式
-- 如果流程不需要变量，variables 可以为空数组 []
 
 输出引用语法（在 properties 中使用）：
 引用格式为 #N 卡片名.输出属性（N 是步骤编号），例如：
@@ -311,20 +437,9 @@ PowerShell 后台能力（当前已启用）：
 
 控制流支持（IfElseBlock 和 ForLoopBlock）：
 - 当需要条件分支时，使用 taskType=""IfElseBlock""，并在 ifBody 和 elseBody（可选）中嵌套子步骤：
-  {{
-    ""step"": 2, ""taskType"": ""IfElseBlock"", ""name"": ""判断匹配结果"",
-    ""description"": ""根据模板匹配是否成功决定下一步"",
-    ""properties"": {{ ""conditionExpression"": ""#1 模板匹配.匹配结果==True"" }},
-    ""ifBody"": [ {{ ""step"": 3, ""taskType"": ""WinClick"", ... }} ],
-    ""elseBody"": [ {{ ""step"": 4, ""taskType"": ""PauseTask"", ... }} ]
-  }}
+  {{ ""step"": 2, ""taskType"": ""IfElseBlock"", ""name"": ""判断匹配结果"", ""properties"": {{ ""conditionExpression"": ""#1 模板匹配.匹配结果==True"" }}, ""ifBody"": [ ... ], ""elseBody"": [ ... ] }}
 - 当需要循环时，使用 taskType=""ForLoopBlock""，并在 loopBody 中嵌套子步骤：
-  {{
-    ""step"": 5, ""taskType"": ""ForLoopBlock"", ""name"": ""重复检测"",
-    ""description"": ""循环截图检测"",
-    ""properties"": {{ ""loopCount"": ""5"" }},
-    ""loopBody"": [ {{ ""step"": 6, ""taskType"": ""WinScreenshot"", ... }} ]
-  }}
+  {{ ""step"": 5, ""taskType"": ""ForLoopBlock"", ""name"": ""重复检测"", ""properties"": {{ ""loopCount"": ""5"" }}, ""loopBody"": [ ... ] }}
 - 嵌套体内的步骤格式与顶层步骤完全一致，可以多层嵌套。
 {flowContextSection}
 重要规则：
@@ -337,19 +452,17 @@ PowerShell 后台能力（当前已启用）：
    - ImgCrop 支持通过 properties 设置裁剪区域：roiX、roiY、roiWidth、roiHeight。
 3. properties 中只填写你能确定的值，不确定的属性不要填写。
 4. 在 properties 中引用其他步骤输出时，使用 #N 步骤名.输出属性 格式（如 #3 查找MAA.查找路径），不要使用花括号。
-5. 当用户要求删除变量时，使用 deleteVariables 数组。
-6. 当用户要求修改变量值时，使用 modifyVariables 数组。
-7. 当用户要求修改已有卡片属性时，使用 modifyCards 数组。
-8. 当用户要求删除已有卡片时，使用 deleteCards 数组。
-9. 当用户要求在已有的 IfElse 分支或 ForLoop 循环中插入卡片时，使用 insertCards 数组，不要删除重建整个 block。targetBlockOrder 是 block 起始卡片的序号，branch 可选 if/else/loop。
+5. 当用户要求删除变量时，通过 submit_plan 的 deleteVariables 参数。
+6. 当用户要求修改变量值时，通过 submit_plan 的 modifyVariables 参数。
+7. 当用户要求修改已有卡片属性时，通过 submit_plan 的 modifyCards 参数，格式：[{{ ""order"": 3, ""properties"": {{ ""Delay"": ""2000"" }} }}]。
+8. 当用户要求删除已有卡片时，通过 submit_plan 的 deleteCards 参数。
+9. 当用户要求在已有的 IfElse 分支或 ForLoop 循环中插入卡片时，通过 submit_plan 的 insertCards 参数，不要删除重建整个 block。targetBlockOrder 是 block 起始卡片的序号，branch 可选 if/else/loop。
 10. 使用 runCards 指定要运行的卡片序号。每轮只运行一批，运行后分析结果再决定下一批。所有卡片都运行完毕后才设置 done: true。
 11. 任务步骤名称和变量名称中严禁使用任何标点符号（如 . 等特殊字符），只能包含中文、字母和数字，以防止引用解析失败。
-12. 流程管理：用户可拥有多个流程（Tab），每个流程包含独立的卡片集合。创建新流程用 createFlows 数组（格式 [{{""name"":""流程名""}}]），删除流程用 deleteFlows 数组（格式 [""流程名""]），切换流程用 switchFlow 字符串。系统先处理 switchFlow 再添加 plan 步骤。
+12. 流程管理：用户可拥有多个流程（Tab），每个流程包含独立的卡片集合。通过 submit_plan 的 createFlows/deleteFlows/switchFlow 参数管理。
 13. 点击界面元素时，结合图像分辨率信息直接估算坐标，在 WinClick 的 startX/startY 中设置。无需创建额外的裁剪或模板匹配步骤。
-14. 你已经能直接看到用户的屏幕截图（系统自动附加），无需创建 WinScreenshot 卡片来获取屏幕信息。直接根据看到的截图内容进行分析和决策。
-14. needsScreenshot 字段：在自主模式下，设置 needsScreenshot: true 来请求截取屏幕。只在需要查看屏幕内容时使用（如估算坐标、分析界面变化），不需要视觉信息时不要请求。
-15. shellCommands 仅在自主模式下可用，优先使用任务卡片完成工作，只有卡片无法实现时才使用 PowerShell。每次最多 3 条命令。
-16. 只返回 JSON，不要返回其他任何文字。";
+14. 截图获取：系统不会自动截屏。在自主模式下，需要查看屏幕内容时调用 request_screenshot 工具（target 填进程名如 msedge 截特定窗口，留空则截全屏）。设计模式下用户可能主动附带截图。
+15. PowerShell：仅在自主模式下可用，通过 execute_shell 工具执行。优先使用任务卡片完成工作，只有卡片无法实现时才使用。每次最多 3 条命令。";
 
             // 构建消息数组（含历史对话）
             var messages = new List<object> { new { role = "system", content = systemPrompt } };
@@ -362,82 +475,432 @@ PowerShell 后台能力（当前已启用）：
             }
 
             // 添加当前用户消息（支持多模态：文本 + 图片）
-            if (imageBase64List != null && imageBase64List.Count > 0)
+            // 检查 history 最后一条是否已经是当前用户输入（避免重复）
+            bool lastHistoryIsCurrentUser = conversationHistory != null
+                && conversationHistory.Count > 0
+                && conversationHistory[^1].Role == "user"
+                && conversationHistory[^1].Content == userPrompt;
+
+            if (!lastHistoryIsCurrentUser)
             {
-                // OpenAI Vision 格式：content 为数组
-                var contentParts = new List<object>
+                if (imageBase64List != null && imageBase64List.Count > 0)
                 {
-                    new { type = "text", text = userPrompt }
-                };
-                foreach (var imgB64 in imageBase64List)
-                {
-                    // 根据 base64 头自动检测格式（PNG 以 iVBOR 开头）
-                    var mime = imgB64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
-                    contentParts.Add(new
+                    // OpenAI Vision 格式：content 为数组
+                    var contentParts = new List<object>
                     {
-                        type = "image_url",
-                        image_url = new { url = $"data:{mime};base64,{imgB64}", detail = "high" }
-                    });
-                }
-                messages.Add(new { role = "user", content = (object)contentParts });
-            }
-            else
-            {
-                messages.Add(new { role = "user", content = (object)userPrompt });
-            }
-
-            var requestBody = new
-            {
-                model = modelConfig.ModelName,
-                messages,
-                temperature = 0.3
-            };
-
-            var requestJson = JsonConvert.SerializeObject(requestBody, Formatting.Indented);
-            AiFlowLogger.LogLlmRequest("阶段2-方案生成", modelId, modelConfig.ApiEndpoint, requestJson);
-
-            var (responseText, inputTokens, outputTokens) = await CallLlmAsync(modelConfig, requestBody, cancellationToken);
-
-            AiFlowLogger.LogLlmResponse("阶段2-方案生成", responseText, inputTokens, outputTokens);
-
-            // 解析方案
-            AiFlowPlanResponse plan;
-            try
-            {
-                // 提取 JSON 对象部分
-                var jsonMatch = System.Text.RegularExpressions.Regex.Match(responseText, @"\{.*\}", System.Text.RegularExpressions.RegexOptions.Singleline);
-                if (jsonMatch.Success)
-                {
-                    plan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(jsonMatch.Value) ?? new();
-                    AiFlowLogger.Info($"阶段2解析成功: {plan.Plan.Count} 个步骤");
-
-                    // 如果解析后所有字段为空（AI 返回了非标准格式的 JSON），把原始响应当作文本回复
-                    bool isEmpty = plan.Plan.Count == 0
-                        && string.IsNullOrEmpty(plan.Summary)
-                        && (plan.Variables == null || plan.Variables.Count == 0)
-                        && (plan.DeleteVariables == null || plan.DeleteVariables.Count == 0)
-                        && (plan.ModifyCards == null || plan.ModifyCards.Count == 0)
-                        && (plan.DeleteCards == null || plan.DeleteCards.Count == 0)
-                        && (plan.InsertCards == null || plan.InsertCards.Count == 0)
-                        && (plan.RunCards == null || plan.RunCards.Count == 0);
-                    if (isEmpty)
+                        new { type = "text", text = userPrompt }
+                    };
+                    foreach (var imgB64 in imageBase64List)
                     {
-                        plan.Summary = responseText.Trim();
-                        AiFlowLogger.Info("阶段2: AI 返回了非标准 JSON，作为文本回复处理");
+                        // 根据 base64 头自动检测格式（PNG 以 iVBOR 开头）
+                        var mime = imgB64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
+                        contentParts.Add(new
+                        {
+                            type = "image_url",
+                            image_url = new { url = $"data:{mime};base64,{imgB64}", detail = "high" }
+                        });
                     }
+                    messages.Add(new { role = "user", content = (object)contentParts });
                 }
                 else
                 {
-                    // AI 返回了纯文本回答（如知识性问题），将原文作为分析结果
-                    plan = new AiFlowPlanResponse { Summary = responseText.Trim() };
-                    AiFlowLogger.Info("阶段2: AI 返回了文本回答（非 JSON），作为分析结果处理");
+                    messages.Add(new { role = "user", content = (object)userPrompt });
                 }
             }
-            catch (Exception ex)
+
+            // 构建工具定义
+            var tools = BuildToolDefinitions(mode);
+
+            // 使用 JObject 构建请求体以便注入 tools
+            var requestObj = new JObject
             {
-                // JSON 解析异常，也用原文回退
-                plan = new AiFlowPlanResponse { Summary = responseText.Trim() };
-                AiFlowLogger.Warn($"阶段2 JSON 解析失败, 回退为文本: {ex.Message}");
+                ["model"] = modelConfig.ModelName,
+                ["messages"] = JArray.FromObject(messages),
+                ["temperature"] = 0.3,
+                ["tools"] = tools
+            };
+
+            var requestJson = requestObj.ToString(Formatting.Indented);
+            AiFlowLogger.LogLlmRequest("阶段2-方案生成", modelId, modelConfig.ApiEndpoint, requestJson);
+
+            // 调用 LLM（流式或非流式）
+            string responseText;
+            int inputTokens, outputTokens;
+            List<(string Id, string Name, string Arguments)>? toolCalls;
+
+            if (onDelta != null)
+            {
+                (responseText, inputTokens, outputTokens, toolCalls) =
+                    await CallLlmStreamAsync(modelConfig, requestObj, onDelta, cancellationToken, onThinking);
+            }
+            else
+            {
+                (responseText, inputTokens, outputTokens, toolCalls) =
+                    await CallLlmAsync(modelConfig, requestObj, cancellationToken);
+            }
+
+            AiFlowLogger.LogLlmResponse("阶段2-方案生成", responseText, inputTokens, outputTokens);
+
+            // ======= 处理 Tool Calls =======
+            AiFlowPlanResponse plan = new();
+
+            if (toolCalls != null && toolCalls.Count > 0)
+            {
+                // ---- analyze_flow 多轮循环 ----
+                // AI 可能多次调用 analyze_flow（分页浏览大流程），循环处理直到 AI 不再调用 analyze_flow
+                var currentToolCalls = toolCalls;
+                var currentResponseText = responseText;
+                var messagesJson = requestObj["messages"] as JArray ?? new JArray();
+                const int maxAnalyzeRounds = 10; // 防止死循环
+                int analyzeRound = 0;
+
+                // 多轮对话前清理：移除用户消息中的 base64 图片数据，避免每轮重复传输
+                foreach (var msg in messagesJson)
+                {
+                    if (msg["role"]?.ToString() != "user") continue;
+                    var content = msg["content"];
+                    if (content is JArray contentArray)
+                    {
+                        // 多模态消息：将 image_url 替换为文本占位符
+                        var toRemove = new List<JToken>();
+                        foreach (var item in contentArray)
+                        {
+                            if (item["type"]?.ToString() == "image_url")
+                                toRemove.Add(item);
+                        }
+                        if (toRemove.Count > 0)
+                        {
+                            foreach (var item in toRemove)
+                                item.Remove();
+                            contentArray.Add(JObject.FromObject(new { type = "text", text = $"[已附带 {toRemove.Count} 张截图，此处省略]" }));
+                        }
+                    }
+                }
+
+                while (analyzeRound < maxAnalyzeRounds)
+                {
+                    // 找到本轮中需要多轮处理的工具调用
+                    var analyzeCall = currentToolCalls?.FirstOrDefault(t => t.Name == "analyze_flow");
+                    var screenshotCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_screenshot");
+
+                    // 优先处理 analyze_flow，其次 request_screenshot
+                    if (analyzeCall != null && analyzeCall.Value.Name == "analyze_flow")
+                    {
+                        // ---- 处理 analyze_flow ----
+
+                        analyzeRound++;
+                        var (afId, afName, afArgs) = analyzeCall.Value;
+
+                        try
+                        {
+                            var flowArg = JObject.Parse(afArgs);
+                            var flowName = flowArg["flow_name"]?.ToString();
+                            var startOrder = (int?)flowArg["start_order"] ?? 0;
+                            var count = (int?)flowArg["count"] ?? 2000;
+
+                            if (string.IsNullOrEmpty(flowName) || getFlowDetail == null)
+                                break;
+
+                            var flowDetail = getFlowDetail(flowName, startOrder, count);
+                            if (flowDetail == null)
+                            {
+                                AiFlowLogger.Warn($"[ToolUse] 流程「{flowName}」不存在");
+                                onDelta?.Invoke($"\n\n⚠️ 流程「{flowName}」不存在。\n");
+                                break;
+                            }
+
+                            AiFlowLogger.Info($"[ToolUse] analyze_flow(\"{flowName}\", start={startOrder}) → 第 {analyzeRound} 轮对话...");
+
+                            // 构建多轮对话消息：assistant(tool_call) → tool(result)
+                            var assistantMsg = new JObject
+                            {
+                                ["role"] = "assistant",
+                                ["content"] = currentResponseText ?? ""
+                            };
+                            assistantMsg["tool_calls"] = new JArray(new JObject
+                            {
+                                ["id"] = afId,
+                                ["type"] = "function",
+                                ["function"] = new JObject
+                                {
+                                    ["name"] = "analyze_flow",
+                                    ["arguments"] = afArgs
+                                }
+                            });
+                            messagesJson.Add(assistantMsg);
+
+                            messagesJson.Add(new JObject
+                            {
+                                ["role"] = "tool",
+                                ["tool_call_id"] = afId,
+                                ["content"] = flowDetail
+                            });
+
+                            // 发起下一轮请求
+                            var requestN = new JObject
+                            {
+                                ["model"] = modelConfig.ModelName,
+                                ["messages"] = messagesJson,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
+                            };
+
+                            onDelta?.Invoke($"\n\n📋 已获取流程详情（第 {analyzeRound} 批），正在分析...\n\n");
+
+                            string respN;
+                            int inN, outN;
+                            List<(string Id, string Name, string Arguments)>? tcN;
+
+                            if (onDelta != null)
+                            {
+                                (respN, inN, outN, tcN) =
+                                    await CallLlmStreamAsync(modelConfig, requestN, onDelta, cancellationToken, onThinking);
+                            }
+                            else
+                            {
+                                (respN, inN, outN, tcN) =
+                                    await CallLlmAsync(modelConfig, requestN, cancellationToken);
+                            }
+
+                            AiFlowLogger.LogLlmResponse($"阶段2-第{analyzeRound + 1}轮对话", respN, inN, outN);
+
+                            inputTokens += inN;
+                            outputTokens += outN;
+                            // 只保留最终轮的回复文本，中间轮的 "继续查看" 丢弃
+                            responseText = respN;
+
+                            // 更新当前轮的 tool calls，继续循环检查是否还有 analyze_flow
+                            currentToolCalls = tcN;
+                            currentResponseText = respN;
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[ToolUse] analyze_flow 第 {analyzeRound} 轮处理失败: {ex.Message}");
+                            break;
+                        }
+                    } // end analyze_flow
+                    else if (screenshotCall != null && screenshotCall.Value.Name == "request_screenshot" && captureScreenshot != null)
+                    {
+                        // ---- 处理 request_screenshot ----
+                        analyzeRound++;
+                        var (ssId, _, ssArgs) = screenshotCall.Value;
+                        try
+                        {
+                            var ssArg = JObject.Parse(ssArgs);
+                            var target = ssArg["target"]?.ToString() ?? "";
+                            AiFlowLogger.Info($"[ToolUse] request_screenshot(target=\"{target}\") → 截图中...");
+
+                            onDelta?.Invoke("\n\n📸 正在截取屏幕...\n\n");
+                            var (base64, sw, sh) = await captureScreenshot(target);
+
+                            if (base64 == null)
+                            {
+                                AiFlowLogger.Warn("[ToolUse] 截图失败");
+                                onDelta?.Invoke("⚠️ 截图失败\n");
+                                break;
+                            }
+
+                            AiFlowLogger.Info($"[ToolUse] 截图成功 ({sw}x{sh})，注入 tool result 发起下一轮对话...");
+
+                            // 构建 assistant 消息（含 tool_call）
+                            var assistantMsg = new JObject
+                            {
+                                ["role"] = "assistant",
+                                ["content"] = currentResponseText ?? ""
+                            };
+                            assistantMsg["tool_calls"] = new JArray(new JObject
+                            {
+                                ["id"] = ssId,
+                                ["type"] = "function",
+                                ["function"] = new JObject
+                                {
+                                    ["name"] = "request_screenshot",
+                                    ["arguments"] = ssArgs
+                                }
+                            });
+                            messagesJson.Add(assistantMsg);
+
+                            // tool result：返回截图信息（图片作为下一条 user 消息附带）
+                            messagesJson.Add(new JObject
+                            {
+                                ["role"] = "tool",
+                                ["tool_call_id"] = ssId,
+                                ["content"] = $"截图成功，分辨率 {sw}x{sh}。截图已附在下方。"
+                            });
+
+                            // 附加截图作为 user 消息（OpenAI Vision 格式）
+                            var mime = base64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
+                            messagesJson.Add(new JObject
+                            {
+                                ["role"] = "user",
+                                ["content"] = new JArray
+                                {
+                                    new JObject { ["type"] = "text", ["text"] = $"这是截取的屏幕截图（{sw}x{sh}），请分析内容。" },
+                                    new JObject
+                                    {
+                                        ["type"] = "image_url",
+                                        ["image_url"] = new JObject
+                                        {
+                                            ["url"] = $"data:{mime};base64,{base64}",
+                                            ["detail"] = "high"
+                                        }
+                                    }
+                                }
+                            });
+
+                            // 发起下一轮请求
+                            var requestN = new JObject
+                            {
+                                ["model"] = modelConfig.ModelName,
+                                ["messages"] = messagesJson,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
+                            };
+
+                            string respN;
+                            int inN, outN;
+                            List<(string Id, string Name, string Arguments)>? tcN;
+
+                            if (onDelta != null)
+                            {
+                                (respN, inN, outN, tcN) =
+                                    await CallLlmStreamAsync(modelConfig, requestN, onDelta, cancellationToken, onThinking);
+                            }
+                            else
+                            {
+                                (respN, inN, outN, tcN) =
+                                    await CallLlmAsync(modelConfig, requestN, cancellationToken);
+                            }
+
+                            AiFlowLogger.LogLlmResponse($"阶段2-截图分析轮", respN, inN, outN);
+
+                            inputTokens += inN;
+                            outputTokens += outN;
+                            responseText = respN;
+                            currentToolCalls = tcN;
+                            currentResponseText = respN;
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[ToolUse] request_screenshot 处理失败: {ex.Message}");
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break; // 没有需要多轮处理的工具调用，退出循环
+                    }
+
+                } // end while
+
+                // ---- 处理最终轮的非 analyze_flow 工具调用 ----
+                var finalToolCalls = currentToolCalls ?? toolCalls;
+                foreach (var (tcId, tcName, tcArgs) in finalToolCalls)
+                {
+                    if (tcName == "analyze_flow" || tcName == "request_screenshot")
+                    {
+                        // 已在上面多轮循环中处理过，跳过
+                        continue;
+                    }
+                    else if (tcName == "submit_plan")
+                    {
+                        // AI 提交了操作方案
+                        try
+                        {
+                            plan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(tcArgs) ?? new();
+                            AiFlowLogger.Info($"[ToolUse] submit_plan: {plan.Plan.Count} 个步骤");
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[ToolUse] submit_plan 解析失败: {ex.Message}");
+                        }
+                    }
+                    else if (tcName == "execute_shell")
+                    {
+                        // AI 请求执行 PowerShell 命令 → 映射到 plan.ShellCommands
+                        try
+                        {
+                            var shellArg = JObject.Parse(tcArgs);
+                            var cmds = shellArg["commands"] as JArray;
+                            if (cmds != null)
+                            {
+                                plan.ShellCommands ??= new List<Models.AiFlow.AiShellCommand>();
+                                foreach (var cmd in cmds)
+                                {
+                                    plan.ShellCommands.Add(new Models.AiFlow.AiShellCommand
+                                    {
+                                        Command = cmd["command"]?.ToString() ?? "",
+                                        Description = cmd["description"]?.ToString() ?? "",
+                                        Timeout = (int?)cmd["timeout"] ?? 10
+                                    });
+                                }
+                                AiFlowLogger.Info($"[ToolUse] execute_shell: {plan.ShellCommands.Count} 条命令");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[ToolUse] execute_shell 解析失败: {ex.Message}");
+                        }
+                    }
+                    else if (tcName == "request_screenshot")
+                    {
+                        // AI 请求截屏 → 映射到 plan.NeedsScreenshot
+                        try
+                        {
+                            var ssArg = JObject.Parse(tcArgs);
+                            plan.NeedsScreenshot = true;
+                            var target = ssArg["target"]?.ToString();
+                            if (!string.IsNullOrWhiteSpace(target))
+                                plan.ScreenshotTarget = target;
+                            AiFlowLogger.Info($"[ToolUse] request_screenshot: target={target ?? "全屏"}");
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[ToolUse] request_screenshot 解析失败: {ex.Message}");
+                        }
+                    }
+                }
+
+                // 自然语言回复作为 Summary
+                if (string.IsNullOrEmpty(plan.Summary) && !string.IsNullOrWhiteSpace(responseText))
+                {
+                    plan.Summary = responseText.Trim();
+                }
+            }
+            else
+            {
+                // 没有 tool_calls —— AI 仅用自然语言回复（兼容不支持 tools 的 API / 回退模式）
+                // 尝试从 responseText 提取 JSON（兼容旧模式）
+                try
+                {
+                    var jsonMatch = System.Text.RegularExpressions.Regex.Match(
+                        responseText, @"\{.*\}", System.Text.RegularExpressions.RegexOptions.Singleline);
+                    if (jsonMatch.Success)
+                    {
+                        plan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(jsonMatch.Value) ?? new();
+                        AiFlowLogger.Info($"[Fallback] JSON 解析成功: {plan.Plan.Count} 个步骤");
+
+                        bool isEmpty = plan.Plan.Count == 0
+                            && string.IsNullOrEmpty(plan.Summary)
+                            && (plan.Variables == null || plan.Variables.Count == 0)
+                            && (plan.ModifyCards == null || plan.ModifyCards.Count == 0)
+                            && (plan.DeleteCards == null || plan.DeleteCards.Count == 0);
+                        if (isEmpty)
+                        {
+                            plan.Summary = responseText.Trim();
+                        }
+                    }
+                    else
+                    {
+                        plan = new AiFlowPlanResponse { Summary = responseText.Trim() };
+                        AiFlowLogger.Info("[ToolUse] AI 纯文本回复（无工具调用）");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    plan = new AiFlowPlanResponse { Summary = responseText.Trim() };
+                    AiFlowLogger.Warn($"[Fallback] JSON 解析失败: {ex.Message}");
+                }
             }
 
             return (plan, inputTokens, outputTokens);
@@ -546,9 +1009,9 @@ PowerShell 后台能力（当前已启用）：
         }
 
         /// <summary>
-        /// 调用 LLM API 的通用方法（兼容 OpenAI 和 Gemini）
+        /// 调用 LLM API 的通用方法（兼容 OpenAI 和 Gemini），支持返回 tool_calls
         /// </summary>
-        private async Task<(string ResponseText, int InputTokens, int OutputTokens)> CallLlmAsync(
+        private async Task<(string ResponseText, int InputTokens, int OutputTokens, List<(string Id, string Name, string Arguments)>? ToolCalls)> CallLlmAsync(
             LlmModelConfig modelConfig, object requestBody, CancellationToken cancellationToken)
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -556,6 +1019,7 @@ PowerShell 后台能力（当前已启用）：
             cts.CancelAfter(TimeSpan.FromSeconds(timeout));
 
             bool isGemini = IsGeminiApi(modelConfig.ApiEndpoint);
+            bool isResponsesApi = modelConfig.ApiEndpoint.Contains("/v1/responses", StringComparison.OrdinalIgnoreCase);
             string actualUrl;
             object actualBody;
 
@@ -564,10 +1028,26 @@ PowerShell 后台能力（当前已启用）：
                 actualUrl = BuildGeminiUrl(modelConfig.ApiEndpoint, modelConfig.ModelName);
                 actualBody = BuildGeminiRequestBody(requestBody);
             }
+            else if (isResponsesApi)
+            {
+                actualUrl = modelConfig.ApiEndpoint;
+                actualBody = BuildResponsesApiBody(requestBody);
+            }
             else
             {
                 actualUrl = modelConfig.ApiEndpoint;
                 actualBody = requestBody;
+            }
+
+
+            // 如果启用了代理，启动代理并替换 URL
+            if (modelConfig.UseProxy && !string.IsNullOrEmpty(modelConfig.ProxyTargetHost))
+            {
+                var (ok, msg) = LocalProxyService.Instance.EnsureRunning(modelConfig.ProxyTargetHost);
+                if (ok)
+                    actualUrl = LocalProxyService.Instance.GetProxiedUrl(actualUrl);
+                else
+                    AiFlowLogger.Warn($"[Proxy] 代理启动失败: {msg}，将直连 API");
             }
 
             using var requestMessage = new HttpRequestMessage(HttpMethod.Post, actualUrl);
@@ -587,7 +1067,15 @@ PowerShell 后台能力（当前已启用）：
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.SendAsync(requestMessage, cts.Token);
+            // 注入自定义请求头
+            ApplyCustomHeaders(requestMessage, modelConfig);
+
+            // Responses API 使用流式，需要 ResponseHeadersRead 以避免等待完整响应
+            var completionOption = isResponsesApi
+                ? HttpCompletionOption.ResponseHeadersRead
+                : HttpCompletionOption.ResponseContentRead;
+
+            var response = await _httpClient.SendAsync(requestMessage, completionOption, cts.Token);
             var responseString = await response.Content.ReadAsStringAsync(cts.Token);
 
             if (!response.IsSuccessStatusCode)
@@ -595,28 +1083,55 @@ PowerShell 后台能力（当前已启用）：
                 throw new HttpRequestException($"API 请求失败: {response.StatusCode} - {responseString}");
             }
 
-            var jsonResponse = JObject.Parse(responseString);
+            // 解析响应
+            string replyText;
+            int inputTokens = 0, outputTokens = 0;
+            List<(string Id, string Name, string Arguments)>? toolCalls = null;
 
-            // 提取回复文本（兼容 OpenAI 和 Gemini 格式）
-            var replyText = jsonResponse["choices"]?[0]?["message"]?["content"]?.ToString()          // OpenAI Chat
+            if (isResponsesApi)
+            {
+                // Responses API 使用 stream=true，返回 SSE 格式
+                (replyText, inputTokens, outputTokens) = ParseResponsesApiStream(responseString);
+            }
+            else
+            {
+                var jsonResponse = JObject.Parse(responseString);
+
+                // 提取回复文本（兼容 OpenAI 和 Gemini 格式）
+                replyText = jsonResponse["choices"]?[0]?["message"]?["content"]?.ToString()          // OpenAI Chat
                             ?? jsonResponse["choices"]?[0]?["text"]?.ToString()                      // OpenAI Legacy
                             ?? jsonResponse["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString()  // Gemini
                             ?? jsonResponse["text"]?.ToString()
-                            ?? responseString;
+                            ?? "";
 
-            // 提取 Token 使用量（兼容 OpenAI 和 Gemini 格式）
-            int inputTokens = 0, outputTokens = 0;
-            var usage = jsonResponse["usage"];                    // OpenAI
-            var usageMeta = jsonResponse["usageMetadata"];        // Gemini
-            if (usage != null)
-            {
-                inputTokens = (int?)usage["prompt_tokens"] ?? 0;
-                outputTokens = (int?)usage["completion_tokens"] ?? 0;
-            }
-            else if (usageMeta != null)
-            {
-                inputTokens = (int?)usageMeta["promptTokenCount"] ?? 0;
-                outputTokens = (int?)usageMeta["candidatesTokenCount"] ?? 0;
+                // 提取非流式 tool_calls（OpenAI Chat 格式）
+                var msgToolCalls = jsonResponse["choices"]?[0]?["message"]?["tool_calls"] as JArray;
+                if (msgToolCalls != null && msgToolCalls.Count > 0)
+                {
+                    toolCalls = new List<(string, string, string)>();
+                    foreach (var tc in msgToolCalls)
+                    {
+                        var id = tc["id"]?.ToString() ?? $"call_{Guid.NewGuid():N}";
+                        var name = tc["function"]?["name"]?.ToString() ?? "";
+                        var args = tc["function"]?["arguments"]?.ToString() ?? "{}";
+                        toolCalls.Add((id, name, args));
+                        AiFlowLogger.Info($"[NonStream] Tool Call: {name}({args.Substring(0, Math.Min(args.Length, 200))})");
+                    }
+                }
+
+                // 提取 Token 使用量（兼容 OpenAI 和 Gemini 格式）
+                var usage = jsonResponse["usage"];                    // OpenAI
+                var usageMeta = jsonResponse["usageMetadata"];        // Gemini
+                if (usage != null)
+                {
+                    inputTokens = (int?)usage["prompt_tokens"] ?? 0;
+                    outputTokens = (int?)usage["completion_tokens"] ?? 0;
+                }
+                else if (usageMeta != null)
+                {
+                    inputTokens = (int?)usageMeta["promptTokenCount"] ?? 0;
+                    outputTokens = (int?)usageMeta["candidatesTokenCount"] ?? 0;
+                }
             }
 
             // 更新模型统计
@@ -626,7 +1141,510 @@ PowerShell 后台能力（当前已启用）：
                 modelConfig.TotalOutputTokens += outputTokens;
             }
 
-            return (replyText, inputTokens, outputTokens);
+            return (replyText, inputTokens, outputTokens, toolCalls);
+        }
+
+        /// <summary>
+        /// 将 OpenAI Chat Completions 格式的请求体转换为 Responses API 格式
+        /// messages → input，添加 stream=true
+        /// </summary>
+        private static object BuildResponsesApiBody(object originalRequestBody)
+        {
+            var json = JObject.FromObject(originalRequestBody);
+            var messages = json["messages"] as JArray;
+            if (messages == null) return originalRequestBody;
+
+            // 将 messages 转换为 input（Responses API 使用 input 而非 messages）
+            // 同时将 system message 提取为 instructions
+            var inputMessages = new List<object>();
+            string? instructions = null;
+
+            foreach (var msg in messages)
+            {
+                var role = msg["role"]?.ToString();
+                var content = msg["content"];
+
+                if (role == "system")
+                {
+                    // Responses API 的 system prompt 使用 instructions 字段
+                    instructions = content?.ToString() ?? "";
+                }
+                else
+                {
+                    // content 可能是字符串或数组（多模态）
+                    if (content is JArray contentArray)
+                    {
+                        // 多模态消息：转换为 Responses API 格式
+                        var parts = new List<object>();
+                        foreach (var item in contentArray)
+                        {
+                            var type = item["type"]?.ToString();
+                            if (type == "text")
+                            {
+                                parts.Add(new { type = "input_text", text = item["text"]?.ToString() ?? "" });
+                            }
+                            else if (type == "image_url")
+                            {
+                                var url = item["image_url"]?["url"]?.ToString() ?? "";
+                                parts.Add(new { type = "input_image", image_url = url });
+                            }
+                        }
+                        inputMessages.Add(new { role, content = (object)parts });
+                    }
+                    else
+                    {
+                        inputMessages.Add(new { role, content = content?.ToString() ?? "" });
+                    }
+                }
+            }
+
+            var result = new Dictionary<string, object?>
+            {
+                ["model"] = json["model"]?.ToString(),
+                ["input"] = inputMessages,
+                ["stream"] = true,
+                ["store"] = false
+            };
+
+            if (instructions != null)
+            {
+                result["instructions"] = instructions;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 解析 Responses API 的 SSE 流式响应，提取完整文本和 Token 用量
+        /// </summary>
+        private static (string Text, int InputTokens, int OutputTokens) ParseResponsesApiStream(string sseResponse)
+        {
+            var contentBuilder = new StringBuilder();
+            int inputTokens = 0, outputTokens = 0;
+
+            foreach (var rawLine in sseResponse.Split('\n'))
+            {
+                var line = rawLine.Trim();
+                if (!line.StartsWith("data:")) continue;
+                var jsonPart = line.Substring(5).Trim();
+                if (string.IsNullOrEmpty(jsonPart) || jsonPart == "[DONE]") continue;
+
+                try
+                {
+                    var evt = JObject.Parse(jsonPart);
+                    var evtType = evt["type"]?.ToString();
+
+                    if (evtType == "response.output_text.delta")
+                    {
+                        // 流式文本增量
+                        var delta = evt["delta"]?.ToString();
+                        if (delta != null) contentBuilder.Append(delta);
+                    }
+                    else if (evtType == "response.completed")
+                    {
+                        // 完成事件中包含完整的 response 和 usage
+                        var respObj = evt["response"];
+                        if (respObj != null)
+                        {
+                            // 提取 usage
+                            var usage = respObj["usage"];
+                            if (usage != null)
+                            {
+                                inputTokens = (int?)usage["input_tokens"] ?? (int?)usage["prompt_tokens"] ?? 0;
+                                outputTokens = (int?)usage["output_tokens"] ?? (int?)usage["completion_tokens"] ?? 0;
+                            }
+
+                            // 如果增量没有拼出文本，从完成事件中提取完整文本
+                            if (contentBuilder.Length == 0)
+                            {
+                                var output = respObj["output"] as JArray;
+                                if (output != null)
+                                {
+                                    foreach (var item in output)
+                                    {
+                                        var contentArr = item["content"] as JArray;
+                                        if (contentArr != null)
+                                        {
+                                            foreach (var c in contentArr)
+                                            {
+                                                if (c["type"]?.ToString() == "output_text")
+                                                {
+                                                    contentBuilder.Append(c["text"]?.ToString() ?? "");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch { /* 跳过无法解析的 SSE 行 */ }
+            }
+
+            return (contentBuilder.ToString(), inputTokens, outputTokens);
+        }
+
+        /// <summary>
+        /// 流式调用 LLM API：逐增量通过 onDelta 回调推送文本到 UI
+        /// 支持 Chat Completions（delta.content / delta.tool_calls）、Responses API 和 Gemini
+        /// </summary>
+        private async Task<(string ResponseText, int InputTokens, int OutputTokens, List<(string Id, string Name, string Arguments)>? ToolCalls)> CallLlmStreamAsync(
+            LlmModelConfig modelConfig, object requestBody, Action<string> onDelta, CancellationToken cancellationToken,
+            Action<string>? onThinking = null)
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var timeout = modelConfig.TimeoutSeconds > 0 ? modelConfig.TimeoutSeconds : 120; // 流式给更多时间
+            cts.CancelAfter(TimeSpan.FromSeconds(timeout));
+
+            bool isGemini = IsGeminiApi(modelConfig.ApiEndpoint);
+            bool isResponsesApi = modelConfig.ApiEndpoint.Contains("/v1/responses", StringComparison.OrdinalIgnoreCase);
+            string actualUrl;
+            object actualBody;
+
+            if (isGemini)
+            {
+                // Gemini 流式：使用 streamGenerateContent 端点
+                var cleanModel = modelConfig.ModelName.Replace(":generateContent", "").Trim();
+                var cleanBase = modelConfig.ApiEndpoint.TrimEnd('/');
+                actualUrl = $"{cleanBase}/models/{cleanModel}:streamGenerateContent?alt=sse";
+                actualBody = BuildGeminiRequestBody(requestBody);
+            }
+            else if (isResponsesApi)
+            {
+                actualUrl = modelConfig.ApiEndpoint;
+                actualBody = BuildResponsesApiBody(requestBody);
+            }
+            else
+            {
+                // Chat Completions：注入 stream=true
+                actualUrl = modelConfig.ApiEndpoint;
+                var json = JObject.FromObject(requestBody);
+                json["stream"] = true;
+                actualBody = json;
+            }
+
+
+            // 如果启用了代理，启动代理并替换 URL
+            if (modelConfig.UseProxy && !string.IsNullOrEmpty(modelConfig.ProxyTargetHost))
+            {
+                var (ok, msg) = LocalProxyService.Instance.EnsureRunning(modelConfig.ProxyTargetHost);
+                if (ok)
+                    actualUrl = LocalProxyService.Instance.GetProxiedUrl(actualUrl);
+                else
+                    AiFlowLogger.Warn($"[Proxy] 代理启动失败: {msg}，将直连 API");
+            }
+
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, actualUrl);
+
+            if (isGemini)
+            {
+                requestMessage.Headers.Add("X-goog-api-key", modelConfig.ApiKey);
+            }
+            else
+            {
+                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelConfig.ApiKey);
+            }
+
+            requestMessage.Content = new StringContent(
+                JsonConvert.SerializeObject(actualBody),
+                Encoding.UTF8,
+                "application/json");
+
+            // 注入自定义请求头
+            ApplyCustomHeaders(requestMessage, modelConfig);
+
+            // 使用 ResponseHeadersRead 以便逐行读取流
+            var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cts.Token);
+                throw new HttpRequestException($"API 请求失败: {response.StatusCode} - {errorBody}");
+            }
+
+            var contentBuilder = new StringBuilder();
+            int inputTokens = 0, outputTokens = 0;
+            int sseLineCount = 0;
+            int rawLineCount = 0;
+
+            // Tool Calls 累积器（支持多个并发工具调用）
+            var toolCallIds = new Dictionary<int, string>();
+            var toolCallNames = new Dictionary<int, string>();
+            var toolCallArgs = new Dictionary<int, StringBuilder>();
+
+            using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
+            using var reader = new System.IO.StreamReader(stream);
+
+            while (!reader.EndOfStream && !cts.Token.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync();
+                if (line == null) break;
+                line = line.Trim();
+
+                // 记录前 5 行原始数据（不过滤），用于诊断非标准 SSE 格式
+                rawLineCount++;
+                if (rawLineCount <= 5 && !string.IsNullOrEmpty(line))
+                    AiFlowLogger.Info($"[RAW #{rawLineCount}] {line.Substring(0, Math.Min(line.Length, 300))}");
+
+                // SSE 格式：跳过空行和事件类型行
+                if (string.IsNullOrEmpty(line) || line.StartsWith("event:")) continue;
+                if (!line.StartsWith("data:")) continue;
+
+                var jsonPart = line.Substring(5).Trim();
+                if (jsonPart == "[DONE]") break;
+                if (string.IsNullOrEmpty(jsonPart)) continue;
+
+                AiFlowLogger.Info($"[SSE RAW JSON] {jsonPart}");
+
+                sseLineCount++;
+
+                try
+                {
+                    var evt = JObject.Parse(jsonPart);
+
+                    // 动态检测：如果 data 中包含 "type":"response.xxx"，自动切换为 Responses API 模式
+                    // （解决 API 代理 URL 为 /v1/chat/completions 但实际返回 Responses API 格式的情况）
+                    if (!isResponsesApi && evt["type"]?.ToString() is string evtTypeCheck
+                        && evtTypeCheck.StartsWith("response."))
+                    {
+                        isResponsesApi = true;
+                        AiFlowLogger.Info($"[SSE] 自动检测到 Responses API 格式（{evtTypeCheck}）");
+                    }
+
+                    if (isResponsesApi)
+                    {
+                        // Responses API 流式事件
+                        var evtType = evt["type"]?.ToString();
+                        if (evtType == "response.output_text.delta")
+                        {
+                            var delta = evt["delta"]?.ToString();
+                            if (delta != null)
+                            {
+                                contentBuilder.Append(delta);
+                                onDelta(delta);
+                            }
+                        }
+                        else if (evtType == "response.reasoning_summary_text.delta"
+                              || evtType == "response.reasoning.delta")
+                        {
+                            // 推理/思考过程增量
+                            var thinking = evt["delta"]?.ToString();
+                            if (thinking != null && onThinking != null)
+                            {
+                                onThinking(thinking);
+                            }
+                        }
+                        else if (evtType == "response.completed")
+                        {
+                            var respObj = evt["response"];
+                            if (respObj is JObject)
+                            {
+                                var usage = respObj["usage"];
+                                if (usage is JObject)
+                                {
+                                    inputTokens = (int?)usage["input_tokens"] ?? (int?)usage["prompt_tokens"] ?? 0;
+                                    outputTokens = (int?)usage["output_tokens"] ?? (int?)usage["completion_tokens"] ?? 0;
+                                }
+
+                                // Responses API: 从 response.completed 中提取 tool calls
+                                var output = respObj["output"] as JArray;
+                                if (output != null)
+                                {
+                                    int tcIdx = 0;
+                                    foreach (var item in output)
+                                    {
+                                        var itemType = item["type"]?.ToString();
+                                        if (itemType == "function_call")
+                                        {
+                                            var callId = item["call_id"]?.ToString() ?? item["id"]?.ToString() ?? $"call_{tcIdx}";
+                                            var funcName = item["name"]?.ToString();
+                                            var funcArgs = item["arguments"]?.ToString();
+                                            if (funcName != null)
+                                            {
+                                                toolCallIds[tcIdx] = callId;
+                                                toolCallNames[tcIdx] = funcName;
+                                                if (funcArgs != null)
+                                                {
+                                                    toolCallArgs[tcIdx] = new StringBuilder(funcArgs);
+                                                }
+                                                AiFlowLogger.Info($"[SSE] Tool Call: {funcName}({funcArgs})");
+                                                tcIdx++;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else if (evtType == "response.output_item.added")
+                        {
+                            // Responses API: 新输出项（可能是 function_call）
+                            var item = evt["item"];
+                            if (item?["type"]?.ToString() == "function_call")
+                            {
+                                var callId = item["call_id"]?.ToString() ?? item["id"]?.ToString() ?? $"call_0";
+                                var funcName = item["name"]?.ToString();
+                                if (funcName != null)
+                                {
+                                    // 使用 output_item index 或默认 0
+                                    int tcIdx = toolCallNames.Count;
+                                    toolCallIds[tcIdx] = callId;
+                                    toolCallNames[tcIdx] = funcName;
+                                    if (!toolCallArgs.ContainsKey(tcIdx))
+                                        toolCallArgs[tcIdx] = new StringBuilder();
+                                }
+                            }
+                        }
+                        else if (evtType == "response.function_call_arguments.delta")
+                        {
+                            // Responses API: function call arguments 增量
+                            var argsDelta = evt["delta"]?.ToString();
+                            if (argsDelta != null)
+                            {
+                                // 追加到最后一个 tool call 的 args
+                                int lastIdx = toolCallNames.Count > 0 ? toolCallNames.Keys.Max() : 0;
+                                if (!toolCallArgs.ContainsKey(lastIdx))
+                                    toolCallArgs[lastIdx] = new StringBuilder();
+                                toolCallArgs[lastIdx].Append(argsDelta);
+                            }
+                        }
+                    }
+                    else if (isGemini)
+                    {
+                        // Gemini 流式事件
+                        var text = evt["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString();
+                        if (text != null)
+                        {
+                            contentBuilder.Append(text);
+                            onDelta(text);
+                        }
+                        var usageMeta = evt["usageMetadata"];
+                        if (usageMeta is JObject)
+                        {
+                            inputTokens = (int?)usageMeta["promptTokenCount"] ?? inputTokens;
+                            outputTokens = (int?)usageMeta["candidatesTokenCount"] ?? outputTokens;
+                        }
+                    }
+                    else
+                    {
+                        // Chat Completions 流式事件
+                        var choices = evt["choices"] as JArray;
+                        var choiceDelta = choices != null && choices.Count > 0 ? choices[0]?["delta"] : null;
+                        if (choiceDelta != null)
+                        {
+                            // 思考/推理过程（DeepSeek: reasoning_content, 部分模型: reasoning）
+                            var thinking = choiceDelta["reasoning_content"]?.ToString()
+                                           ?? choiceDelta["reasoning"]?.ToString();
+                            if (thinking != null && onThinking != null)
+                            {
+                                onThinking(thinking);
+                            }
+
+                            // 正文内容
+                            var delta = choiceDelta["content"]?.ToString();
+                            if (delta != null)
+                            {
+                                contentBuilder.Append(delta);
+                                onDelta(delta);
+                            }
+
+                            // Tool Calls 增量解析
+                            var toolCalls = choiceDelta["tool_calls"] as JArray;
+                            if (toolCalls != null)
+                            {
+                                foreach (var tc in toolCalls)
+                                {
+                                    var idx = (int?)tc["index"] ?? 0;
+                                    var tcId = tc["id"]?.ToString();
+                                    if (tcId != null)
+                                        toolCallIds[idx] = tcId;
+                                    var funcObj = tc["function"];
+                                    if (funcObj != null)
+                                    {
+                                        var name = funcObj["name"]?.ToString();
+                                        if (name != null)
+                                            toolCallNames[idx] = name;
+
+                                        var args = funcObj["arguments"]?.ToString();
+                                        if (args != null)
+                                        {
+                                            if (!toolCallArgs.ContainsKey(idx))
+                                                toolCallArgs[idx] = new StringBuilder();
+                                            toolCallArgs[idx].Append(args);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // 部分提供商在最后一帧附带 usage
+                        var usage = evt["usage"];
+                        if (usage is JObject)
+                        {
+                            inputTokens = (int?)usage["prompt_tokens"] ?? inputTokens;
+                            outputTokens = (int?)usage["completion_tokens"] ?? outputTokens;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AiFlowLogger.Warn($"[SSE] 解析异常: {ex.Message}");
+                }
+            }
+
+            // 更新模型统计
+            if (inputTokens > 0 || outputTokens > 0)
+            {
+                modelConfig.TotalInputTokens += inputTokens;
+                modelConfig.TotalOutputTokens += outputTokens;
+            }
+
+            // 汇总 tool calls 结果
+            List<(string Id, string Name, string Arguments)>? parsedToolCalls = null;
+            if (toolCallNames.Count > 0)
+            {
+                parsedToolCalls = new List<(string, string, string)>();
+                foreach (var kvp in toolCallNames.OrderBy(k => k.Key))
+                {
+                    var id = toolCallIds.ContainsKey(kvp.Key) ? toolCallIds[kvp.Key] : $"call_{Guid.NewGuid():N}";
+                    var args = toolCallArgs.ContainsKey(kvp.Key) ? toolCallArgs[kvp.Key].ToString() : "{}";
+                    parsedToolCalls.Add((id, kvp.Value, args));
+                    AiFlowLogger.Info($"[SSE] Tool Call: {kvp.Value}({args.Substring(0, Math.Min(args.Length, 200))})");
+                }
+            }
+
+            // 回退：流式解析未获取到任何内容且无 tool calls 时，使用非流式方式重试
+            if (contentBuilder.Length == 0 && parsedToolCalls == null && rawLineCount > 0)
+            {
+                AiFlowLogger.Warn($"[SSE] 流式解析未获取内容（共 {rawLineCount} 行原始数据, {sseLineCount} 行 SSE 数据），回退使用非流式 API...");
+                var fallback = await CallLlmAsync(modelConfig, requestBody, cancellationToken);
+                return (fallback.ResponseText, fallback.InputTokens, fallback.OutputTokens, null);
+            }
+
+            return (contentBuilder.ToString(), inputTokens, outputTokens, parsedToolCalls);
+        }
+
+        /// <summary>
+        /// 将模型配置中的自定义请求头注入到 HttpRequestMessage
+        /// </summary>
+        private static void ApplyCustomHeaders(HttpRequestMessage request, LlmModelConfig modelConfig)
+        {
+            if (string.IsNullOrEmpty(modelConfig.CustomHeaders)) return;
+
+            foreach (var line in modelConfig.CustomHeaders.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var idx = line.IndexOf(':');
+                if (idx <= 0) continue;
+
+                var headerKey = line.Substring(0, idx).Trim();
+                var headerVal = line.Substring(idx + 1).Trim();
+                if (string.IsNullOrEmpty(headerKey)) continue;
+
+                // Host 头需要特殊处理
+                if (headerKey.Equals("Host", StringComparison.OrdinalIgnoreCase))
+                    request.Headers.Host = headerVal;
+                else
+                    request.Headers.TryAddWithoutValidation(headerKey, headerVal);
+            }
         }
     }
 }

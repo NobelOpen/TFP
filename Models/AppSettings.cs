@@ -43,6 +43,9 @@ namespace TaskFlow.Models
         /// <summary>界面语言，默认英文。可选值: "en", "zh-CN"</summary>
         public string Language { get; set; } = "en";
 
+        /// <summary>系统主题。可选值: "Light", "Dark"</summary>
+        public string Theme { get; set; } = "Light";
+
         /// <summary>AI 助手模式：0=设计, 1=自主</summary>
         public int AiAssistantMode { get; set; } = 0;
 

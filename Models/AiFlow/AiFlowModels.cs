@@ -116,6 +116,12 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>AI 请求截取当前屏幕（自主模式，按需使用）</summary>
         public bool NeedsScreenshot { get; set; }
 
+        /// <summary>截图目标进程名（如 msedge、notepad），为空时截全屏</summary>
+        public string? ScreenshotTarget { get; set; }
+
+        /// <summary>AI 请求查看指定流程的详细卡片结构（按需加载）</summary>
+        public string? AnalyzeFlow { get; set; }
+
         /// <summary>失败回退策略：retry / fallback / abort（自主模式卡片失败时使用）</summary>
         public string? FailureStrategy { get; set; }
 
@@ -242,5 +248,9 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>如果是报告消息，存储报告项列表</summary>
         [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
         private List<AiFlowReportItem>? _reportItems;
+
+        /// <summary>AI 思考/推理过程文本（可折叠显示）</summary>
+        [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+        private string? _thinkingContent;
     }
 }

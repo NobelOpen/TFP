@@ -620,13 +620,14 @@ namespace TaskFlow.Services
                 var resized = new Mat();
                 Cv2.Resize(sourceImage, resized, new OpenCvSharp.Size(targetW, targetH));
 
-                // 计算缩放倍率（取宽度方向）
-                task.OutputScaleRatio = (double)targetW / sourceImage.Width;
+                // 计算宽度和高度缩放倍率
+                task.OutputWidthScale = (double)targetW / sourceImage.Width;
+                task.OutputHeightScale = (double)targetH / sourceImage.Height;
 
                 task.OutputImage?.Dispose();
                 task.OutputImage = resized;
 
-                Log($"[{DateTime.Now:HH:mm:ss}] 图像缩放: {sourceImage.Width}x{sourceImage.Height} -> {targetW}x{targetH} (倍率: {task.OutputScaleRatio:F4})");
+                Log($"[{DateTime.Now:HH:mm:ss}] 图像缩放: {sourceImage.Width}x{sourceImage.Height} -> {targetW}x{targetH} (宽缩放: {task.OutputWidthScale:F4}, 高缩放: {task.OutputHeightScale:F4})");
                 return true;
             }
             catch (Exception ex)
@@ -960,7 +961,10 @@ namespace TaskFlow.Services
 
         #region Helper Methods
 
-        private bool EvaluateCondition(IfElseBranchTaskCard ifCard, IList<TaskCardBase> allTasks)
+        /// <summary>
+        /// 评估条件表达式，返回 true/false，异常时返回 null 表示评估失败
+        /// </summary>
+        private bool? EvaluateCondition(IfElseBranchTaskCard ifCard, IList<TaskCardBase> allTasks)
         {
             var expression = ifCard.ConditionExpression;
             Log($"[调试] EvaluateCondition: Expression=\"{expression}\"");
@@ -983,7 +987,8 @@ namespace TaskFlow.Services
             catch (Exception ex)
             {
                 Log($"[调试] 条件表达式评估失败: {ex.Message}");
-                return false;
+                ifCard.ErrorMessage = $"条件表达式评估失败: {ex.Message}";
+                return null;
             }
         }
 

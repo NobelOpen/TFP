@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TaskFlow.Resources;
 using System.Windows;
 using System.Windows.Input;
@@ -28,6 +28,7 @@ namespace TaskFlow.Views.Dialogs
         public ColorPickerWindow(Mat sourceImage)
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             ApplyLocalization();
             _sourceImage = sourceImage;
 

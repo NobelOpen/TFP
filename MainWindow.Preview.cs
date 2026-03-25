@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -51,11 +51,11 @@ namespace TaskFlow
         }
 
         /// <summary>
-        /// 默认图片时阻止右键菜单弹出
+        /// 无图片时阻止右键菜单弹出
         /// </summary>
         private void PreviewContextMenu_Opening(object sender, ContextMenuEventArgs e)
         {
-            if (ViewModel.DisplayImage == null || ViewModel.DisplayImage.Empty())
+            if (ViewModel.DisplayImage == null || ViewModel.DisplayImage.IsDisposed)
             {
                 e.Handled = true; // 取消菜单弹出
             }
@@ -63,7 +63,7 @@ namespace TaskFlow
 
         private void SavePreviewImage_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewModel.DisplayImage == null || ViewModel.DisplayImage.Empty())
+            if (ViewModel.DisplayImage == null || ViewModel.DisplayImage.IsDisposed)
             {
                 MessageBox.Show(TaskFlow.Resources.Strings.Msg_NoImageToSave, TaskFlow.Resources.Strings.Common_Tip, MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -92,8 +92,8 @@ namespace TaskFlow
 
         private void PreviewImage_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            // 默认图片时禁止缩放
-            if (ViewModel.DisplayImage == null || ViewModel.DisplayImage.Empty()) return;
+            // 无图片时禁止缩放
+            if (ViewModel.DisplayImage == null || ViewModel.DisplayImage.IsDisposed) return;
 
             // 获取鼠标在 ScrollViewer 视口中的位置
             var mousePos = e.GetPosition(ImageScrollViewer);

@@ -62,6 +62,7 @@ namespace TaskFlow.Models.AiFlow
             TaskType.AdbCloseApp => TaskRiskLevel.Medium,
             TaskType.AdbDisconnect => TaskRiskLevel.Medium,
             TaskType.EventListener => TaskRiskLevel.Medium,
+            TaskType.InputCombo => TaskRiskLevel.Medium,
 
             // === 🔴 高风险：AI 模型调用（消耗资源/费用） ===
             TaskType.LlmTranslate => TaskRiskLevel.High,
@@ -78,6 +79,7 @@ namespace TaskFlow.Models.AiFlow
             TaskType.ForLoopEnd => TaskRiskLevel.Low,
             TaskType.EndTask => TaskRiskLevel.Low,
             TaskType.EndAllFlows => TaskRiskLevel.Low,
+            TaskType.RestartFlow => TaskRiskLevel.Low,
             TaskType.BreakLoop => TaskRiskLevel.Low,
 
             // 默认中风险

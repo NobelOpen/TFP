@@ -77,6 +77,9 @@ namespace TaskFlow.ViewModels
         [ObservableProperty]
         private bool _isRunning;
 
+        [ObservableProperty]
+        private bool _isLoading;
+
         /// <summary>
         /// 是否处于忙碌状态（流程运行中 或 Orchid 生成/执行中）
         /// </summary>
@@ -131,7 +134,7 @@ namespace TaskFlow.ViewModels
         private int _nextTaskNumber = 1;
 
         [ObservableProperty]
-        private string _windowTitle = "TaskFlow Pipeline";
+        private string _windowTitle = "TaskFlowPro";
 
         /// <summary>
         /// 全局变量仓库
@@ -555,7 +558,7 @@ namespace TaskFlow.ViewModels
                 }
 
                 // 显示任务的输出图像，如果没有则清空预览
-                if (task.OutputImage != null && !task.OutputImage.Empty())
+                if (task.OutputImage != null && !task.OutputImage.IsDisposed && !task.OutputImage.Empty())
                 {
                     // 裁剪卡片：显示源图+ROI框，而非裁剪结果
                     if (task is ImgCropTaskCard)
@@ -654,7 +657,7 @@ namespace TaskFlow.ViewModels
             if (useSource && sourceTaskId.HasValue)
             {
                 var srcTask = TaskCards.FirstOrDefault(t => t.Id == sourceTaskId.Value);
-                if (srcTask?.OutputImage != null && !srcTask.OutputImage.Empty())
+                if (srcTask?.OutputImage != null && !srcTask.OutputImage.IsDisposed && !srcTask.OutputImage.Empty())
                 {
                     sourceImage = srcTask.OutputImage.Clone();
                 }
@@ -779,6 +782,17 @@ namespace TaskFlow.ViewModels
                     }
                 }
             }
+
+            // 刷新当前分页面板绑定的 CollectionView 以应用 Filter，避免 UI 虚拟化时的 Container Churning
+            RefreshTaskCardsView();
+        }
+
+        /// <summary>
+        /// 刷新当前分页面板的 UI 列表
+        /// </summary>
+        public void RefreshTaskCardsView()
+        {
+            SelectedTab?.UpdateVisibleTaskCards();
         }
 
         [RelayCommand]
@@ -934,6 +948,7 @@ namespace TaskFlow.ViewModels
             {
                 TaskType.EndTask => new EndTaskCard(),
                 TaskType.EndAllFlows => new EndAllFlowsTaskCard(),
+                TaskType.RestartFlow => new RestartFlowTaskCard(),
                 TaskType.PauseTask => new PauseTaskCard(),
                 TaskType.WinLaunchApp => new WinLaunchAppTaskCard(),
                 TaskType.WinScreenshot => new WinScreenshotTaskCard(),
@@ -970,6 +985,8 @@ namespace TaskFlow.ViewModels
                 TaskType.FileRead => new FileReadTaskCard(),
                 TaskType.EventListener => new EventListenerTaskCard(),
                 TaskType.ArraySearch => new ArraySearchTaskCard(),
+                TaskType.WinTextInput => new WinTextInputTaskCard(),
+                TaskType.InputCombo => new InputComboTaskCard(),
                 _ => throw new ArgumentException($"Unsupported task type: {taskType}")
             };
         }

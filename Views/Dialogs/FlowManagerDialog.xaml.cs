@@ -14,6 +14,7 @@ namespace TaskFlow.Views.Dialogs
         public FlowManagerDialog(ObservableCollection<WorkflowTab> tabs, Action<WorkflowTab> selectTabAction, int nextTabIndex)
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             ApplyLocalization();
             _tabs = tabs;
             _selectTabAction = selectTabAction;
@@ -31,7 +32,7 @@ namespace TaskFlow.Views.Dialogs
             FlowListBox.Items.Clear();
             foreach (var tab in _tabs)
             {
-                FlowListBox.Items.Add(tab.Name);
+                FlowListBox.Items.Add(tab.Name.ToUpper());
             }
             if (FlowListBox.Items.Count > 0)
             {
@@ -53,11 +54,11 @@ namespace TaskFlow.Views.Dialogs
             if (FlowListBox.SelectedIndex < 0) return;
 
             var tab = _tabs[FlowListBox.SelectedIndex];
-            var dialog = new InputDialog(Strings.Dlg_RenameFlow, Strings.Dlg_EnterNewName, tab.Name);
+            var dialog = new RenameDialog(tab.Name, Strings.Dlg_RenameFlow, Strings.Dlg_EnterNewName);
             dialog.Owner = this;
-            if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.InputText))
+            if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.NewName))
             {
-                tab.Name = dialog.InputText.Trim();
+                tab.Name = dialog.NewName.Trim();
                 RefreshList();
             }
         }
@@ -104,106 +105,9 @@ namespace TaskFlow.Views.Dialogs
             BtnAdd.Content = Strings.UI_Add;
             BtnRename.Content = Strings.UI_Rename;
             BtnDelete.Content = Strings.UI_Delete;
-            BtnClose.Content = Strings.UI_Close;
+            BtnClose.Content = Strings.Dlg_OK;
         }
     }
 
-    /// <summary>
-    /// 通用输入对话框
-    /// </summary>
-    public class InputDialog : Window
-    {
-        private readonly System.Windows.Controls.TextBox _textBox;
 
-        public string InputText => _textBox.Text;
-
-        public InputDialog(string title, string prompt, string defaultValue = "")
-        {
-            Title = title;
-            Width = 350;
-            Height = 160;
-            WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            Background = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(250, 249, 245));
-            ResizeMode = ResizeMode.NoResize;
-            ShowInTaskbar = false;
-
-            var grid = new System.Windows.Controls.Grid { Margin = new Thickness(16) };
-            grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
-            grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
-            grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
-
-            var label = new System.Windows.Controls.TextBlock
-            {
-                Text = prompt,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(20, 20, 19)),
-                FontSize = 13,
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            System.Windows.Controls.Grid.SetRow(label, 0);
-            grid.Children.Add(label);
-
-            _textBox = new System.Windows.Controls.TextBox
-            {
-                Text = defaultValue,
-                FontSize = 14,
-                Padding = new Thickness(6, 4, 6, 4),
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(255, 255, 255)),
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(20, 20, 19)),
-                BorderBrush = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(232, 230, 220)),
-                Margin = new Thickness(0, 0, 0, 12)
-            };
-            _textBox.SelectAll();
-            System.Windows.Controls.Grid.SetRow(_textBox, 1);
-            grid.Children.Add(_textBox);
-
-            var btnPanel = new System.Windows.Controls.StackPanel
-            {
-                Orientation = System.Windows.Controls.Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right
-            };
-            System.Windows.Controls.Grid.SetRow(btnPanel, 2);
-
-            var okBtn = new System.Windows.Controls.Button
-            {
-                Content = Strings.Dlg_OK,
-                Width = 70,
-                Padding = new Thickness(0, 4, 0, 4),
-                Margin = new Thickness(0, 0, 8, 0),
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(217, 119, 87)),
-                Foreground = System.Windows.Media.Brushes.White,
-                BorderThickness = new Thickness(0),
-                Cursor = System.Windows.Input.Cursors.Hand
-            };
-            okBtn.Click += (s, e) => { DialogResult = true; };
-
-            var cancelBtn = new System.Windows.Controls.Button
-            {
-                Content = Strings.Dlg_Cancel,
-                Width = 70,
-                Padding = new Thickness(0, 4, 0, 4),
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(240, 239, 232)),
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(20, 20, 19)),
-                BorderThickness = new Thickness(0),
-                Cursor = System.Windows.Input.Cursors.Hand
-            };
-            cancelBtn.Click += (s, e) => { DialogResult = false; };
-
-            btnPanel.Children.Add(okBtn);
-            btnPanel.Children.Add(cancelBtn);
-            grid.Children.Add(btnPanel);
-
-            Content = grid;
-
-            Loaded += (s, e) => { _textBox.Focus(); };
-        }
-
-    }
 }

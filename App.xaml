@@ -19,6 +19,21 @@
             <Setter Property="FontFamily" Value="{StaticResource FontBody}"/>
         </Style>
 
+        <!-- 全局移除默认的键盘焦点虚线框 (FocusVisualStyle) -->
+        <Style TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
+
         <!-- 全局转换器 -->
         <conv:TaskStatusToColorConverter x:Key="StatusToColorConverter"/>
         <conv:SelectedToBorderColorConverter x:Key="SelectedToBorderConverter"/>
@@ -31,15 +46,17 @@
         <conv:MatToBitmapSourceConverter x:Key="MatToImageConverter"/>
         <conv:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter"/>
         <conv:NullToCollapsedConverter x:Key="NullToCollapsedConverter"/>
+        <conv:ToUpperConverter x:Key="ToUpperConverter"/>
 
         <!-- Anthropic 风格工具栏按钮-->
         <Style x:Key="ToolbarButton" TargetType="Button">
-            <Setter Property="Background" Value="#faf9f5"/>
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#e3dacc" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}" />
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -55,37 +72,37 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#e8e6dc"/>
+                    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         
         <Style x:Key="ToolbarButtonGreen" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-            <Setter Property="Background" Value="#788c5d"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource SuccessColorBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#8a9e6d"/>
+                    <Setter Property="Background" Value="{DynamicResource SuccessHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         
         <Style x:Key="ToolbarButtonRed" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-            <Setter Property="Background" Value="#c45b4a"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource DangerButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#d06b5a"/>
+                    <Setter Property="Background" Value="{DynamicResource DangerButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         
         <Style x:Key="ToolbarButtonDark" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-            <Setter Property="Background" Value="#141413"/>
-            <Setter Property="Foreground" Value="#faf9f5"/>
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2a2a28"/>
+                    <Setter Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -93,11 +110,11 @@
         <Style x:Key="VerticalSeparator" TargetType="Separator">
             <Setter Property="Width" Value="1"/>
             <Setter Property="Margin" Value="8,4"/>
-            <Setter Property="Background" Value="#e8e6dc"/>
+            <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Separator">
-                        <Rectangle Width="1" Fill="#e8e6dc"/>
+                        <Rectangle Width="1" Fill="{TemplateBinding Background}"/>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -105,11 +122,11 @@
         
         <!-- Anthropic 风格右键菜单 -->
         <Style TargetType="ContextMenu">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#e8e6dc"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="4"/>
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -121,7 +138,7 @@
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <Border.Effect>
-                                <DropShadowEffect Color="#b0aea5" BlurRadius="12" ShadowDepth="2" Opacity="0.18" Direction="270"/>
+                                <DropShadowEffect Color="{DynamicResource CardShadowColor}" BlurRadius="12" ShadowDepth="2" Opacity="0.18" Direction="270"/>
                             </Border.Effect>
                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                         </Border>
@@ -132,7 +149,7 @@
         
         <!-- Anthropic 风格菜单项（支持子菜单） -->
         <Style TargetType="MenuItem">
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -157,7 +174,7 @@
                                     <Path x:Name="SubMenuArrow"
                                           Grid.Column="1"
                                           Data="M 0,0 L 4,4 L 0,8"
-                                          Fill="#b0aea5"
+                                          Fill="{DynamicResource TextIconBrush}"
                                           VerticalAlignment="Center"
                                           Margin="12,0,0,0"
                                           Visibility="Collapsed"/>
@@ -171,14 +188,14 @@
                                    AllowsTransparency="True"
                                    Focusable="False"
                                    PopupAnimation="Fade">
-                                <Border Background="White"
-                                        BorderBrush="#e8e6dc"
+                                <Border Background="{DynamicResource SurfaceBrush}"
+                                        BorderBrush="{DynamicResource BorderLightBrush}"
                                         BorderThickness="1"
                                         CornerRadius="8"
                                         Padding="4"
                                         Margin="4">
                                     <Border.Effect>
-                                        <DropShadowEffect Color="#b0aea5" BlurRadius="12" ShadowDepth="2" Opacity="0.18" Direction="270"/>
+                                        <DropShadowEffect Color="{DynamicResource CardShadowColor}" BlurRadius="12" ShadowDepth="2" Opacity="0.18" Direction="270"/>
                                     </Border.Effect>
                                     <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                                 </Border>
@@ -186,13 +203,13 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="MenuBorder" Property="Background" Value="#f0efe8"/>
+                                <Setter TargetName="MenuBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="HasItems" Value="True">
                                 <Setter TargetName="SubMenuArrow" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="#b0aea5"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -207,7 +224,55 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Separator">
-                        <Rectangle Height="1" Fill="#e8e6dc"/>
+                        <Rectangle Height="1" Fill="{DynamicResource BorderLightBrush}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- 自定义滚动条样式 -->
+        <Style x:Key="DarkScrollThumbStyle" TargetType="Thumb">
+            <Setter Property="Background" Value="{DynamicResource BorderDarkBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Margin="2"
+                                SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="MinWidth" Value="10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid x:Name="Bg" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                            <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
+                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="true">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="false"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="false"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource DarkScrollThumbStyle}" Background="{DynamicResource BorderDarkBrush}" x:Name="Thumb"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="Background" TargetName="Thumb" Value="{DynamicResource TextSecondaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="true" SourceName="Thumb">
+                                <Setter Property="Background" TargetName="Thumb" Value="{DynamicResource TextTertiaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>

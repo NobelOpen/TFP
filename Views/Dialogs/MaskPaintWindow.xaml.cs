@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TaskFlow.Resources;
 using System.IO;
 using System.Windows;
@@ -37,6 +37,7 @@ namespace TaskFlow.Views.Dialogs
         public MaskPaintWindow(Mat sourceImage, string? existingMaskPath = null)
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             ApplyLocalization();
             _sourceImage = sourceImage;
             _imageWidth = sourceImage.Width;

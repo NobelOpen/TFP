@@ -4,15 +4,18 @@
         Title="重命名" 
         SizeToContent="Height" Width="380"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="Transparent"
+        AllowsTransparency="True"
         FontFamily="{StaticResource FontBody}"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStyle="None">
 
     <Window.Resources>
         <!-- 确定按钮样式 -->
         <Style x:Key="OkBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="#d97757"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -24,10 +27,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#c4663e"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#b55a35"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -37,23 +40,26 @@
 
         <!-- 取消按钮样式 -->
         <Style x:Key="CancelBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="#3a3a4a"/>
-            <Setter Property="Foreground" Value="#f5f0eb"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="6" Padding="16,6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2e2e3c"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#242432"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -62,40 +68,73 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <TextBlock x:Name="TxtNewNameLabel" Grid.Row="0" Text="任务名称" Foreground="#6b6a65" FontSize="12" Margin="0,0,0,6"/>
-        
-        <TextBox x:Name="NameTextBox" 
-                 Grid.Row="1"
-                 MinHeight="36" FontSize="14"
-                 Background="White" Foreground="#141413"
-                 BorderBrush="#e8e6dc" BorderThickness="1"
-                 Padding="8,8"
-                 VerticalContentAlignment="Center">
-            <TextBox.Template>
-                <ControlTemplate TargetType="TextBox">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6"
-                            Padding="{TemplateBinding Padding}">
-                        <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
-                    </Border>
-                </ControlTemplate>
-            </TextBox.Template>
-        </TextBox>
-        
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
-            <Button x:Name="BtnOK" Content="确定" Width="80" Height="32" Margin="0,0,8,0"
-                    Click="OkButton_Click" Style="{StaticResource OkBtnStyle}"/>
-            <Button x:Name="BtnCancel" Content="取消" Width="80" Height="32"
-                    Click="CancelButton_Click" Style="{StaticResource CancelBtnStyle}"/>
-        </StackPanel>
-    </Grid>
+    <!-- 外层阴影边框 -->
+    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Margin="16"
+            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18" Color="{DynamicResource CardShadowColor}"/>
+        </Border.Effect>
+
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题区域 -->
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <TextBlock x:Name="DialogTitleText" Text="重命名" 
+                           Foreground="{DynamicResource DialogTitleBrush}" 
+                           FontSize="16" 
+                           FontWeight="SemiBold"
+                           FontFamily="{StaticResource FontTitle}"
+                           VerticalAlignment="Center"/>
+                <Button Content="✕" Width="32" Height="32" Background="Transparent" BorderThickness="0" 
+                        Foreground="{DynamicResource TextSecondaryBrush}" FontSize="16" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,-8,-8,0"
+                        Click="CancelButton_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="16">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+
+            <TextBlock x:Name="TxtNewNameLabel" Grid.Row="1" Text="新名称" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,6"/>
+            
+            <TextBox x:Name="NameTextBox" 
+                     Grid.Row="1" Margin="0,22,0,0"
+                     MinHeight="36" FontSize="14"
+                     Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                     BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1"
+                     Padding="8,8"
+                     VerticalContentAlignment="Center">
+                <TextBox.Template>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                    </ControlTemplate>
+                </TextBox.Template>
+            </TextBox>
+            
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button x:Name="BtnOK" Content="确定" Width="80" Height="32"
+                        Click="OkButton_Click" Style="{StaticResource OkBtnStyle}"/>
+            </StackPanel>
+        </Grid>
+    </Border>
 </Window>
+

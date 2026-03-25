@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -14,6 +14,7 @@ namespace TaskFlow.Views.Dialogs
         public VariableManagerDialog(VariableStore variableStore)
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             ApplyLocalization();
             _variableStore = variableStore;
             VariableGrid.ItemsSource = _variableStore.Variables;
@@ -144,7 +145,7 @@ namespace TaskFlow.Views.Dialogs
             BtnAdd.Content = Strings.UI_Add;
             BtnRename.Content = Strings.UI_Rename;
             BtnDelete.Content = Strings.UI_Delete;
-            BtnClose.Content = Strings.UI_Close;
+            BtnClose.Content = Strings.Dlg_OK;
         }
     }
 }

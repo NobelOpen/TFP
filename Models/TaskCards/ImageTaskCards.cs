@@ -691,11 +691,18 @@ namespace TaskFlow.Models.TaskCards
         private int _targetHeight;
 
         /// <summary>
-        /// 输出缩放倍率
+        /// 输出宽度缩放倍率
         /// </summary>
         [JsonIgnore]
         [ObservableProperty]
-        private double _outputScaleRatio;
+        private double _outputWidthScale;
+
+        /// <summary>
+        /// 输出高度缩放倍率
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private double _outputHeightScale;
 
         public ImgResizeTaskCard()
         {
@@ -707,7 +714,8 @@ namespace TaskFlow.Models.TaskCards
         public override void Reset()
         {
             base.Reset();
-            OutputScaleRatio = 0;
+            OutputWidthScale = 0;
+            OutputHeightScale = 0;
         }
 
         public override void BindImageSource(TaskCardBase sourceCard)

@@ -4,26 +4,30 @@
         Title="设置"
         Width="480" Height="520"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="Transparent"
+        AllowsTransparency="True"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
         FontFamily="{StaticResource FontBody}"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStyle="None">
 
     <Window.Resources>
         <!-- 标签样式 -->
         <Style x:Key="SectionHeader" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#d97757"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontFamily" Value="{StaticResource FontTitle}"/>
             <Setter Property="Margin" Value="0,12,0,6"/>
         </Style>
         <Style x:Key="SettingLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style x:Key="SettingCheckBox" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Margin" Value="0,4"/>
             <Setter Property="Template">
@@ -31,11 +35,11 @@
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Border x:Name="CheckBorder" Width="16" Height="16"
-                                    Background="White" BorderBrush="#e8e6dc"
+                                    Background="{DynamicResource AppBackgroundBrush}" BorderBrush="{DynamicResource BorderLightBrush}"
                                     BorderThickness="1" CornerRadius="4" Margin="0,0,6,0"
                                     VerticalAlignment="Center">
                                 <Path x:Name="CheckMark" Data="M2,5 L5,8 10,2"
-                                      Stroke="White" StrokeThickness="2"
+                                      Stroke="{DynamicResource AppBackgroundBrush}" StrokeThickness="2"
                                       Visibility="Collapsed"
                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
@@ -43,12 +47,12 @@
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="CheckBorder" Property="Background" Value="#d97757"/>
-                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#d97757"/>
+                                <Setter TargetName="CheckBorder" Property="Background" Value="{DynamicResource TextPrimaryBrush}"/>
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
                                 <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#c8c6be"/>
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -56,9 +60,9 @@
             </Setter>
         </Style>
         <Style x:Key="SettingTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#141413"/>
-            <Setter Property="BorderBrush" Value="#e8e6dc"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="6,3"/>
             <Setter Property="FontSize" Value="13"/>
@@ -81,20 +85,20 @@
 
         <!-- 统一圆角下拉框样式（与整体软件设计风格一致） -->
         <Style x:Key="SettingComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#141413"/>
-            <Setter Property="BorderBrush" Value="#e8e6dc"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,5"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Foreground" Value="#141413"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                         <Setter Property="Padding" Value="8,5"/>
                         <Style.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter Property="Background" Value="#f0efe8"/>
+                                <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -105,27 +109,28 @@
                     <ControlTemplate TargetType="ComboBox">
                         <Grid>
                             <ToggleButton x:Name="ToggleButton"
+                                          Background="{TemplateBinding Background}"
                                           IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                           Focusable="false" ClickMode="Press">
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
-                                        <Border x:Name="Border" Background="White"
-                                                BorderBrush="#e8e6dc" BorderThickness="1" CornerRadius="6">
+                                        <Border x:Name="Border" Background="{TemplateBinding Background}"
+                                                BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition/>
                                                     <ColumnDefinition Width="24"/>
                                                 </Grid.ColumnDefinitions>
-                                                <Path Grid.Column="1" Data="M0,0 L4,4 8,0" Stroke="#6b6a65" StrokeThickness="1.5"
+                                                <Path Grid.Column="1" Data="M0,0 L4,4 8,0" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.5"
                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Grid>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Border" Property="BorderBrush" Value="#c8c6be"/>
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                             </Trigger>
                                             <Trigger Property="IsChecked" Value="True">
-                                                <Setter TargetName="Border" Property="BorderBrush" Value="#d97757"/>
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -142,9 +147,9 @@
                                    AllowsTransparency="True" Focusable="False"
                                    PopupAnimation="Slide">
                                 <Grid x:Name="DropDown" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}" SnapsToDevicePixels="True">
-                                    <Border x:Name="DropDownBorder" Background="White" BorderBrush="#e8e6dc" BorderThickness="1" CornerRadius="6" Margin="0,2,0,0">
+                                    <Border x:Name="DropDownBorder" Background="{DynamicResource AppBackgroundBrush}" BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Margin="0,2,0,0">
                                         <Border.Effect>
-                                            <DropShadowEffect Color="#20000000" BlurRadius="8" ShadowDepth="2" Direction="270"/>
+                                            <DropShadowEffect Color="{DynamicResource CardShadowColor}" BlurRadius="8" ShadowDepth="2" Direction="270"/>
                                         </Border.Effect>
                                         <ScrollViewer SnapsToDevicePixels="True">
                                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
@@ -159,11 +164,11 @@
         </Style>
 
         <!-- 细圆柱滚动条样式（与主窗口一致） -->
-        <SolidColorBrush x:Key="ScrollBar.Static.Background" Color="#f0efe8"/>
+        <SolidColorBrush x:Key="ScrollBar.Static.Background" Color="Transparent"/>
         <SolidColorBrush x:Key="ScrollBar.Static.Border" Color="Transparent"/>
-        <SolidColorBrush x:Key="ScrollBar.Static.Thumb" Color="#c8c6be"/>
-        <SolidColorBrush x:Key="ScrollBar.MouseOver.Thumb" Color="#b0aea5"/>
-        <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="#8a8880"/>
+        <SolidColorBrush x:Key="ScrollBar.Static.Thumb" Color="{DynamicResource BorderLightColor}"/>
+        <SolidColorBrush x:Key="ScrollBar.MouseOver.Thumb" Color="{DynamicResource BorderDarkColor}"/>
+        <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="{DynamicResource TextTertiaryColor}"/>
 
         <Style x:Key="DarkScrollThumbStyle" TargetType="Thumb">
             <Setter Property="IsTabStop" Value="False"/>
@@ -180,53 +185,55 @@
             </Setter>
         </Style>
 
-        <Style TargetType="ScrollBar">
-            <Setter Property="Background" Value="{StaticResource ScrollBar.Static.Background}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource ScrollBar.Static.Border}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="10"/>
-            <Setter Property="MinWidth" Value="10"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollBar">
-                        <Grid x:Name="Bg" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-                            <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
-                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="true">
-                                <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="false"/>
-                                </Track.DecreaseRepeatButton>
-                                <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="false"/>
-                                </Track.IncreaseRepeatButton>
-                                <Track.Thumb>
-                                    <Thumb Style="{StaticResource DarkScrollThumbStyle}" Background="{StaticResource ScrollBar.Static.Thumb}" x:Name="Thumb"/>
-                                </Track.Thumb>
-                            </Track>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.MouseOver.Thumb}"/>
-                            </Trigger>
-                            <Trigger Property="IsDragging" Value="true" SourceName="Thumb">
-                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.Pressed.Thumb}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+
     </Window.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <Border Padding="20">
-        <StackPanel>
-            <!-- 大标题 -->
-            <TextBlock x:Name="TxtTitle" Text="设置管理" 
-                       Foreground="#d97757" 
-                       FontSize="16" 
-                       FontWeight="SemiBold"
-                       FontFamily="{StaticResource FontTitle}"
-                       Margin="0,0,0,12"/>
+    <!-- 外层阴影边框 -->
+    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Margin="16"
+            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18" Color="{DynamicResource CardShadowColor}"/>
+        </Border.Effect>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题层 -->
+        <Border Grid.Row="0" Padding="24,20,24,16" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="0,0,0,1" Background="{DynamicResource AppBackgroundBrush}" CornerRadius="12,12,0,0">
+            <Grid>
+                <TextBlock x:Name="TxtTitle" Text="设置管理" 
+                           Foreground="{DynamicResource DialogTitleBrush}" 
+                           FontSize="16" 
+                           FontWeight="SemiBold"
+                           FontFamily="{StaticResource FontTitle}"
+                           HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                <Button Content="✕" Width="36" Height="36" Background="Transparent" BorderThickness="0" 
+                        Foreground="{DynamicResource TextSecondaryBrush}" FontSize="18" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Click="Cancel_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="18">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 内容层 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Border Padding="24,16">
+                <StackPanel>
 
             <!-- 启动设置 -->
             <TextBlock x:Name="TxtStartupSection" Text="启动设置" Style="{StaticResource SectionHeader}"/>
@@ -259,7 +266,7 @@
             <!-- OCR引擎设置 -->
             <StackPanel Orientation="Horizontal" Margin="0,12,0,6">
                 <TextBlock x:Name="TxtOcrSection" Text="OCR 引擎设置" Style="{StaticResource SectionHeader}" Margin="0"/>
-                <TextBlock x:Name="TxtOcrStatus" Text="状态: ⚠ 未配置" Foreground="#b0aea5" FontSize="12" 
+                <TextBlock x:Name="TxtOcrStatus" Text="状态: ⚠ 未配置" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" 
                            VerticalAlignment="Center" Margin="10,0,0,0"/>
             </StackPanel>
             <TextBlock x:Name="TxtOcrExeLabel" Text="OCR 可执行文件路径:" Style="{StaticResource SettingLabel}" Margin="0,4,0,2"/>
@@ -267,7 +274,8 @@
                 <TextBox x:Name="TxtOcrExePath" Style="{StaticResource SettingTextBox}" Width="340"/>
                 <Button x:Name="BtnBrowseOcrExe" Content="浏览"
                         Click="BrowseOcrExe_Click" Margin="6,0,0,0" Padding="8,4" Cursor="Hand"
-                        Background="#e8e6dc" BorderThickness="0">
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Background="{DynamicResource AppBackgroundBrush}" BorderThickness="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
@@ -282,7 +290,8 @@
                 <TextBox x:Name="TxtOcrDirPath" Style="{StaticResource SettingTextBox}" Width="340"/>
                 <Button x:Name="BtnBrowseOcrDir" Content="浏览"
                         Click="BrowseOcrDir_Click" Margin="6,0,0,0" Padding="8,4" Cursor="Hand"
-                        Background="#e8e6dc" BorderThickness="0">
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Background="{DynamicResource AppBackgroundBrush}" BorderThickness="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
@@ -294,7 +303,7 @@
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
                 <Button x:Name="BtnAutoDetect" Content="自动探测" Click="AutoDetect_Click"
-                        Background="#e8e6dc" Foreground="#141413" Padding="12,6" BorderThickness="0" Cursor="Hand" Margin="0,0,8,0">
+                        Background="{DynamicResource SurfaceHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" Padding="12,6" BorderThickness="0" Cursor="Hand" Margin="0,0,8,0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
@@ -304,7 +313,7 @@
                     </Button.Template>
                 </Button>
                 <Button x:Name="BtnTestOcr" Content="测试可用性" Click="TestOcr_Click"
-                        Background="#4A90D9" Foreground="White" Padding="12,6" BorderThickness="0" Cursor="Hand">
+                        Background="{DynamicResource PrimaryButtonBgBrush}" Foreground="{DynamicResource PrimaryButtonTextBrush}" Padding="12,6" BorderThickness="0" Cursor="Hand">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
@@ -320,7 +329,7 @@
                       Style="{StaticResource SettingCheckBox}"/>
             <Button x:Name="BtnViewCalibration" Content="查看标定结果" Click="ViewCalibration_Click"
                     Padding="12,6" Cursor="Hand" HorizontalAlignment="Left"
-                    Background="#e8e6dc" Foreground="#141413" BorderThickness="0">
+                    Background="{DynamicResource SurfaceHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
@@ -329,7 +338,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#dddbd2"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BorderLightBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -346,40 +355,39 @@
                     <ComboBoxItem Content="中文" Tag="zh-CN"/>
                 </ComboBox>
             </DockPanel>
-            <TextBlock x:Name="TxtLangHint" Text="* Restart required after language change" Foreground="#b0aea5" FontSize="11" Margin="0,2,0,0"/>
+            <TextBlock x:Name="TxtLangHint" Text="* Restart required after language change" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,2,0,0"/>
+
+            <!-- 主题设置 -->
+            <TextBlock x:Name="TxtThemeSection" Text="Theme" Style="{StaticResource SectionHeader}"/>
+            <DockPanel Margin="0,4">
+                <TextBlock x:Name="TxtThemeLabel" Text="Theme:" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
+                <ComboBox x:Name="CmbTheme" Width="160" HorizontalAlignment="Left" SelectedIndex="0"
+                          Style="{StaticResource SettingComboBox}">
+                    <ComboBoxItem Content="Light (白天)" Tag="Light"/>
+                    <ComboBoxItem Content="Dark (深夜)" Tag="Dark"/>
+                </ComboBox>
+            </DockPanel>
 
             <!-- 关于 -->
             <TextBlock x:Name="TxtAboutSection" Text="ℹ About / 关于" Style="{StaticResource SectionHeader}"/>
-            <TextBlock x:Name="TxtVersion" Foreground="#b0aea5" FontSize="13" Margin="0,2"/>
-            <TextBlock Foreground="#b0aea5" FontSize="13" Margin="0,2">
+            <TextBlock x:Name="TxtVersion" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="13" Margin="0,2"/>
+            <TextBlock Foreground="{DynamicResource TextTertiaryBrush}" FontSize="13" Margin="0,2">
                 <Run Text="GitHub: "/>
                 <Hyperlink NavigateUri="https://github.com/NobelOpen/TFP" RequestNavigate="Hyperlink_RequestNavigate">
                     https://github.com/NobelOpen/TFP
                 </Hyperlink>
             </TextBlock>
 
-            <!-- 按钮 -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+
+        <!-- 按钮层 -->
+        <Border Grid.Row="2" Padding="24,16" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="0,1,0,0" CornerRadius="0,0,12,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="BtnSave" Content="保存" Click="Save_Click" IsDefault="True"
-                        Width="80" Height="32" Margin="0,0,8,0"
-                        Background="#d97757" Foreground="White" 
-                        BorderThickness="0" Cursor="Hand">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#e08868"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
-                <Button x:Name="BtnCancel" Content="取消" Click="Cancel_Click" IsCancel="True"
                         Width="80" Height="32"
-                        Background="#141413" Foreground="#faf9f5" 
+                        Background="{DynamicResource PrimaryButtonBgBrush}" Foreground="{DynamicResource PrimaryButtonTextBrush}" 
                         BorderThickness="0" Cursor="Hand">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
@@ -388,14 +396,14 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#2a2a28"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
             </StackPanel>
-        </StackPanel>
+        </Border>
+    </Grid>
     </Border>
-    </ScrollViewer>
 </Window>

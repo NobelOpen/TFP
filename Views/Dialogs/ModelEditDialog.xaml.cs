@@ -28,6 +28,7 @@ namespace TaskFlow.Views.Dialogs
         {
             Owner = owner;
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             ApplyLocalization();
             
             _modelConfig = modelConfig;
@@ -48,6 +49,11 @@ namespace TaskFlow.Views.Dialogs
                 TxtApiKey.Text = _modelConfig.ApiKey;
                 TxtModelName.Text = _modelConfig.ModelName;
                 TxtTimeout.Text = _modelConfig.TimeoutSeconds.ToString();
+                TxtCustomHeaders.Text = _modelConfig.CustomHeaders ?? "";
+                ChkUseProxy.IsChecked = _modelConfig.UseProxy;
+                TxtProxyTargetHost.Text = _modelConfig.ProxyTargetHost ?? "";
+                PanelProxyConfig.Visibility = _modelConfig.UseProxy ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+                UpdateProxyStatus();
             }
             finally
             {
@@ -183,6 +189,9 @@ namespace TaskFlow.Views.Dialogs
             {
                 _modelConfig.TimeoutSeconds = timeout;
             }
+            _modelConfig.CustomHeaders = TxtCustomHeaders.Text.Trim();
+            _modelConfig.UseProxy = ChkUseProxy.IsChecked == true;
+            _modelConfig.ProxyTargetHost = TxtProxyTargetHost.Text.Trim();
 
             IsSaved = true;
             Close();
@@ -203,7 +212,24 @@ namespace TaskFlow.Views.Dialogs
             TxtModelNameHint.Text = Strings.UI_ModelNameHint;
             TxtTimeoutLabel.Text = Strings.UI_TimeoutSec;
             BtnSave.Content = Strings.UI_Save;
-            BtnCancel.Content = Strings.UI_Cancel;
+        }
+
+        private void ChkUseProxy_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isUpdatingUi) return;
+            PanelProxyConfig.Visibility = (ChkUseProxy.IsChecked == true)
+                ? System.Windows.Visibility.Visible
+                : System.Windows.Visibility.Collapsed;
+            UpdateProxyStatus();
+        }
+
+        private void UpdateProxyStatus()
+        {
+            var proxy = Services.LocalProxyService.Instance;
+            if (proxy.IsRunning)
+                TxtProxyStatus.Text = $"● 运行中 ({proxy.ProxyBaseUrl} → {proxy.CurrentTargetHost})";
+            else
+                TxtProxyStatus.Text = "○ 未运行";
         }
     }
 }

@@ -94,8 +94,20 @@ namespace TaskFlow.Helpers
                             _ => "0"
                         }
                         : "0",
-                    "缩放倍率" => referencedTask is ImgResizeTaskCard resizeCard
-                        ? resizeCard.OutputScaleRatio.ToString()
+                    "宽度缩放倍率" => referencedTask is ImgResizeTaskCard resizeCard
+                        ? resizeCard.OutputWidthScale.ToString()
+                        : "0",
+                    "高度缩放倍率" => referencedTask is ImgResizeTaskCard resizeCard2
+                        ? resizeCard2.OutputHeightScale.ToString()
+                        : "0",
+                    "图像分辨率" => referencedTask is WinScreenshotTaskCard ssCard
+                        ? $"\"{ssCard.OutputResolution}\""
+                        : "\"\"",
+                    "宽度分辨率" => referencedTask is WinScreenshotTaskCard ssCard2
+                        ? ssCard2.OutputWidth.ToString()
+                        : "0",
+                    "高度分辨率" => referencedTask is WinScreenshotTaskCard ssCard3
+                        ? ssCard3.OutputHeight.ToString()
                         : "0",
                     "数组当前容量" => referencedTask is ArrayBuilderTaskCard abCard
                         ? abCard.OutputArrayCount.ToString()

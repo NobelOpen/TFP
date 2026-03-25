@@ -81,7 +81,15 @@ namespace TaskFlow.ViewModels
             finally
             {
                 RestoreScreenSleep();
-                IsRunning = false;
+                // 如果还有 InputCombo 后台任务在运行，等它们全部结束再改状态
+                if (_executionService.HasActiveInputCombos)
+                {
+                    _executionService.InputCombosAllDone += OnInputCombosFinished;
+                }
+                else
+                {
+                    IsRunning = false;
+                }
             }
         }
 
@@ -138,7 +146,14 @@ namespace TaskFlow.ViewModels
             finally
             {
                 RestoreScreenSleep();
-                IsRunning = false;
+                if (_executionService.HasActiveInputCombos)
+                {
+                    _executionService.InputCombosAllDone += OnInputCombosFinished;
+                }
+                else
+                {
+                    IsRunning = false;
+                }
             }
         }
 
@@ -159,6 +174,7 @@ namespace TaskFlow.ViewModels
 
             IsRunning = true;
             _cts = new CancellationTokenSource();
+            PreventScreenSleep();
 
             try
             {
@@ -173,7 +189,15 @@ namespace TaskFlow.ViewModels
             }
             finally
             {
-                IsRunning = false;
+                RestoreScreenSleep();
+                if (_executionService.HasActiveInputCombos)
+                {
+                    _executionService.InputCombosAllDone += OnInputCombosFinished;
+                }
+                else
+                {
+                    IsRunning = false;
+                }
             }
         }
 
@@ -196,7 +220,7 @@ namespace TaskFlow.ViewModels
             Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 // 如果是选中的任务且有输出图像，更新显示
-                if (SelectedTask == task && task.OutputImage != null && !task.OutputImage.Empty())
+                if (SelectedTask == task && task.OutputImage != null && !task.OutputImage.IsDisposed && !task.OutputImage.Empty())
                 {
                     DisplayImage = task.OutputImage;
                 }
@@ -207,12 +231,25 @@ namespace TaskFlow.ViewModels
         {
             Application.Current.Dispatcher.BeginInvoke(() =>
             {
-                IsRunning = false;
                 CurrentRunningTask = null;
                 CurrentTaskBreadcrumb = null;
                 PreviousTask = null;
                 NextTask = null;
+                // IsRunning 由 finally 块负责（会检查 InputCombo 状态）
                 AddLog("========== 全部流程执行完毕 ==========");
+            });
+        }
+
+        /// <summary>
+        /// InputCombo 后台任务全部结束后的回调
+        /// </summary>
+        private void OnInputCombosFinished(object? sender, EventArgs e)
+        {
+            _executionService.InputCombosAllDone -= OnInputCombosFinished;
+            Application.Current.Dispatcher.BeginInvoke(() =>
+            {
+                IsRunning = false;
+                AddLog("输入组合后台任务已全部结束");
             });
         }
 

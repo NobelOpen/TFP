@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TaskFlow.Resources;
 using System.Collections.Generic;
 using System.IO;
@@ -52,6 +52,7 @@ namespace TaskFlow.Views.Dialogs
         public TemplateTrainingWindow(Mat sourceImage, Guid taskId)
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             ApplyLocalization();
             _sourceImage = sourceImage;
             _taskId = taskId;

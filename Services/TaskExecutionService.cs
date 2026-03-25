@@ -21,6 +21,11 @@ namespace TaskFlow.Services
         event EventHandler? AllTasksCompleted;
         event EventHandler<string>? LogMessage;
 
+        /// <summary>是否有 InputCombo 后台任务正在运行</summary>
+        bool HasActiveInputCombos { get; }
+        /// <summary>所有 InputCombo 后台任务结束时触发</summary>
+        event EventHandler? InputCombosAllDone;
+
         Task ExecuteTaskAsync(TaskCardBase task, IList<TaskCardBase> allTasks, CancellationToken cancellationToken);
         Task ExecuteAllTasksAsync(IList<TaskCardBase> tasks, CancellationToken cancellationToken, IList<TaskCardBase>? allTasksForLookup = null);
         void Stop();
@@ -41,6 +46,15 @@ namespace TaskFlow.Services
 
         private CancellationTokenSource? _cts;
         private bool _isRunning;
+
+        /// <summary>当前活跃的 InputCombo 后台任务数量</summary>
+        private int _activeComboCount = 0;
+
+        /// <summary>是否有 InputCombo 后台任务正在运行</summary>
+        public bool HasActiveInputCombos => _activeComboCount > 0;
+
+        /// <summary>所有 InputCombo 后台任务结束时触发</summary>
+        public event EventHandler? InputCombosAllDone;
 
         /// <summary>ArrayBuilder 运行时数据存储，Key=卡片Id</summary>
         internal static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, List<string>> _arrayBuilderData = new();
@@ -76,6 +90,8 @@ namespace TaskFlow.Services
             _cts?.Cancel();
             _isRunning = false;
             _subtitleService.HideAll();
+            // 释放所有输入组合卡片的后台任务
+            CancelAllInputCombos();
         }
 
         public async Task ExecuteAllTasksAsync(IList<TaskCardBase> tasks, CancellationToken cancellationToken, IList<TaskCardBase>? allTasksForLookup = null)
@@ -126,10 +142,30 @@ namespace TaskFlow.Services
                             i = tasks.Count;
                             break;
 
+                        case TaskType.RestartFlow:
+                            // 重新开始当前流程：重置所有任务状态，跳回起点
+                            Log($"[{DateTime.Now:HH:mm:ss}] 重新开始当前流程");
+                            foreach (var t in tasks) t.Reset();
+                            _arrayBuilderData.Clear();
+                            _fileReadData.Clear();
+                            loopStack.Clear();
+                            branchConditions.Clear();
+                            skipToIndex = 0;
+                            i = -1; // for 循环 i++ 后变为 0
+                            continue;
+
                         case TaskType.IfStart:
                             if (task is IfElseBranchTaskCard ifCard)
                             {
-                                var condition = EvaluateCondition(ifCard, allTasksForLookup ?? tasks);
+                                var conditionResult = EvaluateCondition(ifCard, allTasksForLookup ?? tasks);
+                                if (conditionResult == null)
+                                {
+                                    // 评估失败，标记任务失败并结束当前流程
+                                    ifCard.Status = Models.TaskCards.TaskStatus.Failed;
+                                    i = tasks.Count;
+                                    break;
+                                }
+                                bool condition = conditionResult.Value;
                                 ifCard.ConditionResult = condition;
 
                                 if (ifCard.BranchGroupId.HasValue)
@@ -176,7 +212,15 @@ namespace TaskFlow.Services
                                 else
                                 {
                                     // 评估自身条件
-                                    var elifCondition = EvaluateCondition(elifCard, allTasksForLookup ?? tasks);
+                                    var elifConditionResult = EvaluateCondition(elifCard, allTasksForLookup ?? tasks);
+                                    if (elifConditionResult == null)
+                                    {
+                                        // 评估失败，标记任务失败并结束当前流程
+                                        elifCard.Status = Models.TaskCards.TaskStatus.Failed;
+                                        i = tasks.Count;
+                                        break;
+                                    }
+                                    bool elifCondition = elifConditionResult.Value;
                                     elifCard.ConditionResult = elifCondition;
 
                                     if (elifCondition)
@@ -393,7 +437,7 @@ namespace TaskFlow.Services
                     // 控制流卡片
                     TaskType.IfStart or TaskType.IfEnd or TaskType.ElifStart or TaskType.ElseStart or TaskType.ElseEnd => true,
                     TaskType.ForLoopStart or TaskType.ForLoopEnd => true,
-                    TaskType.EndTask or TaskType.EndAllFlows or TaskType.BreakLoop => true,
+                    TaskType.EndTask or TaskType.EndAllFlows or TaskType.BreakLoop or TaskType.RestartFlow => true,
                     TaskType.PauseTask => await ExecutePauseAsync((PauseTaskCard)task, allTasks, cancellationToken),
                     TaskType.GetTimestamp => ExecuteGetTimestamp((GetTimestampTaskCard)task),
 
@@ -458,6 +502,10 @@ namespace TaskFlow.Services
 
                     // 匹配查找
                     TaskType.ArraySearch => ExecuteArraySearch((ArraySearchTaskCard)task, allTasks),
+
+                    // 输入组合（非阻塞）
+                    TaskType.WinTextInput => await ExecuteWinTextInputAsync((WinTextInputTaskCard)task, allTasks, cancellationToken),
+                    TaskType.InputCombo => StartInputComboFireAndForget((InputComboTaskCard)task, allTasks, cancellationToken),
 
                     _ => false
                 };

@@ -56,6 +56,88 @@ namespace TaskFlow
             }
         }
 
+        #region 平滑滚轮滚动（指数衰减插值）
+
+        // 平滑滚动的目标偏移量
+        private double _smoothScrollTarget;
+        // 平滑滚动的当前虚拟偏移量（驱动 ScrollViewer）
+        private double _smoothScrollCurrent;
+        // 当前绑定的目标 ScrollViewer
+        private ScrollViewer? _smoothScrollViewer;
+        // 是否正在执行平滑滚动帧循环
+        private bool _smoothScrollRunning;
+
+        /// <summary>
+        /// 拦截滚轮事件，启动基于 CompositionTarget.Rendering 的每帧指数衰减平滑滚动。
+        /// 无论滚轮频率多高，只更新目标值，不叠加动画，从根本上杜绝"拖住"问题。
+        /// </summary>
+        private void Canvas_SmoothMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is not ListBox listBox) return;
+            var sv = FindVisualChild<ScrollViewer>(listBox);
+            if (sv == null) return;
+
+            // 阻断 ScrollViewer 默认的瞬间跳跃
+            e.Handled = true;
+
+            // 每格滚轮对应的滚动像素量（可调）
+            const double scrollStep = 120.0;
+            double delta = -e.Delta / 120.0 * scrollStep;
+
+            // 切换 ScrollViewer 时重置状态
+            if (_smoothScrollViewer != sv)
+            {
+                _smoothScrollViewer = sv;
+                _smoothScrollCurrent = sv.VerticalOffset;
+                _smoothScrollTarget = sv.VerticalOffset;
+            }
+
+            // 动态追加目标（不重置，无论多快拨轮都只更新终点）
+            _smoothScrollTarget = Math.Max(0,
+                Math.Min(_smoothScrollTarget + delta, sv.ScrollableHeight));
+
+            // 启动帧循环（幂等，重复启动无害）
+            if (!_smoothScrollRunning)
+            {
+                _smoothScrollRunning = true;
+                System.Windows.Media.CompositionTarget.Rendering += SmoothScroll_OnRendering;
+            }
+        }
+
+        /// <summary>
+        /// 每帧回调：按指数衰减系数向目标靠拢。
+        /// 当距离足够小时停止帧循环，释放 CPU。
+        /// </summary>
+        private void SmoothScroll_OnRendering(object? sender, EventArgs e)
+        {
+            var sv = _smoothScrollViewer;
+            if (sv == null) { StopSmoothScroll(); return; }
+
+            // 指数衰减插值：每帧向目标靠拢 20%（相当于约 150ms 接近终点，60fps 下约 9 帧）
+            _smoothScrollCurrent += (_smoothScrollTarget - _smoothScrollCurrent) * 0.18;
+
+            sv.ScrollToVerticalOffset(_smoothScrollCurrent);
+
+            // 距目标不足 0.5px 时停止帧循环
+            if (Math.Abs(_smoothScrollTarget - _smoothScrollCurrent) < 0.5)
+            {
+                sv.ScrollToVerticalOffset(_smoothScrollTarget);
+                _smoothScrollCurrent = _smoothScrollTarget;
+                StopSmoothScroll();
+            }
+        }
+
+        private void StopSmoothScroll()
+        {
+            if (_smoothScrollRunning)
+            {
+                System.Windows.Media.CompositionTarget.Rendering -= SmoothScroll_OnRendering;
+                _smoothScrollRunning = false;
+            }
+        }
+
+        #endregion
+
         /// <summary>
         /// 从父元素中查找指定类型的第一个子元素（无名称版本）
         /// </summary>
@@ -392,12 +474,17 @@ namespace TaskFlow
             // 忙碌状态禁止操作
             if (ViewModel.IsBusy) return;
 
-            var settings = AppSettings.Load();
-            var dialog = new SettingsDialog(settings) { Owner = this };
+            var settings = TaskFlow.Models.AppSettings.Load();
+            var dialog = new Views.Dialogs.SettingsDialog(settings) { Owner = this };
             if (dialog.ShowDialog() == true)
             {
                 // 设置已保存，通知 ViewModel 更新
                 ViewModel.ApplySettings(settings);
+
+                ThemeIconText.Text = settings.Theme == "Dark" ? "\uE708" : "\uE706";
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                int useImmersiveDarkMode = settings.Theme == "Dark" ? 1 : 0;
+                DwmSetWindowAttribute(hwnd, 20, ref useImmersiveDarkMode, sizeof(int));
             }
         }
 
@@ -438,8 +525,8 @@ namespace TaskFlow
                 AiPanelColumn.Width = new GridLength(320);
                 AiPanelSplitterColumn.Width = new GridLength(5);
                 
-                // 收缩右侧面板为流程画布腾出空间
-                RightPanelColumn.Width = new GridLength(300);
+                // 收缩右侧面板为流程画布腾出空间，并与左侧Orchid宽度(320)保持一致
+                RightPanelColumn.Width = new GridLength(320);
             }
             else
             {
@@ -650,10 +737,10 @@ namespace TaskFlow
                             menuItem.Visibility = isIfStart ? Visibility.Visible : Visibility.Collapsed;
                             if (isIfStart && task is IfElseBranchTaskCard ifCard)
                             {
-                                menuItem.Header = ifCard.IsElseHidden ? "显示Else" : "隐藏Else";
+                                menuItem.Header = ifCard.IsElseHidden ? Strings.Menu_ShowElse : Strings.Menu_HideElse;
                             }
                         }
-                        else if (menuItem.Header is string header && header == "帮助")
+                        else if (menuItem.Header is string header && header == TaskFlow.Resources.Strings.Common_Help)
                         {
                             // 动态设置帮助锚点为当前任务类型
                             menuItem.Tag = GetHelpAnchor(task.TaskType);
@@ -662,7 +749,7 @@ namespace TaskFlow
                     else if (item is Separator separator)
                     {
                         string? tag = separator.Tag as string;
-                        if (tag == "DeleteSeparator")
+                        if (tag == "DeleteSeparator" || tag == "EditSeparator")
                         {
                             separator.Visibility = isNonEditableBranch ? Visibility.Collapsed : Visibility.Visible;
                         }
@@ -687,14 +774,18 @@ namespace TaskFlow
         {
             var menu = new ContextMenu();
 
-            menu.Items.Add(new MenuItem { Header = TaskFlow.Resources.Strings.Main_SearchTask, Tag = "Search" });
-            ((MenuItem)menu.Items[menu.Items.Count - 1]).Click += SearchTask_Click;
-            menu.Items.Add(new Separator());
-
+            // 1. 编辑与重命名
             var editProp = new MenuItem { Header = TaskFlow.Resources.Strings.TaskProp_EditTitle, Tag = "EditProperty" };
             editProp.Click += EditTaskProperty_Click;
             menu.Items.Add(editProp);
 
+            var rename = new MenuItem { Header = TaskFlow.Resources.Strings.Common_Rename, Tag = "Rename" };
+            rename.Click += RenameTask_Click;
+            menu.Items.Add(rename);
+
+            menu.Items.Add(new Separator { Tag = "EditSeparator" });
+
+            // 2. 剪贴板操作
             var copy = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_Copy, Tag = "Copy" };
             copy.Click += CopyTask_Click;
             menu.Items.Add(copy);
@@ -703,14 +794,16 @@ namespace TaskFlow
             paste.Click += PasteTask_Click;
             menu.Items.Add(paste);
 
-            // 在下方添加任务
+            menu.Items.Add(new Separator());
+
+            // 3. 在下方添加任务
             var addBelow = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_AddTaskBelow };
 
             // 通用任务
             var general = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_General };
             foreach (var (type, tag) in new[] {
                 (TaskType.PauseTask, "PauseTask"), (TaskType.GetTimestamp, "GetTimestamp"),
-                (TaskType.EndTask, "EndTask"), (TaskType.EndAllFlows, "EndAllFlows") })
+                (TaskType.EndTask, "EndTask"), (TaskType.EndAllFlows, "EndAllFlows"), (TaskType.RestartFlow, "RestartFlow") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;
@@ -724,7 +817,9 @@ namespace TaskFlow
                 (TaskType.WinLaunchApp, "WinLaunchApp"), (TaskType.WinScreenshot, "WinScreenshot"),
                 (TaskType.WinClick, "WinClick"), (TaskType.WinCloseApp, "WinCloseApp"),
                 (TaskType.WinUiAutomation, "WinUiAutomation"), (TaskType.WinSimulateInput, "WinSimulateInput"),
-                (TaskType.WinSubtitle, "WinSubtitle"), (TaskType.EventListener, "EventListener") })
+                (TaskType.WinSubtitle, "WinSubtitle"), (TaskType.WinFindFile, "WinFindFile"),
+                (TaskType.WinTextInput, "WinTextInput"),
+                (TaskType.InputCombo, "InputCombo"), (TaskType.EventListener, "EventListener") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;
@@ -801,16 +896,6 @@ namespace TaskFlow
 
             menu.Items.Add(addBelow);
 
-            var rename = new MenuItem { Header = TaskFlow.Resources.Strings.Common_Rename, Tag = "Rename" };
-            rename.Click += RenameTask_Click;
-            menu.Items.Add(rename);
-
-            menu.Items.Add(new Separator { Tag = "DeleteSeparator" });
-
-            var delete = new MenuItem { Header = TaskFlow.Resources.Strings.Common_Delete, Tag = "Delete", Foreground = ErrorBrush };
-            delete.Click += DeleteTask_Click;
-            menu.Items.Add(delete);
-
             menu.Items.Add(new Separator { Tag = "ElifSeparator" });
 
             var addElif = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_AddElifBranch, Tag = "AddElif" };
@@ -823,9 +908,21 @@ namespace TaskFlow
 
             menu.Items.Add(new Separator());
 
+            // 4. 辅助工具
+            var search = new MenuItem { Header = TaskFlow.Resources.Strings.Main_SearchTask, Tag = "Search" };
+            search.Click += SearchTask_Click;
+            menu.Items.Add(search);
+
             var help = new MenuItem { Header = TaskFlow.Resources.Strings.Common_Help, Tag = "Help" };
             help.Click += OpenTaskHelp_Click;
             menu.Items.Add(help);
+
+            menu.Items.Add(new Separator { Tag = "DeleteSeparator" });
+
+            // 5. 危险操作
+            var delete = new MenuItem { Header = TaskFlow.Resources.Strings.Common_Delete, Tag = "Delete", Foreground = ErrorBrush };
+            delete.Click += DeleteTask_Click;
+            menu.Items.Add(delete);
 
             return menu;
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TaskFlow.Resources;
 using System.Collections.Generic;
 using System.IO;
@@ -50,6 +50,8 @@ namespace TaskFlow.Views.Dialogs
         private int _brushSize = 20;
         private readonly string? _existingMaskPath;
         private bool _maskModified = false; // 掩膜是否被修改过
+        private Point? _lastPaintPoint;      // 上一次涂抑点，用于连线段无缝画笔
+        private DateTime _lastRefreshTime;   // 节流刺新时间戳
 
         /// <summary>
         /// 完成后的掩膜路径（null 表示无掩膜）
@@ -65,6 +67,7 @@ namespace TaskFlow.Views.Dialogs
             string? existingMaskPath = null)
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             ApplyLocalization();
             _sourceImage = sourceImage;
             _imageWidth = sourceImage.Width;
@@ -380,6 +383,15 @@ namespace TaskFlow.Views.Dialogs
             if (BrushSizeText != null) BrushSizeText.Text = _brushSize.ToString();
         }
 
+        private void ClearMask_Click(object sender, RoutedEventArgs e)
+        {
+            // 清除掩膜（全白=不遮蔽）
+            _maskMat.SetTo(new Scalar(255));
+            _maskModified = true;
+            RefreshDisplay();
+            UpdateMaskStatus();
+        }
+
         private void ClearRoi_Click(object sender, RoutedEventArgs e)
         {
             // 仅清除ROI，保留掩膜
@@ -402,15 +414,6 @@ namespace TaskFlow.Views.Dialogs
             UpdateMaskStatus();
         }
 
-        private void ClearMask_Click(object sender, RoutedEventArgs e)
-        {
-            // 清除掩膜（全白=不遮蔽）
-            _maskMat.SetTo(new Scalar(255));
-            _maskModified = true;
-            RefreshDisplay();
-            UpdateMaskStatus();
-        }
-
         /// <summary>
         /// 更新掩膜状态文本
         /// </summary>
@@ -421,7 +424,7 @@ namespace TaskFlow.Views.Dialogs
             if (blackPixels > 0)
             {
                 MaskStatusText.Text = "✔ 已设置掩膜";
-                MaskStatusText.Foreground = new SolidColorBrush(Color.FromRgb(120, 140, 93)); // Anthropic 绿
+                MaskStatusText.Foreground = new SolidColorBrush(Color.FromRgb(120, 140, 93));
             }
             else
             {
@@ -450,17 +453,43 @@ namespace TaskFlow.Views.Dialogs
             var imgPt = DisplayToImage(displayPoint);
             int imgX = (int)imgPt.X;
             int imgY = (int)imgPt.Y;
-            if (imgX < 0 || imgY < 0 || imgX >= _imageWidth || imgY >= _imageHeight) return;
+
+            // 检查点是否在图像范围内
+            if (imgX < 0 || imgY < 0 || imgX >= _imageWidth || imgY >= _imageHeight)
+            {
+                _lastPaintPoint = null; // 如果超出范围，断开连接
+                return;
+            }
 
             int scaledBrush = GetScaledBrushSize();
-            var center = new OpenCvSharp.Point(imgX, imgY);
-
-            // 画笔=涂黑（遮蔽），橡皮擦=涂白（恢复）
             var color = _isErasing ? new Scalar(255) : new Scalar(0);
-            Cv2.Circle(_maskMat, center, scaledBrush / 2, color, -1);
+
+            // 如果有上一个点，则绘制线段
+            if (_lastPaintPoint.HasValue)
+            {
+                var lastImgPt = DisplayToImage(_lastPaintPoint.Value);
+                Cv2.Line(_maskMat,
+                         new OpenCvSharp.Point((int)lastImgPt.X, (int)lastImgPt.Y),
+                         new OpenCvSharp.Point(imgX, imgY),
+                         color,
+                         scaledBrush);
+            }
+            else
+            {
+                // 否则只绘制一个圆点
+                Cv2.Circle(_maskMat, new OpenCvSharp.Point(imgX, imgY), scaledBrush / 2, color, -1);
+            }
+
+            _lastPaintPoint = displayPoint; // 更新上一个点
 
             _maskModified = true;
-            RefreshDisplay();
+
+            // 限制刷新频率，避免UI卡顿
+            if ((DateTime.Now - _lastRefreshTime).TotalMilliseconds > 50) // 每50ms刷新一次
+            {
+                RefreshDisplay();
+                _lastRefreshTime = DateTime.Now;
+            }
         }
 
         #endregion
@@ -475,6 +504,8 @@ namespace TaskFlow.Views.Dialogs
             if (_isMaskMode)
             {
                 _isPainting = true;
+                _lastPaintPoint = null; // 每次按下时重置，避免跨次配山
+                _lastRefreshTime = default;
                 ImageContainer.CaptureMouse();
                 PaintMaskAt(pos);
                 return;

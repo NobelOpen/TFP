@@ -79,8 +79,12 @@ namespace TaskFlow
             this.SourceInitialized += (s, e) =>
             {
                 var hwnd = new WindowInteropHelper(this).Handle;
-                int useImmersiveDarkMode = 1;
+                var settings = TaskFlow.Models.AppSettings.Load();
+                int useImmersiveDarkMode = settings.Theme == "Dark" ? 1 : 0;
                 DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int));
+
+                // 初始化 ThemeIconText
+                ThemeIconText.Text = settings.Theme == "Dark" ? "\uE708" : "\uE706";
 
                 // 挂接 WndProc 以支持 Snap Layout
                 var source = HwndSource.FromHwnd(hwnd);
@@ -124,6 +128,9 @@ namespace TaskFlow
 
                 // 停止微信 OCR 后台进程
                 try { Services.WeChatOcrService.Shutdown(); } catch { }
+
+                // 停止本地 API 代理进程
+                try { Services.LocalProxyService.Instance.Stop(); } catch { }
 
                 // 强制终止残留后台线程，确保进程完全退出
                 Environment.Exit(0);
@@ -240,6 +247,35 @@ namespace TaskFlow
         }
 
         // ====== 自定义标题栏按钮事件 ======
+        private async void TitleBar_ThemeToggle_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm && vm.IsBusy) return;
+
+            var settings = TaskFlow.Models.AppSettings.Load();
+            bool isCurrentlyDark = settings.Theme == "Dark";
+            string newTheme = isCurrentlyDark ? "Light" : "Dark";
+
+            ThemeTransitionIcon.Text = newTheme == "Dark" ? "\uE708" : "\uE706";
+            ThemeTransitionOverlay.Visibility = Visibility.Visible;
+            
+            await Task.Delay(50);
+            
+            TaskFlow.Helpers.ThemeManager.ApplyTheme(newTheme);
+            settings.Theme = newTheme;
+            settings.Save();
+            
+            ThemeIconText.Text = newTheme == "Dark" ? "\uE708" : "\uE706";
+
+            // 动态设置窗口深色模式
+            var hwnd = new WindowInteropHelper(this).Handle;
+            int useImmersiveDarkMode = newTheme == "Dark" ? 1 : 0;
+            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int));
+
+            await Task.Delay(350);
+
+            ThemeTransitionOverlay.Visibility = Visibility.Collapsed;
+        }
+
         private void TitleBar_Minimize_Click(object sender, RoutedEventArgs e)
         {
             this.WindowState = WindowState.Minimized;
@@ -265,35 +301,21 @@ namespace TaskFlow
             RunModeMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
             RunModeMenu.IsOpen = true;
         }
-
         private void RunModeCurrent_Click(object sender, RoutedEventArgs e)
         {
-            RunModeButton.Content = "▶▶ 运行当前";
+            RunModeText.Text = TaskFlow.Resources.Strings.Main_RunCurrent;
             RunModeButton.Command = ViewModel.RunCurrentFlowCommand;
         }
 
         private void RunModeAll_Click(object sender, RoutedEventArgs e)
         {
-            RunModeButton.Content = "▶▶ 运行全部";
+            RunModeText.Text = TaskFlow.Resources.Strings.Main_RunAll;
             RunModeButton.Command = ViewModel.RunAllCommand;
         }
 
-        // ====== 运行/停止 按钮颜色过渡动画 ======
-        private static readonly Color _darkBg = Color.FromRgb(0x14, 0x14, 0x13);
-        private static readonly Color _lightBg = Color.FromRgb(0xfa, 0xf9, 0xf5);
-        private static readonly Color _orangeBg = Color.FromRgb(0xD9, 0x77, 0x57);
-        private static readonly Color _darkFg = Color.FromRgb(0x14, 0x14, 0x13);
-        private static readonly Color _lightFg = Color.FromRgb(0xfa, 0xf9, 0xf5);
-        private static readonly Color _redFg = Color.FromRgb(0xc4, 0x5b, 0x4a);
-        private static readonly Color _whiteFg = Color.FromRgb(0xff, 0xff, 0xff);
-
         private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(MainViewModel.IsRunning))
-            {
-                Dispatcher.Invoke(() => AnimateRunStopTransition(ViewModel.IsRunning));
-            }
-            else if (e.PropertyName == nameof(MainViewModel.SelectedTab))
+            if (e.PropertyName == nameof(MainViewModel.SelectedTab))
             {
                 // 当 ViewModel 通过其他路径（AddTab、RemoveTab、文件加载等）改变 SelectedTab 时，
                 // 自动切换对应的 ListBox Visibility
@@ -305,56 +327,6 @@ namespace TaskFlow
                     }
                 });
             }
-        }
-
-        /// <summary>
-        /// 运行/停止按钮的颜色交错渐变动画
-        /// </summary>
-        private void AnimateRunStopTransition(bool isRunning)
-        {
-            var duration = TimeSpan.FromMilliseconds(500);
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-
-            if (isRunning)
-            {
-                // 运行组合按钮：深色 → 浅色
-                AnimateColor(RunModeButton, Control.BackgroundProperty, _darkBg, _lightBg, duration, ease);
-                AnimateColor(RunModeButton, Control.ForegroundProperty, _lightFg, _darkFg, duration, ease);
-                AnimateColor(RunModeDropdown, Control.BackgroundProperty, _darkBg, _lightBg, duration, ease);
-                AnimateColor(RunModeDropdownIcon, TextBlock.ForegroundProperty, _lightFg, _darkFg, duration, ease);
-                // 停止按钮：浅色 → 橙色（稍微延迟，制造“颜色跑过去”的感觉）
-                AnimateColor(StopAllButton, Control.BackgroundProperty, _lightBg, _orangeBg, duration, ease, 80);
-                AnimateColor(StopAllButton, Control.ForegroundProperty, _redFg, _whiteFg, duration, ease, 80);
-            }
-            else
-            {
-                // 停止按钮：橙色 → 浅色
-                AnimateColor(StopAllButton, Control.BackgroundProperty, _orangeBg, _lightBg, duration, ease);
-                AnimateColor(StopAllButton, Control.ForegroundProperty, _whiteFg, _redFg, duration, ease);
-                // 运行组合按钮：浅色 → 深色（稍微延迟）
-                AnimateColor(RunModeButton, Control.BackgroundProperty, _lightBg, _darkBg, duration, ease, 80);
-                AnimateColor(RunModeButton, Control.ForegroundProperty, _darkFg, _lightFg, duration, ease, 80);
-                AnimateColor(RunModeDropdown, Control.BackgroundProperty, _lightBg, _darkBg, duration, ease, 80);
-                AnimateColor(RunModeDropdownIcon, TextBlock.ForegroundProperty, _darkFg, _lightFg, duration, ease, 80);
-            }
-        }
-
-        /// <summary>
-        /// 对指定元素的颜色属性执行平滑动画
-        /// </summary>
-        private static void AnimateColor(FrameworkElement element, DependencyProperty property,
-            Color from, Color to, TimeSpan duration, IEasingFunction ease, int delayMs = 0)
-        {
-            var brush = new System.Windows.Media.SolidColorBrush(from);
-            element.SetValue(property, brush);
-
-            var animation = new ColorAnimation(to, duration)
-            {
-                EasingFunction = ease,
-                BeginTime = TimeSpan.FromMilliseconds(delayMs)
-            };
-
-            brush.BeginAnimation(System.Windows.Media.SolidColorBrush.ColorProperty, animation);
         }
 
         /// <summary>
@@ -382,6 +354,10 @@ namespace TaskFlow
             borderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
             borderFactory.SetBinding(Border.BackgroundProperty,
                 new System.Windows.Data.Binding("Background") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+            borderFactory.SetBinding(Border.BorderBrushProperty,
+                new System.Windows.Data.Binding("BorderBrush") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+            borderFactory.SetBinding(Border.BorderThicknessProperty,
+                new System.Windows.Data.Binding("BorderThickness") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
             var contentPresenter = new FrameworkElementFactory(typeof(ContentPresenter));
             contentPresenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
             contentPresenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
@@ -397,6 +373,10 @@ namespace TaskFlow
             btn.Template = template;
             return btn;
         }
+
+        /// <summary>
+        /// 隐藏到系统托盘并显示悬浮窗
+        /// </summary>
 
         /// <summary>
         /// 隐藏到系统托盘并显示悬浮窗
@@ -452,7 +432,7 @@ namespace TaskFlow
         {
             var listBox = new ListBox
             {
-                ItemsSource = tab.TaskCards,
+                ItemsSource = tab.VisibleTaskCards,
                 ItemTemplate = (DataTemplate)FindResource("TaskCardTemplate"),
                 AllowDrop = true,
                 Background = System.Windows.Media.Brushes.Transparent,
@@ -462,21 +442,18 @@ namespace TaskFlow
                 Visibility = Visibility.Collapsed
             };
 
-            // 虚拟化设置
-            VirtualizingPanel.SetIsVirtualizing(listBox, true);
-            VirtualizingPanel.SetVirtualizationMode(listBox, VirtualizationMode.Recycling);
-            VirtualizingPanel.SetScrollUnit(listBox, ScrollUnit.Pixel);
-            VirtualizingPanel.SetCacheLength(listBox, new VirtualizationCacheLength(0.5, 0.5));
-            VirtualizingPanel.SetCacheLengthUnit(listBox, VirtualizationCacheLengthUnit.Page);
+            // 物理平滑滚动设置 (关闭虚拟化并使用像素滚动)
+            VirtualizingPanel.SetIsVirtualizing(listBox, false);
+            ScrollViewer.SetCanContentScroll(listBox, false);
             ScrollViewer.SetVerticalScrollBarVisibility(listBox, ScrollBarVisibility.Auto);
             ScrollViewer.SetHorizontalScrollBarVisibility(listBox, ScrollBarVisibility.Disabled);
-            ScrollViewer.SetCanContentScroll(listBox, true);
 
             // 事件绑定
             listBox.Drop += Canvas_Drop;
             listBox.DragOver += Canvas_DragOver;
             listBox.PreviewMouseLeftButtonDown += Canvas_PreviewMouseLeftButtonDown;
             listBox.ContextMenuOpening += TaskList_ContextMenuOpening;
+            listBox.PreviewMouseWheel += Canvas_SmoothMouseWheel;
 
             // 共享画布右键菜单
             listBox.ContextMenu = (ContextMenu)FlowCanvasHost.FindResource("CanvasContextMenu");

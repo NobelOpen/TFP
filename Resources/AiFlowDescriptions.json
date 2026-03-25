@@ -13,7 +13,7 @@
     "Description": "截取指定进程窗口的截图，或截取整个桌面",
     "Usage": "当需要获取某个窗口的画面用于后续图像分析（OCR、模板匹配等）时使用",
     "KeyProperties": ["processName: 目标进程名称（不含.exe），留空时截取整个桌面（包含所有显示器）。严禁使用 explorer 作为截屏整个桌面的进程名"],
-    "Outputs": ["outputImage: 截取的窗口图像"]
+    "Outputs": ["outputImage: 截取的窗口图像", "outputResolution: 图像分辨率字符串（如 1920x1080）", "outputWidth: 宽度分辨率(int)", "outputHeight: 高度分辨率(int)"]
   },
   {
     "TaskType": "WinClick",
@@ -165,7 +165,7 @@
     "Description": "调整图像大小",
     "Usage": "当图像尺寸不合适需要缩放时使用",
     "KeyProperties": ["sourceTaskIdForImage: 图像来源任务", "targetWidth/targetHeight: 目标尺寸"],
-    "Outputs": ["outputImage: 缩放后的图像"]
+    "Outputs": ["outputImage: 缩放后的图像", "outputWidthScale: 宽度缩放倍率(double)", "outputHeightScale: 高度缩放倍率(double)"]
   },
   {
     "TaskType": "ExpressionEval",
@@ -261,6 +261,30 @@
     "Description": "循环结构 — 将 LoopBody 中的步骤重复执行指定次数",
     "Usage": "当需要重复执行某些操作（如循环截图检测、批量处理文件列表中的每一项）时使用。LoopBody 中可以放置任意步骤（包括嵌套的 IfElseBlock 或 ForLoopBlock）",
     "KeyProperties": ["loopCount: 循环次数（整数）"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "InputCombo",
+    "Category": "Windows操作",
+    "Description": "执行多按键编排的输入组合（支持长按/单击混合），非阻塞后台执行",
+    "Usage": "当需要模拟复杂的键盘/鼠标组合操作时使用，如游戏中同时按住W移动并按空格跳跃、Ctrl+C复制等。支持按键序列编排、长按模式和循环执行",
+    "KeyProperties": ["actions: 按键动作列表，每个动作包含 key(按键名)、mode(Tap单击/Hold长按)、delayAfterMs(动作后延迟)", "repeatCount: 动作序列重复次数（0=无限循环）", "stopExpression: 终止条件表达式", "totalDurationMs: 最大执行时长(毫秒，0=不限时)"],
+    "Outputs": ["outputText: 执行结果文本"]
+  },
+  {
+    "TaskType": "WinTextInput",
+    "Category": "Windows操作",
+    "Description": "向当前聚焦的窗口输入文本内容",
+    "Usage": "当需要在输入框中键入文字时使用（如搜索框、表单填写）。支持逐字符模拟和剪贴板粘贴两种模式",
+    "KeyProperties": ["inputText: 输入文本（支持变量引用）", "inputMode: CharByChar(逐字符)/Clipboard(剪贴板粘贴)", "charIntervalMs: 逐字符模式下的字符间隔(毫秒)"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "RestartFlow",
+    "Category": "通用",
+    "Description": "重新开始当前流程（从第一个卡片重新执行）",
+    "Usage": "当需要循环执行整个流程、或在某个条件下重新开始时使用",
+    "KeyProperties": [],
     "Outputs": []
   }
 ]

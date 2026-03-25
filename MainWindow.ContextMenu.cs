@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -130,6 +130,7 @@ namespace TaskFlow
                     if (elseStart != null)
                     {
                         elseStart.IsHiddenByCollapse = ifCard.IsElseHidden;
+                        ViewModel.RefreshTaskCardsView();
                     }
                 }
             }
@@ -140,15 +141,81 @@ namespace TaskFlow
             var dialog = new SearchTaskDialog(ViewModel) { Owner = this };
             if (dialog.ShowDialog() == true && dialog.FoundTask != null)
             {
-                var task = dialog.FoundTask;
+                var foundTask = dialog.FoundTask;
+
+                // 如果目标卡片被折叠隐藏，自动展开其所有父级分支/循环
+                if (foundTask.IsHiddenByCollapse)
+                {
+                    ExpandAncestorsOf(foundTask);
+                }
 
                 // 取消所有选中，选中目标卡片
                 ViewModel.DeselectAllCommand.Execute(null);
-                ViewModel.SelectTaskCommand.Execute(task);
+                ViewModel.SelectTaskCommand.Execute(foundTask);
 
                 // 滚动到目标卡片位置
-                TaskCanvas.ScrollIntoView(task);
+                TaskCanvas.ScrollIntoView(foundTask);
             }
+        }
+
+        /// <summary>
+        /// 展开目标卡片的所有被折叠的祖先分支/循环，使其在 UI 上可见
+        /// </summary>
+        private void ExpandAncestorsOf(TaskCardBase target)
+        {
+            var taskIndex = ViewModel.TaskCards.IndexOf(target);
+            if (taskIndex < 0) return;
+
+            // 从目标卡片向前搜索所有折叠的分支/循环头，收集需要展开的分支头
+            var collapsedHeads = new System.Collections.Generic.List<TaskCardBase>();
+            for (int i = taskIndex - 1; i >= 0; i--)
+            {
+                var card = ViewModel.TaskCards[i];
+                if (card.IsCollapsed &&
+                    card.BranchGroupId.HasValue &&
+                    (card.BranchRole == BranchRole.IfStart || card.BranchRole == BranchRole.ForLoopStart))
+                {
+                    // 检查目标卡片是否在该分支范围内
+                    if (IsTaskInsideBranch(card, target))
+                    {
+                        collapsedHeads.Add(card);
+                    }
+                }
+            }
+
+            // 从外层到内层依次展开（反转列表，因为是从后往前找的）
+            collapsedHeads.Reverse();
+            foreach (var head in collapsedHeads)
+            {
+                ViewModel.ToggleBranchCollapseCommand.Execute(head);
+            }
+        }
+
+        /// <summary>
+        /// 判断目标卡片是否在指定分支/循环头的范围内
+        /// </summary>
+        private bool IsTaskInsideBranch(TaskCardBase branchHead, TaskCardBase target)
+        {
+            var headIndex = ViewModel.TaskCards.IndexOf(branchHead);
+            var targetIndex = ViewModel.TaskCards.IndexOf(target);
+            if (headIndex < 0 || targetIndex < 0 || targetIndex <= headIndex) return false;
+
+            // 从分支头向后找到对应的结束卡片
+            var groupId = branchHead.BranchGroupId;
+            for (int i = headIndex + 1; i < ViewModel.TaskCards.Count; i++)
+            {
+                var card = ViewModel.TaskCards[i];
+                if (card.BranchGroupId == groupId)
+                {
+                    if ((branchHead.BranchRole == BranchRole.IfStart && card.BranchRole == BranchRole.ElseEnd) ||
+                        (branchHead.BranchRole == BranchRole.ForLoopStart && card.BranchRole == BranchRole.ForLoopEnd))
+                    {
+                        // 目标在分支头和结束卡片之间则属于该分支
+                        return targetIndex <= i;
+                    }
+                }
+            }
+            return false;
         }
 
         private void EditTaskProperty_Click(object sender, RoutedEventArgs e)

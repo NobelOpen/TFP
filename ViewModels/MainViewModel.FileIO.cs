@@ -46,7 +46,7 @@ namespace TaskFlow.ViewModels
                 _isSwitchingTab = false;
             }
 
-            WindowTitle = "TaskFlow 自动流程设计器";
+            WindowTitle = "TaskFlowPro";
             AddLog("========== 已新建流程 ==========");
         }
 
@@ -114,7 +114,7 @@ namespace TaskFlow.ViewModels
                     SaveLastFilePath(_currentFilePath);
 
                     // 更新窗口标题
-                    WindowTitle = $"TaskFlow - {System.IO.Path.GetFileNameWithoutExtension(dialog.FileName)}";
+                    WindowTitle = $"TaskFlowPro - {System.IO.Path.GetFileNameWithoutExtension(dialog.FileName)}";
 
                     AddLog(string.Format(Strings.VM_SavedTo, dialog.FileName));
                 }
@@ -127,7 +127,7 @@ namespace TaskFlow.ViewModels
         }
 
         [RelayCommand]
-        private void Load()
+        private async System.Threading.Tasks.Task Load()
         {
             // 忙碌状态禁止操作
             if (IsBusy) return;
@@ -142,7 +142,7 @@ namespace TaskFlow.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    LoadFromPath(dialog.FileName);
+                    await LoadFromPathAsync(dialog.FileName);
                 }
             }
             catch (Exception ex)
@@ -155,10 +155,19 @@ namespace TaskFlow.ViewModels
         /// <summary>
         /// 从指定路径加载流程文件（加载全部分页）
         /// </summary>
-        public void LoadFromPath(string filePath)
+        public async System.Threading.Tasks.Task LoadFromPathAsync(string filePath)
         {
-            var (loadedTabs, loadedVariables) = JsonHelper.LoadFromFileWithTabs(filePath);
-            if (loadedTabs.Count == 0) return;
+            IsLoading = true;
+            // 短暂延迟让 UI 有机会渲染 Loading 遮罩层
+            await System.Threading.Tasks.Task.Delay(50);
+
+            // 在后台线程解析 JSON 避免卡死 UI 线程
+            var (loadedTabs, loadedVariables) = await System.Threading.Tasks.Task.Run(() => JsonHelper.LoadFromFileWithTabs(filePath));
+            if (loadedTabs.Count == 0) 
+            {
+                IsLoading = false;
+                return;
+            }
 
             // 记录当前文件路径
             _currentFilePath = filePath;
@@ -172,7 +181,7 @@ namespace TaskFlow.ViewModels
             }
 
             // 更新窗口标题
-            WindowTitle = $"TaskFlow - {System.IO.Path.GetFileNameWithoutExtension(filePath)}";
+            WindowTitle = $"TaskFlowPro - {System.IO.Path.GetFileNameWithoutExtension(filePath)}";
 
             // 通知 View 清空所有缓存的 ListBox
             FlowListBoxResetRequested?.Invoke(this, EventArgs.Empty);
@@ -226,19 +235,30 @@ namespace TaskFlow.ViewModels
                 RecalculateIndentLevelsFor(tab.TaskCards);
                 RecalculateCollapseStatesFor(tab.TaskCards);
             }
+
+            // 更新可见任务列表
+            foreach (var tab in Tabs)
+            {
+                tab.UpdateVisibleTaskCards();
+            }
+
+            // 让出线程，等待 WPF 布局系统彻底完成数百项 UI 容器树的创建（这段时间 UI 线程会卡顿，但 Loading 动画已在屏幕上）
+            await Application.Current.Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+
+            IsLoading = false;
         }
 
         /// <summary>
         /// 启动时自动加载上次打开的流程文件
         /// </summary>
-        public void AutoLoad()
+        public async System.Threading.Tasks.Task AutoLoad()
         {
             try
             {
                 var lastPath = GetLastFilePath();
                 if (!string.IsNullOrEmpty(lastPath) && System.IO.File.Exists(lastPath))
                 {
-                    LoadFromPath(lastPath);
+                    await LoadFromPathAsync(lastPath);
                     AddLog($"自动加载上次流程: {lastPath}");
                 }
             }

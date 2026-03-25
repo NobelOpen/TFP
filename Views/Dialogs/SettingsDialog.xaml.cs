@@ -39,8 +39,13 @@ namespace TaskFlow.Views.Dialogs
             TxtFlowIntervalLabel.Text = Strings.UI_FlowInterval + ":";
             ChkRepeatRunAll.Content = Strings.UI_RepeatExecution;
             TxtRepeatIntervalLabel.Text = Strings.UI_RepeatInterval + ":";
+            ChkKeepScreenOn.Content = Strings.Settings_KeepScreenOn;
             TxtLogSection.Text = Strings.UI_LogOutput;
             TxtMaxLogLinesLabel.Text = Strings.UI_MaxLogLines + ":";
+            ChkAutoSaveLog.Content = Strings.Settings_AutoSaveLog;
+            TxtOrchidSection.Text = Strings.Settings_OrchidSection;
+            ChkSingleStage.Content = Strings.Settings_SingleStage;
+            BtnViewCalibration.Content = Strings.Settings_ViewCalibration;
             TxtOcrSection.Text = Strings.UI_WeChatOcr;
             TxtOcrExeLabel.Text = Strings.UI_OcrExePath + ":";
             TxtOcrDirLabel.Text = Strings.UI_OcrDirPath + ":";
@@ -51,7 +56,16 @@ namespace TaskFlow.Views.Dialogs
             TxtLangHint.Text = "* " + Strings.UI_LangRestartHint;
             TxtAboutSection.Text = "ℹ " + Strings.UI_About;
             BtnSave.Content = Strings.UI_Save;
-            BtnCancel.Content = Strings.UI_Cancel;
+            
+            // Theme Localization
+            if (CmbTheme.Items.Count >= 2)
+            {
+                bool isZh = System.Threading.Thread.CurrentThread.CurrentUICulture.Name.StartsWith("zh");
+                if (CmbTheme.Items[0] is ComboBoxItem itemLight)
+                    itemLight.Content = isZh ? "浅色 (Light)" : "Light Theme";
+                if (CmbTheme.Items[1] is ComboBoxItem itemDark)
+                    itemDark.Content = isZh ? "深色 (Dark)" : "Dark Theme";
+            }
         }
 
         private void LoadSettings()
@@ -73,6 +87,16 @@ namespace TaskFlow.Views.Dialogs
                 if (item.Tag is string tag && tag == _settings.Language)
                 {
                     CmbLanguage.SelectedItem = item;
+                    break;
+                }
+            }
+
+            // 主题
+            foreach (System.Windows.Controls.ComboBoxItem item in CmbTheme.Items)
+            {
+                if (item.Tag is string tag && tag == _settings.Theme)
+                {
+                    CmbTheme.SelectedItem = item;
                     break;
                 }
             }
@@ -282,6 +306,12 @@ namespace TaskFlow.Views.Dialogs
                 _settings.Language = langTag;
             bool languageChanged = _settings.Language != oldLang;
 
+            // 主题设置
+            string oldTheme = _settings.Theme;
+            if (CmbTheme.SelectedItem is System.Windows.Controls.ComboBoxItem themeItem && themeItem.Tag is string themeTag)
+                _settings.Theme = themeTag;
+            bool themeChanged = _settings.Theme != oldTheme;
+
             // 保存微信 OCR 路径
             string ocrExe = TxtOcrExePath.Text.Trim();
             string ocrDir = TxtOcrDirPath.Text.Trim();
@@ -297,6 +327,11 @@ namespace TaskFlow.Views.Dialogs
             _settings.WeChatOcrDirPath = string.IsNullOrEmpty(ocrDir) ? null : ocrDir;
 
             _settings.Save();
+
+            if (themeChanged)
+            {
+                TaskFlow.Helpers.ThemeManager.ApplyTheme(_settings.Theme);
+            }
 
             // 应用开机自启动
             ApplyAutoStart(_settings.AutoStartWithOS);
@@ -315,6 +350,12 @@ namespace TaskFlow.Views.Dialogs
         {
             DialogResult = false;
             Close();
+        }
+
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+                DragMove();
         }
 
         private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
@@ -394,10 +435,6 @@ namespace TaskFlow.Views.Dialogs
             var outerBorder = new System.Windows.Controls.Border
             {
                 CornerRadius = new CornerRadius(10),
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(250, 249, 245)),
-                BorderBrush = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(232, 230, 220)),
                 BorderThickness = new Thickness(1),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect
                 {
@@ -407,6 +444,8 @@ namespace TaskFlow.Views.Dialogs
                     Direction = 270
                 }
             };
+            outerBorder.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "AppBackgroundBrush");
+            outerBorder.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, "BorderLightBrush");
 
             var mainStack = new System.Windows.Controls.StackPanel
             {
@@ -436,15 +475,15 @@ namespace TaskFlow.Views.Dialogs
             });
             mainStack.Children.Add(titlePanel);
 
-            mainStack.Children.Add(new System.Windows.Controls.TextBlock
+            var messageText = new System.Windows.Controls.TextBlock
             {
                 Text = message,
                 FontSize = 13,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(20, 20, 19)),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 20)
-            });
+            };
+            messageText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "TextPrimaryBrush");
+            mainStack.Children.Add(messageText);
 
             var okButton = new System.Windows.Controls.Button
             {
@@ -453,7 +492,7 @@ namespace TaskFlow.Views.Dialogs
                 Height = 32,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Background = new System.Windows.Media.SolidColorBrush(themeColor),
-                Foreground = System.Windows.Media.Brushes.White,
+                Foreground = (System.Windows.Media.Brush)FindResource("CreamyWhiteBrush"),
                 BorderThickness = new Thickness(0),
                 Cursor = System.Windows.Input.Cursors.Hand
             };

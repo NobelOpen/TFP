@@ -14,13 +14,12 @@ namespace TaskFlow.Converters
     /// </summary>
     public class TaskStatusToColorConverter : IValueConverter
     {
-        // 使用静态缓存并冻结，避免每次绑定都创建新Brush对象
-        // Anthropic 浅色风格状态颜色
-        private static readonly SolidColorBrush IdleBrush = CreateFrozenBrush(250, 249, 245);     // 白色卡片
-        private static readonly SolidColorBrush RunningBrush = CreateFrozenBrush(106, 155, 204);  // Anthropic 蓝 #6a9bcc
-        private static readonly SolidColorBrush SuccessBrush = CreateFrozenBrush(120, 140, 93);   // Anthropic 绿 #788c5d
-        private static readonly SolidColorBrush FailedBrush = CreateFrozenBrush(196, 91, 74);     // 柔和红 #c45b4a
-        private static readonly SolidColorBrush DefaultBrush = CreateFrozenBrush(176, 174, 165);  // Anthropic 中灰 #b0aea5
+        // Anthropic 极致纯净风格：状态用高饱和度亮色作为 Accent (边框或图标颜色)
+        private static readonly SolidColorBrush IdleBrush = CreateFrozenBrush(Colors.Transparent);
+        private static readonly SolidColorBrush RunningBrush = CreateFrozenBrush(74, 156, 214);  // 蓝 #4a9cd6
+        private static readonly SolidColorBrush SuccessBrush = CreateFrozenBrush(50, 160, 100);   // 绿 #32a064
+        private static readonly SolidColorBrush FailedBrush = CreateFrozenBrush(203, 64, 64);     // 红 #cb4040
+        private static readonly SolidColorBrush DefaultBrush = CreateFrozenBrush(Colors.Transparent);
 
         private static SolidColorBrush CreateFrozenBrush(byte r, byte g, byte b)
         {
@@ -65,14 +64,14 @@ namespace TaskFlow.Converters
     {
         // 使用静态缓存并冻结，避免每次绑定都创建新Brush对象
         private static readonly SolidColorBrush SelectedBrush;
-        private static readonly SolidColorBrush TransparentBrush;
+        private static readonly SolidColorBrush NormalBrush;
 
         static SelectedToBorderColorConverter()
         {
             SelectedBrush = new SolidColorBrush(Color.FromRgb(217, 119, 87)); // Anthropic 橙 #d97757
             SelectedBrush.Freeze();
-            TransparentBrush = new SolidColorBrush(Colors.Transparent);
-            TransparentBrush.Freeze();
+            NormalBrush = new SolidColorBrush(Color.FromRgb(232, 230, 220)); // #e8e6dc
+            NormalBrush.Freeze();
         }
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -81,7 +80,7 @@ namespace TaskFlow.Converters
             {
                 return SelectedBrush;
             }
-            return TransparentBrush;
+            return NormalBrush;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -392,6 +391,65 @@ namespace TaskFlow.Converters
             if (value == null) return Visibility.Collapsed;
             if (value is System.Collections.ICollection col && col.Count == 0) return Visibility.Collapsed;
             return Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 字符串转大写转换器
+    /// </summary>
+    public class ToUpperConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string str)
+            {
+                return str.ToUpper();
+            }
+            return value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+    /// <summary>
+    /// 可滚动区域转可见性转换器（大于0为Visible，否则Collapsed）
+    /// </summary>
+    public class ScrollableToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double scrollableWidth && scrollableWidth > 0)
+            {
+                return Visibility.Visible;
+            }
+            return Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 非空字符串到可见性转换器（用于思考过程区域的显隐）
+    /// </summary>
+    public class StringNotEmptyToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string str && !string.IsNullOrEmpty(str))
+            {
+                return Visibility.Visible;
+            }
+            return Visibility.Collapsed;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

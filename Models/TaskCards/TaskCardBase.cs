@@ -36,6 +36,7 @@ namespace TaskFlow.Models.TaskCards
         EndAllFlows,
         PauseTask,
         BreakLoop,
+        RestartFlow,
 
         // Windows操作
         WinLaunchApp,
@@ -95,7 +96,11 @@ namespace TaskFlow.Models.TaskCards
         LlmFileTranslate,
 
         // 时间
-        GetTimestamp
+        GetTimestamp,
+
+        // 输入组合
+        WinTextInput,
+        InputCombo
     }
 
     /// <summary>
@@ -339,6 +344,9 @@ namespace TaskFlow.Models.TaskCards
                 TaskType.FileRead => Resources.Strings.TaskType_FileRead,
                 TaskType.EventListener => Resources.Strings.TaskType_EventListener,
                 TaskType.ArraySearch => Resources.Strings.TaskType_ArraySearch,
+                TaskType.WinTextInput => Resources.Strings.TaskType_WinTextInput,
+                TaskType.InputCombo => Resources.Strings.TaskType_InputCombo,
+                TaskType.RestartFlow => Resources.Strings.TaskType_RestartFlow,
                 _ => type.ToString()
             };
         }

@@ -43,31 +43,80 @@ namespace TaskFlow
             {
                 Title = TaskFlow.Resources.Strings.Live_SettingsTitle,
                 Width = 350,
-                Height = 200,
+                SizeToContent = SizeToContent.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Owner = this,
                 ResizeMode = ResizeMode.NoResize,
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0xFA, 0xF9, 0xF5))
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent
             };
 
-            var grid = new Grid { Margin = new Thickness(16) };
+            var grid = new Grid { Margin = new Thickness(24) };
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
+            // 标题层
+            var titlePanel = new Grid { Margin = new Thickness(0, 0, 0, 20) };
+            titlePanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            titlePanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            
+            var titleLabel = new TextBlock
+            {
+                Text = TaskFlow.Resources.Strings.Live_SettingsTitle,
+                FontSize = 18,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            titleLabel.SetResourceReference(TextBlock.ForegroundProperty, "DialogTitleBrush");
+            Grid.SetColumn(titleLabel, 0);
+            titlePanel.Children.Add(titleLabel);
+
+            var closeBtn = new Button
+            {
+                Content = "✕", Width = 36, Height = 36, Background = System.Windows.Media.Brushes.Transparent, 
+                BorderThickness = new Thickness(0),
+                FontSize = 18, Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -8, -8, 0)
+            };
+            closeBtn.SetResourceReference(Control.ForegroundProperty, "TextSecondaryBrush");
+            closeBtn.Click += (s, args) => dialog.DialogResult = false;
+            
+            var closeTemplate = new ControlTemplate(typeof(Button));
+            var closeBorderFact = new FrameworkElementFactory(typeof(Border));
+            closeBorderFact.Name = "Bd";
+            closeBorderFact.SetValue(Border.CornerRadiusProperty, new CornerRadius(18));
+            closeBorderFact.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+            var closeContentFact = new FrameworkElementFactory(typeof(ContentPresenter));
+            closeContentFact.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            closeContentFact.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            closeContentFact.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 0, 2));
+            closeBorderFact.AppendChild(closeContentFact);
+            closeTemplate.VisualTree = closeBorderFact;
+
+            var closeHoverTrig = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            closeHoverTrig.Setters.Add(new Setter(Border.BackgroundProperty, new DynamicResourceExtension("SurfaceHoverBrush"), "Bd"));
+            closeTemplate.Triggers.Add(closeHoverTrig);
+            closeBtn.Template = closeTemplate;
+
+            Grid.SetColumn(closeBtn, 1);
+            titlePanel.Children.Add(closeBtn);
+            
+            Grid.SetRow(titlePanel, 0);
+            grid.Children.Add(titlePanel);
+
             // 标签
             var label = new TextBlock
             {
                 Text = TaskFlow.Resources.Strings.Live_ProcessName,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x6B, 0x6A, 0x65)),
                 FontSize = 13,
                 Margin = new Thickness(0, 0, 0, 4)
             };
-            Grid.SetRow(label, 0);
+            label.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+            Grid.SetRow(label, 1);
             grid.Children.Add(label);
 
             // 输入框（圆角与整体风格一致）
@@ -76,14 +125,13 @@ namespace TaskFlow
                 Text = _liveProcessName,
                 FontSize = 13,
                 Padding = new Thickness(8, 6, 8, 6),
-                Background = System.Windows.Media.Brushes.White,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x14, 0x14, 0x13)),
-                BorderBrush = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0xE8, 0xE6, 0xDC)),
                 BorderThickness = new Thickness(1),
                 Margin = new Thickness(0, 0, 0, 12)
             };
+            inputBox.SetResourceReference(Control.BackgroundProperty, "AppBackgroundBrush");
+            inputBox.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
+            inputBox.SetResourceReference(Control.BorderBrushProperty, "BorderLightBrush");
+
             // 设置圆角模板
             var inputTemplate = new ControlTemplate(typeof(TextBox));
             var borderFactory = new FrameworkElementFactory(typeof(Border));
@@ -98,17 +146,17 @@ namespace TaskFlow
             borderFactory.AppendChild(scrollFactory);
             inputTemplate.VisualTree = borderFactory;
             inputBox.Template = inputTemplate;
-            Grid.SetRow(inputBox, 1);
+            Grid.SetRow(inputBox, 2);
             grid.Children.Add(inputBox);
 
             // 提示文本
             var hint = new TextBlock
             {
                 Text = TaskFlow.Resources.Strings.Live_ProcessHint,
-                Foreground = HintBrush,
                 FontSize = 11
             };
-            Grid.SetRow(hint, 2);
+            hint.SetResourceReference(TextBlock.ForegroundProperty, "TextTertiaryBrush");
+            Grid.SetRow(hint, 3);
             grid.Children.Add(hint);
 
             // 按钮区（确定 + 取消）
@@ -117,29 +165,69 @@ namespace TaskFlow
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right
             };
-            Grid.SetRow(btnPanel, 4);
+            Grid.SetRow(btnPanel, 5);
 
-            // 确定按钮（与 AddVariableDialog 一致的样式）
-            var btnOk = CreateDialogButton(TaskFlow.Resources.Strings.Common_OK,
-                System.Windows.Media.Color.FromRgb(0xD9, 0x77, 0x57),
-                System.Windows.Media.Colors.White,
-                System.Windows.Media.Color.FromRgb(0xE0, 0x88, 0x68));
-            btnOk.Margin = new Thickness(0, 0, 8, 0);
+            // 确定按钮
+            var btnOk = new Button
+            {
+                Content = TaskFlow.Resources.Strings.Common_OK,
+                Padding = new Thickness(24, 8, 24, 8),
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                FontSize = 13
+            };
+            btnOk.SetResourceReference(Control.BackgroundProperty, "PrimaryButtonBgBrush");
+            btnOk.SetResourceReference(Control.ForegroundProperty, "PrimaryButtonTextBrush");
+
+            var btnTemplate = new ControlTemplate(typeof(Button));
+            var btnBorderFact = new FrameworkElementFactory(typeof(Border));
+            btnBorderFact.Name = "Bd";
+            btnBorderFact.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
+            btnBorderFact.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+            btnBorderFact.SetBinding(Border.PaddingProperty, new System.Windows.Data.Binding("Padding") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+            var btnContentFact = new FrameworkElementFactory(typeof(ContentPresenter));
+            btnContentFact.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            btnContentFact.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            btnBorderFact.AppendChild(btnContentFact);
+            btnTemplate.VisualTree = btnBorderFact;
+
+            var btnHoverTrig = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            btnHoverTrig.Setters.Add(new Setter(Border.BackgroundProperty, new DynamicResourceExtension("PrimaryButtonHoverBrush"), "Bd"));
+            btnTemplate.Triggers.Add(btnHoverTrig);
+            btnOk.Template = btnTemplate;
+
             btnOk.IsDefault = true;
             btnOk.Click += (s, args) => { dialog.DialogResult = true; };
             btnPanel.Children.Add(btnOk);
 
-            // 取消按钮（深色，与 AddVariableDialog 一致）
-            var btnCancel = CreateDialogButton(TaskFlow.Resources.Strings.Common_Cancel,
-                System.Windows.Media.Color.FromRgb(0x14, 0x14, 0x13),
-                System.Windows.Media.Color.FromRgb(0xFA, 0xF9, 0xF5),
-                System.Windows.Media.Color.FromRgb(0x2A, 0x2A, 0x28));
-            btnCancel.IsCancel = true;
-            btnCancel.Click += (s, args) => { dialog.DialogResult = false; };
-            btnPanel.Children.Add(btnCancel);
-
             grid.Children.Add(btnPanel);
-            dialog.Content = grid;
+            
+            var border = new Border
+            {
+                CornerRadius = new CornerRadius(12),
+                Margin = new Thickness(16),
+                BorderThickness = new Thickness(1),
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 24,
+                    ShadowDepth = 4,
+                    Opacity = 0.18,
+                    Color = System.Windows.Media.Color.FromRgb(0x1A, 0x1A, 0x19) // Shadow can stay hardcoded or we can use generic shadow if any
+                },
+                Child = grid
+            };
+            border.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
+            border.SetResourceReference(Border.BorderBrushProperty, "BorderLightBrush");
+
+
+            dialog.Content = border;
+            
+            // 允许拖动整个窗口
+            dialog.MouseLeftButtonDown += (s, args) =>
+            {
+                if (args.ButtonState == MouseButtonState.Pressed)
+                    dialog.DragMove();
+            };
 
             // 焦点到输入框
             dialog.Loaded += (s, args) =>

@@ -148,7 +148,7 @@ namespace TaskFlow.Resources {
         public static string Main_Minimize => ResourceManager.GetString("Main_Minimize", resourceCulture) ?? "Minimize";
         public static string Main_Maximize => ResourceManager.GetString("Main_Maximize", resourceCulture) ?? "Maximize";
         public static string Main_Restore => ResourceManager.GetString("Main_Restore", resourceCulture) ?? "Restore";
-        public static string Main_LiveStartHint => ResourceManager.GetString("Main_LiveStartHint", resourceCulture) ?? "Click ⚙ Settings → ▶ to start";
+        public static string Main_LiveStartHint => ResourceManager.GetString("Main_LiveStartHint", resourceCulture) ?? "Configure target process to initiate live capture...";
         public static string Main_StartLive => ResourceManager.GetString("Main_StartLive", resourceCulture) ?? "Start Live View";
         public static string Main_StopLive => ResourceManager.GetString("Main_StopLive", resourceCulture) ?? "Stop Live View";
         public static string Main_LiveSettings => ResourceManager.GetString("Main_LiveSettings", resourceCulture) ?? "Live Settings";
@@ -297,7 +297,11 @@ namespace TaskFlow.Resources {
         public static string Output_BlobCoordsArray => ResourceManager.GetString("Output_BlobCoordsArray", resourceCulture) ?? "Blob Coords Array";
         public static string Output_BlobSizeArray => ResourceManager.GetString("Output_BlobSizeArray", resourceCulture) ?? "Blob Size Array";
         public static string Output_BlobAreaArray => ResourceManager.GetString("Output_BlobAreaArray", resourceCulture) ?? "Blob Area Array";
-        public static string Output_ScaleRatio => ResourceManager.GetString("Output_ScaleRatio", resourceCulture) ?? "Scale Ratio";
+        public static string Output_WidthScale => ResourceManager.GetString("Output_WidthScale", resourceCulture) ?? "Width Scale";
+        public static string Output_HeightScale => ResourceManager.GetString("Output_HeightScale", resourceCulture) ?? "Height Scale";
+        public static string Output_Resolution => ResourceManager.GetString("Output_Resolution", resourceCulture) ?? "Resolution";
+        public static string Output_ImgWidth => ResourceManager.GetString("Output_ImgWidth", resourceCulture) ?? "Width";
+        public static string Output_ImgHeight => ResourceManager.GetString("Output_ImgHeight", resourceCulture) ?? "Height";
         public static string Output_ConvertResult => ResourceManager.GetString("Output_ConvertResult", resourceCulture) ?? "Convert Result (Int)";
         public static string Output_ParseResultInt => ResourceManager.GetString("Output_ParseResultInt", resourceCulture) ?? "Parse Result (Int)";
         public static string Output_ParseResultString => ResourceManager.GetString("Output_ParseResultString", resourceCulture) ?? "Parse Result (String)";
@@ -922,5 +926,48 @@ namespace TaskFlow.Resources {
         ///   确认按钮文本
         /// </summary>
         public static string UI_Confirm => ResourceManager.GetString("UI_Confirm", resourceCulture) ?? "UI_Confirm";
+
+        /// <summary>
+        ///   Orchid 设置区域标题
+        /// </summary>
+        public static string Settings_OrchidSection => ResourceManager.GetString("Settings_OrchidSection", resourceCulture) ?? "✦ Orchid Settings";
+
+        /// <summary>
+        ///   开启单层调用
+        /// </summary>
+        public static string Settings_SingleStage => ResourceManager.GetString("Settings_SingleStage", resourceCulture) ?? "Enable Single Stage Call";
+
+        /// <summary>
+        ///   查看标定结果
+        /// </summary>
+        public static string Settings_ViewCalibration => ResourceManager.GetString("Settings_ViewCalibration", resourceCulture) ?? "View Calibration Results";
+
+        public static string TaskType_RestartFlow => ResourceManager.GetString("TaskType_RestartFlow", resourceCulture) ?? "Restart Flow";
+
+        // ─── InputCombo 输入组合卡片 ───
+        public static string TaskType_InputCombo => ResourceManager.GetString("TaskType_InputCombo", resourceCulture) ?? "Win Input Combo";
+        public static string Prop_InputComboActions => ResourceManager.GetString("Prop_InputComboActions", resourceCulture) ?? "Action List";
+        public static string Prop_InputComboAddAction => ResourceManager.GetString("Prop_InputComboAddAction", resourceCulture) ?? "+ Add Key";
+        public static string Prop_InputComboTap => ResourceManager.GetString("Prop_InputComboTap", resourceCulture) ?? "Tap";
+        public static string Prop_InputComboHold => ResourceManager.GetString("Prop_InputComboHold", resourceCulture) ?? "Hold";
+        public static string Prop_InputComboRepeat => ResourceManager.GetString("Prop_InputComboRepeat", resourceCulture) ?? "Repeat Count (0=infinite)";
+        public static string Prop_InputComboStop => ResourceManager.GetString("Prop_InputComboStop", resourceCulture) ?? "Stop Expression";
+        public static string Prop_InputComboDuration => ResourceManager.GetString("Prop_InputComboDuration", resourceCulture) ?? "Max Duration (ms, 0=no limit)";
+
+        // ─── WinTextInput 文本输入卡片 ───
+        public static string TaskType_WinTextInput => ResourceManager.GetString("TaskType_WinTextInput", resourceCulture) ?? "Win Text Input";
+        public static string Prop_WinTextInputText => ResourceManager.GetString("Prop_WinTextInputText", resourceCulture) ?? "Input Text";
+        public static string Prop_WinTextInputMode => ResourceManager.GetString("Prop_WinTextInputMode", resourceCulture) ?? "Input Mode";
+        public static string Prop_WinTextInputCharByChar => ResourceManager.GetString("Prop_WinTextInputCharByChar", resourceCulture) ?? "Char by Char";
+        public static string Prop_WinTextInputClipboard => ResourceManager.GetString("Prop_WinTextInputClipboard", resourceCulture) ?? "Clipboard Paste";
+        public static string Prop_WinTextInputInterval => ResourceManager.GetString("Prop_WinTextInputInterval", resourceCulture) ?? "Char Interval (ms)";
+        public static string AiPanel_InputPlaceholder => ResourceManager.GetString("AiPanel_InputPlaceholder", resourceCulture) ?? "What can I help you with today?";
+        public static string AiPanel_HistoryTitle => ResourceManager.GetString("AiPanel_HistoryTitle", resourceCulture) ?? "Chat History";
+        public static string AiPanel_NoHistory => ResourceManager.GetString("AiPanel_NoHistory", resourceCulture) ?? "No chat history";
+        public static string AiPanel_DeleteTooltip => ResourceManager.GetString("AiPanel_DeleteTooltip", resourceCulture) ?? "Delete";
+
+        public static string Main_OrchidDisclaimer => ResourceManager.GetString("Main_OrchidDisclaimer", resourceCulture) ?? "Orchid can make mistakes. Please double-check responses.";
+        public static string Main_NoImageHint => ResourceManager.GetString("Main_NoImageHint", resourceCulture) ?? "Awaiting visual signal...";
+        public static string Main_NoLogsHint => ResourceManager.GetString("Main_NoLogsHint", resourceCulture) ?? "System ready, awaiting execution traces...";
     }
 }

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow Pipeline</title>
+  <style>
+    /* ── Anthropic Swatch System (from anthropic.com CSS) ── */
+    :root {
+      --ivory-light: #faf9f5;
+      --ivory-medium: #f0eee6;
+      --ivory-dark: #e8e6dc;
+      --slate-dark: #141413;
+      --slate-medium: #3d3d3a;
+      --slate-light: #5e5d59;
+      --cloud-dark: #87867f;
+      --cloud-medium: #b0aea5;
+      --cloud-light: #d1cfc5;
+      --accent: #c6613f;
+      --accent-warm: #d97757;
+      --border: rgba(20, 20, 19, 0.1);
+      --border-strong: rgba(20, 20, 19, 0.2);
+
+      --bg: var(--ivory-medium);
+      --surface: var(--ivory-light);
+      --surface-dim: var(--ivory-dark);
+      --text: var(--slate-dark);
+      --muted: var(--slate-light);
+      --shadow: rgba(20, 20, 19, 0.07);
+
+      --r: 8px;
+      --r-lg: 12px;
+      --title-h: 44px;
+      --toolbar-h: 56px;
+      font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: var(--text);
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1918;
+      --surface: #232220;
+      --surface-dim: #1e1d1c;
+      --text: var(--ivory-light);
+      --muted: var(--cloud-dark);
+      --accent: #d97757;
+      --border: rgba(250, 249, 245, 0.08);
+      --border-strong: rgba(250, 249, 245, 0.15);
+      --shadow: rgba(0, 0, 0, 0.25);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--bg); }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      color: var(--text);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    button { font: inherit; cursor: pointer; }
+
+    /* ── Scrollbar ── */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--cloud-light) transparent;
+    }
+    [data-theme="dark"] * {
+      scrollbar-color: rgba(250, 249, 245, 0.15) transparent;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--cloud-light); border-radius: 3px; }
+    [data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(250, 249, 245, 0.15); }
+
+    /* ── Window ── */
+    .window {
+      width: min(1520px, 100vw - 40px);
+      height: min(940px, calc(100vh - 40px));
+      min-height: 720px;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      border-radius: var(--r-lg);
+      border: 0.5px solid var(--border);
+      box-shadow: 0 8px 32px var(--shadow);
+      overflow: hidden;
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+
+    .titlebar {
+      height: var(--title-h);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: none;
+    }
+
+    .titlebar__title { font-size: 17px; font-weight: 600; }
+
+    .window-controls { display: flex; gap: 8px; }
+    .window-controls button {
+      width: 12px; height: 12px; border: 0; border-radius: 50%;
+      background: var(--cloud-light); opacity: 0.5; transition: opacity 0.2s;
+    }
+    [data-theme="dark"] .window-controls button { background: var(--muted); }
+    .window-controls button:hover { opacity: 1; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      height: var(--toolbar-h);
+      margin: 0 16px 12px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: none;
+      border-radius: 0.6rem;
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      transition: background-color 0.3s;
+    }
+
+    .spacer { flex: 1; }
+
+    .tool {
+      height: 36px; padding: 0 14px; border: 0;
+      border-radius: 0.6rem;
+      display: inline-flex; align-items: center; gap: 7px;
+      color: var(--text);
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      box-shadow: none;
+      white-space: nowrap; transition: all 0.15s;
+    }
+    .tool:hover { background: var(--surface-dim); }
+    .tool.is-pressed, .tool:active {
+      box-shadow: none;
+      transform: translateY(1px);
+    }
+    .tool--primary {
+      color: var(--ivory-light);
+      background: #202020;
+      border-color: transparent;
+    }
+    .tool--primary:hover {
+      background: #333;
+      color: var(--ivory-light);
+    }
+    [data-theme="dark"] .tool--primary {
+      background: var(--ivory-light);
+      color: var(--slate-dark);
+    }
+    [data-theme="dark"] .tool--primary:hover {
+      background: var(--ivory-medium);
+      color: var(--slate-dark);
+    }
+    .tool svg {
+      width: 15px; height: 15px; stroke: currentColor;
+      stroke-width: 1.8; fill: none;
+      stroke-linecap: round; stroke-linejoin: round; flex: none;
+    }
+
+    /* ── Content Grid ── */
+    .content {
+      flex: 1; min-height: 0;
+      padding: 0 16px 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.92fr);
+      gap: 16px;
+    }
+
+    /* ── Panel: tabs + body are one piece ── */
+    .panel {
+      display: flex; flex-direction: column; min-height: 0;
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      transition: background-color 0.3s;
+    }
+
+    /* Tab bar sits inside the panel, same bg = one piece */
+    .workspace-tabs, .mini-tabs {
+      height: 42px; padding: 0 16px;
+      display: flex; align-items: stretch; gap: 0;
+      border-bottom: 1px solid var(--border);
+      flex: none;
+    }
+
+    .tab {
+      position: relative;
+      padding: 0 14px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px; font-weight: 500;
+      display: flex; align-items: center;
+      transition: color 0.15s;
+    }
+    .tab:hover:not(.is-active) { color: var(--text); }
+    .tab.is-active {
+      color: var(--text);
+    }
+    .tab.is-active::after {
+      content: "";
+      position: absolute;
+      bottom: -1px; left: 0; right: 0;
+      height: 2px;
+      background: var(--text);
+      border-radius: 1px;
+    }
+
+    /* ── Workspace Body ── */
+    .workspace-body {
+      flex: 1; min-height: 0;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      align-content: start;
+      overflow: auto;
+    }
+
+    /* ── Task Card: same surface, border only ── */
+    .task-card {
+      padding: 16px;
+      border-radius: 0.6rem;
+      border: 0.5px solid var(--border);
+      display: flex; flex-direction: column; gap: 10px;
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+    .task-card:hover { background: var(--surface-dim); }
+    .task-card.is-active { border-color: var(--accent); }
+
+    .task-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .task-card__eyebrow {
+      font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .task-title { margin-top: 3px; font-size: 15px; font-weight: 600; }
+    .task-card.is-active .task-title { color: var(--accent); }
+    .task-badge {
+      padding: 4px 8px; border-radius: 100px;
+      border: 0.5px solid var(--border);
+      color: var(--muted); font-size: 11px; white-space: nowrap;
+    }
+    .task-summary { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.42; }
+    .task-list { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+    .task-item {
+      padding: 8px 10px; border-radius: 0.5rem;
+      border: 0.5px solid var(--border);
+      color: var(--muted); font-size: 12px; line-height: 1.35;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .viewport {
+      flex: 1; min-height: 0; padding: 14px;
+      color: var(--muted); overflow: auto;
+    }
+    .viewport--console { font-size: 13px; line-height: 1.65; }
+
+    /* ── Detail Card (right side): also border-only ── */
+    .detail-grid { display: flex; flex-direction: column; gap: 12px; }
+    .detail-card {
+      padding: 16px; border-radius: 0.6rem;
+      border: 0.5px solid var(--border);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .detail-title { font-size: 17px; line-height: 1.2; font-weight: 600; }
+    .detail-copy { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .detail-list, .console-stack { display: flex; flex-direction: column; gap: 6px; }
+    .detail-stat {
+      width: fit-content; padding: 4px 8px; border-radius: 100px;
+      border: 0.5px solid var(--border); color: var(--muted); font-size: 11px;
+    }
+    .preview-kicker {
+      font-size: 11px; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .console-row {
+      padding: 8px 10px; border-radius: 0.5rem;
+      border: 0.5px solid var(--border);
+      color: var(--muted); font-family: "Cascadia Mono", Consolas, monospace; font-size: 12px;
+    }
+    .console-row--accent { color: var(--accent); }
+    .empty-state {
+      height: 100%; display: grid; place-items: center;
+      text-align: center; color: var(--muted);
+    }
+
+    @media (max-width: 1240px) {
+      .content { grid-template-columns: 1fr; }
+      .sidebar { grid-template-rows: auto auto; }
+    }
+    @media (max-width: 760px) {
+      body { padding: 10px; }
+      .window { width: 100%; height: auto; min-height: calc(100vh - 20px); }
+      .toolbar { height: auto; padding: 10px; flex-wrap: wrap; }
+      .spacer { display: none; }
+      .content { padding: 0 10px 10px; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="window">
+    <header class="titlebar">
+      <div class="titlebar__title">TaskFlow Pipeline</div>
+      <div class="window-controls" aria-hidden="true">
+        <button type="button" title="Minimize"></button>
+        <button type="button" title="Maximize"></button>
+        <button type="button" title="Close"></button>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="Toolbar">
+      <button class="tool" id="new-task" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+        <span>New Task</span>
+      </button>
+      <button class="tool" id="theme-toggle" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <span id="theme-label">Night Mode</span>
+      </button>
+      <div class="spacer"></div>
+      <button class="tool tool--primary" id="run-active" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l9 6-9 6z"></path></svg>
+        <span>Execute</span>
+      </button>
+    </section>
+
+    <section class="content">
+      <section class="panel workspace">
+        <div class="workspace-tabs" id="workspace-tabs">
+          <button class="tab is-active" type="button" data-pipeline="alpha">Pipeline Alpha</button>
+          <button class="tab" type="button" data-pipeline="clean">Data Clean</button>
+        </div>
+        <div class="workspace-body" id="task-container"></div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="mini-tabs" id="preview-tabs">
+            <button class="tab is-active" type="button" data-view="preview">Preview</button>
+            <button class="tab" type="button" data-view="graph">Flow</button>
+          </div>
+          <div class="viewport" id="preview-content"></div>
+        </section>
+
+        <section class="panel">
+          <div class="mini-tabs" id="console-tabs">
+            <button class="tab is-active" type="button" data-view="console">Console</button>
+            <button class="tab" type="button" data-view="notes">Note</button>
+          </div>
+          <div class="viewport viewport--console" id="console-content"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const taskLibrary = {
+      alpha: [
+        {
+          lane: "Input",
+          title: "Source Intake",
+          summary: "Collect prompt context and normalize the payload before any heavier work begins.",
+          note: "This node keeps the whole run predictable by flattening noisy upstream input.",
+          steps: ["Resolve prompt bundle", "Trim duplicate context", "Lock schema"]
+        },
+        {
+          lane: "Transform",
+          title: "Evidence Sort",
+          summary: "Cluster incoming records into a smaller, cleaner set that the model can reason over fast.",
+          note: "Best used when the pipeline is mixing logs, text snippets, and structured metadata.",
+          steps: ["Rank by confidence", "Drop stale rows", "Pack useful context"]
+        },
+        {
+          lane: "Model",
+          title: "Reasoning Pass",
+          summary: "Run the main inference step with a smaller context window and tighter task framing.",
+          note: "This pass favors clarity over recall, so the preview should stay concise.",
+          steps: ["Prime instructions", "Run model", "Cache response"]
+        },
+        {
+          lane: "Safety",
+          title: "Policy Check",
+          summary: "Inspect the outgoing answer for policy conflicts before it reaches the final output stage.",
+          note: "A warm UI still needs a slightly paranoid filter somewhere, tragic but true.",
+          steps: ["Scan risky terms", "Mark uncertainty", "Apply fallback"]
+        },
+        {
+          lane: "Output",
+          title: "Publish Bundle",
+          summary: "Assemble the final answer, metadata, and stream markers for the client surface.",
+          note: "This is the polished handoff stage, so typography and pacing matter more here.",
+          steps: ["Format payload", "Attach usage data", "Emit response"]
+        }
+      ],
+      clean: [
+        {
+          lane: "Input",
+          title: "Schema Sweep",
+          summary: "Find loose keys, empty values, and version mismatches before the data enters the graph.",
+          note: "Quiet cleanup work, but it saves the flashy downstream steps from looking dumb.",
+          steps: ["Detect drift", "Patch null fields", "Coerce primitives"]
+        },
+        {
+          lane: "Transform",
+          title: "Chunk Merge",
+          summary: "Collapse overly small fragments into balanced segments that travel better through the pipeline.",
+          note: "A good merge stage feels boring, which is exactly the point.",
+          steps: ["Measure token size", "Merge adjacent spans", "Reindex order"]
+        },
+        {
+          lane: "Vector",
+          title: "Embedding Sync",
+          summary: "Refresh vector state and align new embeddings with the current retrieval store.",
+          note: "Useful when cached vectors are slightly out of season.",
+          steps: ["Load latest batch", "Rebuild vectors", "Swap active index"]
+        },
+        {
+          lane: "Quality",
+          title: "Review Gate",
+          summary: "Sample the transformed output and catch awkward edge cases before execution continues.",
+          note: "This stage gives the demo a pulse instead of just being a static postcard.",
+          steps: ["Score coverage", "Flag anomalies", "Queue manual pass"]
+        },
+        {
+          lane: "Output",
+          title: "Export Ready",
+          summary: "Prepare the cleaned dataset for handoff with a lighter footprint and consistent naming.",
+          note: "Names are part of the interface too, even when nobody wants to admit it.",
+          steps: ["Pack export", "Stamp version", "Write handoff"]
+        }
+      ]
+    };
+
+    const statusCycle = ["Draft", "Queued", "Ready", "Review"];
+    const taskContainer = document.getElementById("task-container");
+    const previewContent = document.getElementById("preview-content");
+    const consoleContent = document.getElementById("console-content");
+    const themeBtn = document.getElementById("theme-toggle");
+    const themeLabel = document.getElementById("theme-label");
+    const newTaskBtn = document.getElementById("new-task");
+    const runBtn = document.getElementById("run-active");
+    const root = document.documentElement;
+
+    let currentPipeline = "alpha";
+    let taskCounter = 0;
+    let tasks = [];
+    let activeTaskId = null;
+
+    function sampleStatus(index) {
+      return statusCycle[(index + Math.floor(Math.random() * statusCycle.length)) % statusCycle.length];
+    }
+
+    function createTask(template, index) {
+      taskCounter += 1;
+      return {
+        id: `task-${taskCounter}`,
+        lane: template.lane,
+        title: template.title,
+        summary: template.summary,
+        note: template.note,
+        steps: template.steps.slice(0, 2 + Math.floor(Math.random() * 2)),
+        status: sampleStatus(index)
+      };
+    }
+
+    function buildTaskSet(pipelineKey) {
+      const source = taskLibrary[pipelineKey] || taskLibrary.alpha;
+      return source.map((item, index) => createTask(item, index));
+    }
+
+    function getActiveTask() {
+      return tasks.find((task) => task.id === activeTaskId) || tasks[0] || null;
+    }
+
+    function renderTasks() {
+      if (!tasks.length) {
+        taskContainer.innerHTML = '<div class="empty-state">No tasks yet</div>';
+        return;
+      }
+
+      taskContainer.innerHTML = tasks.map((task) => `
+        <article class="task-card${task.id === activeTaskId ? " is-active" : ""}" data-task-id="${task.id}">
+          <div class="task-card__head">
+            <div>
+              <div class="task-card__eyebrow">${task.lane}</div>
+              <div class="task-title">${task.title}</div>
+            </div>
+            <div class="task-badge">${task.status}</div>
+          </div>
+          <p class="task-summary">${task.summary}</p>
+          <div class="task-list">
+            ${task.steps.map((step) => `<div class="task-item">${step}</div>`).join("")}
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderPreview() {
+      const activeTask = getActiveTask();
+      if (!activeTask) {
+        previewContent.innerHTML = '<div class="empty-state">Select a task to inspect</div>';
+        return;
+      }
+
+      const previewMode = document.querySelector("#preview-tabs .tab.is-active").dataset.view;
+
+      if (previewMode === "graph") {
+        const graphItems = [activeTask.lane, ...activeTask.steps, "Output"];
+        previewContent.innerHTML = `
+          <div class="detail-grid">
+            <article class="detail-card">
+              <div class="preview-kicker">Flow</div>
+              <div class="detail-title">${activeTask.title}</div>
+              <div class="detail-list">
+                ${graphItems.map((item, index) => `<div class="task-item">${index + 1}. ${item}</div>`).join("")}
+              </div>
+            </article>
+          </div>
+        `;
+        return;
+      }
+
+      previewContent.innerHTML = `
+        <div class="detail-grid">
+          <article class="detail-card">
+            <div class="preview-kicker">${activeTask.lane}</div>
+            <div class="detail-title">${activeTask.title}</div>
+            <p class="detail-copy">${activeTask.summary}</p>
+            <div class="detail-list">
+              ${activeTask.steps.map((step) => `<div class="task-item">${step}</div>`).join("")}
+            </div>
+          </article>
+        </div>
+      `;
+    }
+
+    function renderConsole() {
+      const activeTask = getActiveTask();
+      if (!activeTask) {
+        consoleContent.innerHTML = '<div class="empty-state">Console idle</div>';
+        return;
+      }
+
+      const consoleMode = document.querySelector("#console-tabs .tab.is-active").dataset.view;
+
+      if (consoleMode === "notes") {
+        consoleContent.innerHTML = `
+          <div class="detail-grid">
+            <article class="detail-card">
+              <div class="preview-kicker">Note</div>
+              <p class="detail-copy">${activeTask.note}</p>
+            </article>
+          </div>
+        `;
+        return;
+      }
+
+      const lines = [
+        "> system: surface stack calibrated",
+        `> pipeline: ${currentPipeline}`,
+        `> selected: ${activeTask.title}`,
+        `> state: ${activeTask.status.toLowerCase()}`,
+        "> shadow profile: soft ambient, low gloss"
+      ];
+
+      consoleContent.innerHTML = `
+        <div class="detail-grid">
+          <article class="detail-card">
+            <div class="preview-kicker">Console</div>
+            <div class="console-stack">
+              ${lines.map((line, index) => `<div class="console-row${index === lines.length - 1 ? " console-row--accent" : ""}">${line}</div>`).join("")}
+            </div>
+          </article>
+        </div>
+      `;
+    }
+
+    function renderAll() {
+      renderTasks();
+      renderPreview();
+      renderConsole();
+    }
+
+    function setPipeline(pipelineKey) {
+      currentPipeline = pipelineKey;
+      tasks = buildTaskSet(pipelineKey);
+      activeTaskId = tasks[0] ? tasks[0].id : null;
+      renderAll();
+    }
+
+    function syncThemeLabel() {
+      themeLabel.textContent = root.getAttribute("data-theme") === "dark" ? "Day Mode" : "Night Mode";
+    }
+
+    document.querySelectorAll(".tool").forEach((button) => {
+      button.addEventListener("mousedown", () => button.classList.add("is-pressed"));
+      button.addEventListener("mouseup", () => button.classList.remove("is-pressed"));
+      button.addEventListener("mouseleave", () => button.classList.remove("is-pressed"));
+    });
+
+    document.querySelectorAll("#workspace-tabs .tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll("#workspace-tabs .tab").forEach((item) => item.classList.remove("is-active"));
+        tab.classList.add("is-active");
+        setPipeline(tab.dataset.pipeline);
+      });
+    });
+
+    document.querySelectorAll("#preview-tabs .tab, #console-tabs .tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tab.parentElement.querySelectorAll(".tab").forEach((item) => item.classList.remove("is-active"));
+        tab.classList.add("is-active");
+        renderPreview();
+        renderConsole();
+      });
+    });
+
+    taskContainer.addEventListener("click", (event) => {
+      const card = event.target.closest(".task-card");
+      if (!card) {
+        return;
+      }
+      activeTaskId = card.dataset.taskId;
+      renderAll();
+    });
+
+    themeBtn.addEventListener("click", () => {
+      const nextTheme = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", nextTheme);
+      syncThemeLabel();
+    });
+
+    newTaskBtn.addEventListener("click", () => {
+      const source = taskLibrary[currentPipeline];
+      const template = source[Math.floor(Math.random() * source.length)];
+      const task = createTask(template, tasks.length);
+      tasks = [task, ...tasks];
+      activeTaskId = task.id;
+      renderAll();
+    });
+
+    runBtn.addEventListener("click", () => {
+      const activeTask = getActiveTask();
+      if (!activeTask) {
+        return;
+      }
+
+      tasks = tasks.map((task) => task.id === activeTask.id ? { ...task, status: "Running" } : task);
+      renderAll();
+
+      window.setTimeout(() => {
+        tasks = tasks.map((task) => task.id === activeTask.id ? { ...task, status: "Complete" } : task);
+        renderAll();
+      }, 900);
+    });
+
+    setPipeline(currentPipeline);
+    syncThemeLabel();
+  </script>
+</body>
+</html>

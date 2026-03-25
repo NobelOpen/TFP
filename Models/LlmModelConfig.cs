@@ -22,6 +22,15 @@ namespace TaskFlow.Models
         /// <summary>超时设置(秒)</summary>
         public int TimeoutSeconds { get; set; } = 60;
         
+        /// <summary>自定义请求头，每行一个 Key: Value 格式</summary>
+        public string CustomHeaders { get; set; } = "";
+        
+        /// <summary>是否启用本地 API 代理（绕过 Cloudflare TLS 指纹检测）</summary>
+        public bool UseProxy { get; set; } = false;
+        
+        /// <summary>代理目标域名（如 api.312800.xyz）</summary>
+        public string ProxyTargetHost { get; set; } = "";
+        
         /// <summary>统计总消耗的 input tokens</summary>
         public long TotalInputTokens { get; set; } = 0;
         
@@ -42,6 +51,9 @@ namespace TaskFlow.Models
                 ApiKey = this.ApiKey,
                 ModelName = this.ModelName,
                 TimeoutSeconds = this.TimeoutSeconds,
+                CustomHeaders = this.CustomHeaders,
+                UseProxy = this.UseProxy,
+                ProxyTargetHost = this.ProxyTargetHost,
                 TotalInputTokens = this.TotalInputTokens,
                 TotalOutputTokens = this.TotalOutputTokens
             };

@@ -130,7 +130,7 @@
   <data name="Main_Minimize" xml:space="preserve"><value>Minimize</value></data>
   <data name="Main_Maximize" xml:space="preserve"><value>Maximize</value></data>
   <data name="Main_Restore" xml:space="preserve"><value>Restore</value></data>
-  <data name="Main_LiveStartHint" xml:space="preserve"><value>Click ⚙ Settings button → ▶ to start</value></data>
+  <data name="Main_LiveStartHint" xml:space="preserve"><value>Configure target process to initiate live capture...</value></data>
   <data name="Main_StartLive" xml:space="preserve"><value>Start Live View</value></data>
   <data name="Main_StopLive" xml:space="preserve"><value>Stop Live View</value></data>
   <data name="Main_LiveSettings" xml:space="preserve"><value>Live Settings</value></data>
@@ -245,6 +245,9 @@
   <data name="Msg_ConfirmDelete" xml:space="preserve"><value>Are you sure you want to delete?</value></data>
   <data name="Msg_CannotOpenHelp" xml:space="preserve"><value>Cannot open help document: {0}</value></data>
   <data name="Msg_SavedSuccessfully" xml:space="preserve"><value>Saved successfully</value></data>
+  <data name="Main_OrchidDisclaimer" xml:space="preserve"><value>Orchid can make mistakes. Please double-check responses.</value></data>
+  <data name="Main_NoImageHint" xml:space="preserve"><value>Awaiting visual signal...</value></data>
+  <data name="Main_NoLogsHint" xml:space="preserve"><value>System ready, awaiting execution traces...</value></data>
   <data name="Msg_LanguageRestart" xml:space="preserve"><value>Language has been changed. Please restart the application for it to take effect.</value></data>
   <data name="Msg_ConfirmDeleteBranchGroup" xml:space="preserve"><value>Are you sure you want to delete the entire branch group?</value></data>
   <data name="Msg_ConfirmDeleteTask" xml:space="preserve"><value>Are you sure you want to delete task "{0}"?</value></data>
@@ -287,7 +290,11 @@
   <data name="Output_BlobCoordsArray" xml:space="preserve"><value>Blob Coords Array</value></data>
   <data name="Output_BlobSizeArray" xml:space="preserve"><value>Blob Size Array</value></data>
   <data name="Output_BlobAreaArray" xml:space="preserve"><value>Blob Area Array</value></data>
-  <data name="Output_ScaleRatio" xml:space="preserve"><value>Scale Ratio</value></data>
+  <data name="Output_WidthScale" xml:space="preserve"><value>Width Scale</value></data>
+  <data name="Output_HeightScale" xml:space="preserve"><value>Height Scale</value></data>
+  <data name="Output_Resolution" xml:space="preserve"><value>Resolution</value></data>
+  <data name="Output_ImgWidth" xml:space="preserve"><value>Width</value></data>
+  <data name="Output_ImgHeight" xml:space="preserve"><value>Height</value></data>
   <data name="Output_ConvertResult" xml:space="preserve"><value>Convert Result (Int)</value></data>
   <data name="Output_ParseResultInt" xml:space="preserve"><value>Parse Result (Int)</value></data>
   <data name="Output_ParseResultString" xml:space="preserve"><value>Parse Result (String)</value></data>
@@ -901,5 +908,27 @@ Example: @A = 1; @B = @A + 1</value></data>
     <value>Language has been changed, please restart the application to apply.</value>
   </data>
   <data name="UI_Confirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="Settings_OrchidSection" xml:space="preserve"><value>✦ Orchid Settings</value></data>
+  <data name="Settings_SingleStage" xml:space="preserve"><value>Enable single-stage invocation (improves speed, increases token usage)</value></data>
+  <data name="Settings_ViewCalibration" xml:space="preserve"><value>View Calibration Results</value></data>
+  <data name="TaskType_RestartFlow" xml:space="preserve"><value>Restart Flow</value></data>
+  <data name="TaskType_InputCombo" xml:space="preserve"><value>Win Input Combo</value></data>
+  <data name="Prop_InputComboActions" xml:space="preserve"><value>Action List</value></data>
+  <data name="Prop_InputComboAddAction" xml:space="preserve"><value>+ Add Key</value></data>
+  <data name="Prop_InputComboTap" xml:space="preserve"><value>Tap</value></data>
+  <data name="Prop_InputComboHold" xml:space="preserve"><value>Hold</value></data>
+  <data name="Prop_InputComboRepeat" xml:space="preserve"><value>Repeat Count (0=infinite)</value></data>
+  <data name="Prop_InputComboStop" xml:space="preserve"><value>Stop Expression</value></data>
+  <data name="Prop_InputComboDuration" xml:space="preserve"><value>Max Duration (ms, 0=no limit)</value></data>
+  <data name="TaskType_WinTextInput" xml:space="preserve"><value>Win Text Input</value></data>
+  <data name="Prop_WinTextInputText" xml:space="preserve"><value>Input Text</value></data>
+  <data name="Prop_WinTextInputMode" xml:space="preserve"><value>Input Mode</value></data>
+  <data name="Prop_WinTextInputCharByChar" xml:space="preserve"><value>Char by Char</value></data>
+  <data name="Prop_WinTextInputClipboard" xml:space="preserve"><value>Clipboard Paste</value></data>
+  <data name="Prop_WinTextInputInterval" xml:space="preserve"><value>Char Interval (ms)</value></data>
+  <data name="AiPanel_InputPlaceholder" xml:space="preserve"><value>What can I help you with today?</value></data>
+  <data name="AiPanel_HistoryTitle" xml:space="preserve"><value>Chat History</value></data>
+  <data name="AiPanel_NoHistory" xml:space="preserve"><value>No chat history</value></data>
+  <data name="AiPanel_DeleteTooltip" xml:space="preserve"><value>Delete</value></data>
 </root>
 

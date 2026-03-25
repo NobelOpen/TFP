@@ -78,7 +78,7 @@ namespace TaskFlow
                 // 启动时自动加载上次项目
                 if (vm.Settings.AutoLoadLastProject)
                 {
-                    vm.AutoLoad();
+                    _ = vm.AutoLoad();
                 }
 
                 // 启动后立即隐藏窗口（优先处理）
@@ -147,7 +147,12 @@ namespace TaskFlow
                 nameof(FileReadTaskCard.OutputArrayCount) or
                 nameof(ArraySearchTaskCard.OutputMatchIndex) or
                 nameof(ArraySearchTaskCard.OutputMatchValue) or
-                nameof(WinFindFileTaskCard.OutputFilePath))
+                nameof(WinFindFileTaskCard.OutputFilePath) or
+                nameof(ImgResizeTaskCard.OutputWidthScale) or
+                nameof(ImgResizeTaskCard.OutputHeightScale) or
+                nameof(WinScreenshotTaskCard.OutputResolution) or
+                nameof(WinScreenshotTaskCard.OutputWidth) or
+                nameof(WinScreenshotTaskCard.OutputHeight))
             {
                 Dispatcher.BeginInvoke(() => ScheduleOutputPanelUpdate());
             }
@@ -314,10 +319,19 @@ namespace TaskFlow
                 }
             }
 
-            // ImgResize specific: 显示缩放倍率
-            if (task is ImgResizeTaskCard resizeCard)
+            // ImgResize specific: 显示宽度和高度缩放倍率
+            if (task is ImgResizeTaskCard resizeCard && resizeCard.OutputImage != null)
             {
-                AddOutputRow(TaskFlow.Resources.Strings.Output_ScaleRatio, resizeCard.OutputScaleRatio.ToString("F4"));
+                AddOutputRow(TaskFlow.Resources.Strings.Output_WidthScale, resizeCard.OutputWidthScale.ToString("F4"));
+                AddOutputRow(TaskFlow.Resources.Strings.Output_HeightScale, resizeCard.OutputHeightScale.ToString("F4"));
+            }
+
+            // WinScreenshot specific: 显示分辨率信息
+            if (task is WinScreenshotTaskCard ssCard && !string.IsNullOrEmpty(ssCard.OutputResolution))
+            {
+                AddOutputRow(TaskFlow.Resources.Strings.Output_Resolution, ssCard.OutputResolution);
+                AddOutputRow(TaskFlow.Resources.Strings.Output_ImgWidth, ssCard.OutputWidth.ToString());
+                AddOutputRow(TaskFlow.Resources.Strings.Output_ImgHeight, ssCard.OutputHeight.ToString());
             }
 
             // TypeConvert specific: 转换结果
@@ -393,17 +407,16 @@ namespace TaskFlow
                 AddOutputRow(TaskFlow.Resources.Strings.Output_ErrorMessage, task.ErrorMessage, isError: true);
             }
 
-            // 如果没有输出数据
-            bool hasOutput = task.OutputResult.HasValue ||
+            // 只要执行过成功，或者有任何输出字段，就算有输出（不再维护易遗漏的类型列表）
+            bool hasOutput = task.Status == Models.TaskCards.TaskStatus.Success ||
+                            task.Status == Models.TaskCards.TaskStatus.Failed ||
+                            task.OutputResult.HasValue ||
                             !string.IsNullOrEmpty(task.OutputText) ||
                             task.OutputX.HasValue || task.OutputY.HasValue ||
                             task.OutputLoopIndex.HasValue ||
-                            !string.IsNullOrEmpty(task.ErrorMessage) ||
-                            task is ForLoopTaskCard || task is ImgColorDetectTaskCard ||
-                            task is ImgTemplateMatchTaskCard || task is TypeConvertTaskCard ||
-                            task is ArrayParseTaskCard || task is GetTimestampTaskCard ||
                             task is ArrayBuilderTaskCard || task is LlmFileTranslateTaskCard ||
-                            task is FileReadTaskCard || task is ArraySearchTaskCard;
+                            task is FileReadTaskCard || task is ArraySearchTaskCard ||
+                            task is WinScreenshotTaskCard || task is ImgResizeTaskCard;
 
             if (!hasOutput)
             {
@@ -436,7 +449,7 @@ namespace TaskFlow
             var valueBox = new TextBox
             {
                 Text = value,
-                Foreground = isError ? ErrorBrush : ValueBrush,
+                
                 FontSize = 11,
                 TextWrapping = TextWrapping.Wrap,
                 VerticalAlignment = VerticalAlignment.Top,
@@ -446,6 +459,7 @@ namespace TaskFlow
                 Padding = new Thickness(0),
                 Margin = new Thickness(0)
             };
+            valueBox.SetResourceReference(TextBox.ForegroundProperty, isError ? "DangerButtonBgBrush" : "TextPrimaryBrush");
             Grid.SetColumn(valueBox, 1);
 
             grid.Children.Add(labelBlock);
@@ -558,4 +572,6 @@ namespace TaskFlow
         #endregion
     }
 }
+
+
 

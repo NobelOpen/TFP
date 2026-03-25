@@ -30,6 +30,7 @@ namespace TaskFlow.Views.Dialogs
         public AnthropicMessageDialog(string title, string message, MsgType type = MsgType.Info)
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
 
             TitleText.Text = title;
             MessageText.Text = message;

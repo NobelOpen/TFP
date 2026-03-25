@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="标定结果" Width="620" Height="380"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="{DynamicResource AppBackgroundBrush}"
         FontFamily="{StaticResource FontBody}"
         ResizeMode="NoResize">
 
@@ -15,24 +15,24 @@
         </Grid.RowDefinitions>
 
         <!-- 标题 -->
-        <TextBlock Text="Vision 坐标标定记录" Foreground="#d97757" FontSize="14"
+        <TextBlock Text="Vision 坐标标定记录" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14"
                    FontWeight="SemiBold" Margin="0,0,0,8"/>
 
         <!-- 列表 -->
         <DataGrid Grid.Row="1" x:Name="CalibrationGrid"
                   AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserAddRows="False" CanUserDeleteRows="False"
-                  Background="White" BorderBrush="#e8e6dc" BorderThickness="1"
-                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#f0efe8"
+                  Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource BorderLightBrush}"
                   HeadersVisibility="Column" SelectionMode="Single"
                   FontSize="12">
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#f5f4f0"/>
-                    <Setter Property="Foreground" Value="#6b6a65"/>
+                    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                     <Setter Property="Padding" Value="8,4"/>
                     <Setter Property="FontSize" Value="11"/>
-                    <Setter Property="BorderBrush" Value="#e8e6dc"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
                     <Setter Property="BorderThickness" Value="0,0,0,1"/>
                 </Style>
             </DataGrid.ColumnHeaderStyle>
@@ -53,7 +53,7 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="删除所选" Click="DeleteSelected_Click"
                     Padding="12,6" Margin="0,0,8,0" Cursor="Hand"
-                    Background="#e8e6dc" Foreground="#141413" BorderThickness="0">
+                    Background="{DynamicResource SurfaceHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
@@ -62,7 +62,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#dddbd2"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BorderLightBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -70,7 +70,7 @@
             </Button>
             <Button Content="全部清除" Click="ClearAll_Click"
                     Padding="12,6" Margin="0,0,8,0" Cursor="Hand"
-                    Background="#e8e6dc" Foreground="#141413" BorderThickness="0">
+                    Background="{DynamicResource DangerButtonBgBrush}" Foreground="{DynamicResource DangerButtonTextBrush}" BorderThickness="0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
@@ -79,7 +79,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#dddbd2"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerButtonHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -87,7 +87,7 @@
             </Button>
             <Button Content="关闭" Click="Close_Click" IsCancel="True"
                     Padding="12,6" Cursor="Hand"
-                    Background="#141413" Foreground="#faf9f5" BorderThickness="0">
+                    Background="{DynamicResource PrimaryButtonBgBrush}" Foreground="{DynamicResource PrimaryButtonTextBrush}" BorderThickness="0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
@@ -96,7 +96,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2a2a28"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

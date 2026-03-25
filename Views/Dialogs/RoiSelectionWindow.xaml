@@ -1,19 +1,19 @@
-﻿<Window x:Class="TaskFlow.Views.Dialogs.RoiSelectionWindow"
+<Window x:Class="TaskFlow.Views.Dialogs.RoiSelectionWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="框选ROI区域" 
         Height="700" Width="950"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="{DynamicResource AppBackgroundBrush}"
         ResizeMode="CanResize"
         MinHeight="500" MinWidth="700">
 
     <Window.Resources>
         <Style x:Key="ToolButton" TargetType="ToggleButton">
-            <Setter Property="Background" Value="#f0efe8"/>
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#e8e6dc"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -29,12 +29,12 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#e8e6dc"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BorderDarkBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#788c5d"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#8a9e6d"/>
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -43,8 +43,10 @@
         </Style>
 
         <Style x:Key="ActionButton" TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -53,12 +55,15 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="6" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="border" Property="Opacity" Value="0.85"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -75,45 +80,45 @@
         </Grid.RowDefinitions>
 
         <!-- 工具栏 -->
-        <Border Grid.Row="0" Background="White" Padding="12,8" BorderBrush="#e8e6dc" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" Padding="12,8" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="0,0,0,1">
             <StackPanel>
                 <!-- ROI 工具行 -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="ROI:" Foreground="#6b6a65" VerticalAlignment="Center" FontSize="12" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                    <TextBlock Text="ROI:" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" FontSize="12" Margin="0,0,8,0" FontWeight="SemiBold"/>
                     <ToggleButton x:Name="RectRoiBtn" Content="▭ 矩形ROI" Style="{StaticResource ToolButton}"
                                   Checked="RoiButton_Checked" Unchecked="RoiButton_Unchecked"/>
                     <ToggleButton x:Name="AffineRectRoiBtn" Content="◇ 仿射矩形ROI" Style="{StaticResource ToolButton}"
                                   Checked="RoiButton_Checked" Unchecked="RoiButton_Unchecked"/>
                     <ToggleButton x:Name="CircleRoiBtn" Content="○ 圆形ROI" Style="{StaticResource ToolButton}"
                                   Checked="RoiButton_Checked" Unchecked="RoiButton_Unchecked"/>
-                    <Separator Margin="8,0" Background="#e8e6dc"/>
-                    <Button x:Name="BtnClearRoi" Content="清除ROI" Background="#8a7560" Style="{StaticResource ActionButton}"
+                    <Separator Margin="8,0" Background="{DynamicResource BorderLightBrush}"/>
+                    <Button x:Name="BtnClearRoi" Content="清除ROI" Style="{StaticResource ActionButton}"
                             Click="ClearRoi_Click" Margin="0"/>
                 </StackPanel>
                 <!-- 掩膜工具行 -->
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="TxtMaskLabel" Text="掩膜:" Foreground="#6b6a65" VerticalAlignment="Center" FontSize="12" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="TxtMaskLabel" Text="掩膜:" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" FontSize="12" Margin="0,0,8,0" FontWeight="SemiBold"/>
                     <ToggleButton x:Name="MaskBrushBtn" Content="🖌 画笔" Style="{StaticResource ToolButton}"
                                   Checked="MaskBrushBtn_Checked"/>
                     <ToggleButton x:Name="MaskEraserBtn" Content="🧹 橡皮擦" Style="{StaticResource ToolButton}"
                                   Checked="MaskEraserBtn_Checked"/>
-                    <Separator Margin="8,0" Background="#e8e6dc"/>
-                    <TextBlock Text="画笔大小:" Foreground="#6b6a65" VerticalAlignment="Center" FontSize="12" Margin="0,0,6,0"/>
+                    <Separator Margin="8,0" Background="{DynamicResource BorderLightBrush}"/>
+                    <TextBlock Text="画笔大小:" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" FontSize="12" Margin="0,0,6,0"/>
                     <Slider x:Name="BrushSizeSlider" Width="100" Minimum="5" Maximum="80" Value="20"
                             VerticalAlignment="Center" ValueChanged="BrushSizeSlider_ValueChanged"/>
-                    <TextBlock x:Name="BrushSizeText" Text="20" Foreground="#141413" VerticalAlignment="Center"
+                    <TextBlock x:Name="BrushSizeText" Text="20" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"
                                FontSize="12" Margin="6,0,0,0" MinWidth="25"/>
-                    <Separator Margin="8,0" Background="#e8e6dc"/>
-                    <Button Content="遮蔽全部" Background="#6a9bcc" Style="{StaticResource ActionButton}"
+                    <Separator Margin="8,0" Background="{DynamicResource BorderLightBrush}"/>
+                    <Button Content="遮蔽全部" Background="{DynamicResource RunReadyButtonBgBrush}" Style="{StaticResource ActionButton}"
                             Click="MaskAll_Click" Margin="0,0,6,0"/>
-                    <Button Content="清除掩膜" Background="#8a7560" Style="{StaticResource ActionButton}"
-                            Click="ClearMask_Click"/>
+                    <Button Content="清除掩膜" Style="{StaticResource ActionButton}"
+                            Click="ClearMask_Click" Margin="0"/>
                 </StackPanel>
             </StackPanel>
         </Border>
 
         <!-- 图像画布区域（自适应窗口大小） -->
-        <Grid Grid.Row="1" x:Name="ImageContainer" Background="#f0efe8" ClipToBounds="True"
+        <Grid Grid.Row="1" x:Name="ImageContainer" Background="{DynamicResource AppBackgroundBrush}" ClipToBounds="True"
               MouseLeftButtonDown="Container_MouseLeftButtonDown"
               MouseMove="Container_MouseMove"
               MouseLeftButtonUp="Container_MouseLeftButtonUp"
@@ -124,18 +129,18 @@
         </Grid>
 
         <!-- 底部按钮栏 -->
-        <Border Grid.Row="2" Background="White" Padding="12,10" BorderBrush="#e8e6dc" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}" Padding="12,10" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="0,1,0,0">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock x:Name="StatusText" Text="请选择ROI类型绘制，或使用掩膜画笔" 
-                               Foreground="#6b6a65" FontSize="12"/>
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
                     <TextBlock x:Name="MaskStatusText" Text="" 
-                               Foreground="#788c5d" FontSize="12" Margin="16,0,0,0"/>
+                               Foreground="{DynamicResource SuccessColorBrush}" FontSize="12" Margin="16,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="ResetBtn" Content="重置" Background="#c45b4a" 
+                    <Button x:Name="ResetBtn" Content="重置" 
                             Style="{StaticResource ActionButton}" Click="ResetButton_Click"/>
-                    <Button x:Name="CompleteBtn" Content="完成" Background="#788c5d" 
+                    <Button x:Name="CompleteBtn" Content="完成" Background="{DynamicResource PrimaryButtonBgBrush}" Foreground="{DynamicResource PrimaryButtonTextBrush}"
                             Style="{StaticResource ActionButton}" Click="CompleteButton_Click"/>
                 </StackPanel>
             </Grid>

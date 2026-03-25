@@ -245,6 +245,7 @@ namespace TaskFlow.Helpers
                 TaskType.ForLoopStart => new ForLoopTaskCard(BranchRole.ForLoopStart),
                 TaskType.ForLoopEnd => new ForLoopTaskCard(BranchRole.ForLoopEnd),
                 TaskType.EndTask => new EndTaskCard(),
+                TaskType.RestartFlow => new RestartFlowTaskCard(),
                 TaskType.PauseTask => new PauseTaskCard(),
                 TaskType.WinLaunchApp => new WinLaunchAppTaskCard(),
                 TaskType.WinScreenshot => new WinScreenshotTaskCard(),
@@ -279,6 +280,8 @@ namespace TaskFlow.Helpers
                 TaskType.LlmVision => new LlmVisionTaskCard(),
                 TaskType.ArrayBuilder => new ArrayBuilderTaskCard(),
                 TaskType.LlmFileTranslate => new LlmFileTranslateTaskCard(),
+                TaskType.WinTextInput => new WinTextInputTaskCard(),
+                TaskType.InputCombo => new InputComboTaskCard(),
                 _ => throw new NotSupportedException($"Unknown task type: {taskType}")
             };
 

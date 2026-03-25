@@ -130,8 +130,14 @@ namespace TaskFlow.Services
                 sb.AppendLine("▶️ 将运行的卡片：");
                 foreach (var order in plan.RunCards)
                 {
+                    // 先从画布已有卡片查找，找不到则从方案步骤中按 step 编号查找
                     var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
-                    var cardName = card?.Name ?? $"未知卡片";
+                    var cardName = card?.Name;
+                    if (string.IsNullOrEmpty(cardName))
+                    {
+                        var planStep = plan.Plan.FirstOrDefault(s => s.Step == order);
+                        cardName = planStep?.Name ?? $"卡片#{order}";
+                    }
                     sb.AppendLine($"  • #{order} {cardName}");
                 }
                 sb.AppendLine();
@@ -296,32 +302,28 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 将当前画布上的任务卡片序列化为 AI 可理解的文本摘要
+        /// 序列化流程摘要（仅流程列表 + 变量，不含卡片详情）
+        /// AI 通过 analyzeFlow 按需请求某个流程的完整卡片结构
         /// </summary>
         public string SerializeCurrentFlow()
         {
-            var cards = _mainViewModel.TaskCards;
             var variables = _mainViewModel.VariableStore.Variables;
-            bool hasCards = cards != null && cards.Count > 0;
             bool hasVars = variables != null && variables.Count > 0;
 
             var sb = new StringBuilder();
 
-            // 序列化流程列表
+            // 序列化流程列表（只有名称和卡片数）
             var tabs = _mainViewModel.Tabs;
-            if (tabs.Count > 1)
+            sb.AppendLine($"当前共有 {tabs.Count} 个流程：");
+            foreach (var tab in tabs)
             {
-                sb.AppendLine($"当前共有 {tabs.Count} 个流程：");
-                foreach (var tab in tabs)
-                {
-                    var marker = tab == _mainViewModel.SelectedTab ? "（当前）" : "";
-                    var cardCount = tab == _mainViewModel.SelectedTab
-                        ? (cards?.Count ?? 0)
-                        : tab.TaskCards.Count;
-                    sb.AppendLine($"  • {tab.Name}{marker} - {cardCount} 个卡片");
-                }
-                sb.AppendLine();
+                var marker = tab == _mainViewModel.SelectedTab ? " ⬅ 当前" : "";
+                var cardCount = tab == _mainViewModel.SelectedTab
+                    ? (_mainViewModel.TaskCards?.Count ?? 0)
+                    : tab.TaskCards.Count;
+                sb.AppendLine($"  • {tab.Name}{marker} - {cardCount} 个卡片");
             }
+            sb.AppendLine();
 
             // 序列化变量
             if (hasVars)
@@ -332,47 +334,73 @@ namespace TaskFlow.Services
                 sb.AppendLine();
             }
 
-            // 序列化当前流程卡片
-            if (hasCards)
+            sb.AppendLine("如需查看某个流程的详细卡片结构，请在 analyzeFlow 字段中指定流程名称。");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 序列化指定流程的完整卡片结构（紧凑单行格式，供 analyze_flow 调用）
+        /// 每张卡片压缩为 1 行：#序号 [类型] 名称 | 关键属性
+        /// </summary>
+        public string? SerializeFlowDetail(string flowName, int startOrder = 0, int maxCount = 2000)
+        {
+            var tabs = _mainViewModel.Tabs;
+            var targetTab = tabs.FirstOrDefault(t => t.Name == flowName);
+            if (targetTab == null) return null;
+
+            var cards = targetTab == _mainViewModel.SelectedTab
+                ? _mainViewModel.TaskCards
+                : targetTab.TaskCards;
+
+            if (cards == null || cards.Count == 0)
+                return $"流程「{flowName}」为空，没有任何卡片。";
+
+            // 分页过滤（仅超大流程兜底）
+            var filteredCards = cards.AsEnumerable();
+            if (startOrder > 0)
+                filteredCards = filteredCards.Where(c => c.Order >= startOrder);
+            var pagedCards = filteredCards.Take(maxCount).ToList();
+            int totalCount = cards.Count;
+            bool isTruncated = pagedCards.Count < filteredCards.Count();
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"流程「{flowName}」共 {totalCount} 个卡片：");
+
+            // 需要跳过的属性（元数据/UI 相关，不需要展示给 AI）
+            var excludeProps = new HashSet<string> { "Id", "Name", "Order", "Status", "ErrorMessage",
+                "IndentLevel", "BranchRole", "BranchGroupId", "IsCollapsed", "IsHiddenByCollapse",
+                "TaskType", "OutputsImage", "OutputsText", "OutputsCoordinates", "OutputsBoolResult",
+                "CanBeReferenced" };
+
+            foreach (var card in pagedCards)
             {
-                var currentTabName = _mainViewModel.SelectedTab?.Name ?? "当前流程";
-                sb.AppendLine($"当前流程「{currentTabName}」已有 {cards!.Count} 个任务卡片：");
+                var indent = new string(' ', card.IndentLevel * 2);
+                var typeName = card.GetType().Name.Replace("TaskCard", "");
 
-                var excludeProps = new HashSet<string> { "Id", "Name", "Order", "Status", "ErrorMessage",
-                    "IndentLevel", "BranchRole", "BranchGroupId", "IsCollapsed", "IsHiddenByCollapse",
-                    "TaskType", "OutputsImage", "OutputsText", "OutputsCoordinates", "OutputsBoolResult" };
+                // 收集关键属性（紧凑格式）
+                var props = new List<string>();
 
-                foreach (var card in cards)
+                if (card is IfElseBranchTaskCard ifCard)
                 {
-                    var indent = new string(' ', card.IndentLevel * 2);
-                    var typeName = card.GetType().Name.Replace("TaskCard", "");
-
-                    if (card is IfElseBranchTaskCard ifCard)
+                    typeName = ifCard.BranchRole switch
                     {
-                        var roleStr = ifCard.BranchRole switch
-                        {
-                            BranchRole.IfStart => "If开始",
-                            BranchRole.ElseStart => "Else开始",
-                            BranchRole.ElseEnd => "分支结束",
-                            _ => ifCard.BranchRole.ToString()
-                        };
-                        sb.AppendLine($"{indent}#{card.Order} [{roleStr}] {card.Name}");
-                        if (ifCard.BranchRole == BranchRole.IfStart && !string.IsNullOrEmpty(ifCard.ConditionExpression))
-                            sb.AppendLine($"{indent}  条件: {ifCard.ConditionExpression}");
-                    }
-                    else if (card is ForLoopTaskCard loopCard)
-                    {
-                        var roleStr = loopCard.BranchRole == BranchRole.ForLoopStart ? "循环开始" : "循环结束";
-                        sb.AppendLine($"{indent}#{card.Order} [{roleStr}] {card.Name}");
-                        if (loopCard.BranchRole == BranchRole.ForLoopStart)
-                            sb.AppendLine($"{indent}  循环次数: {loopCard.LoopCount}");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"{indent}#{card.Order} [{typeName}] {card.Name}");
-                    }
-
-                    // 序列化关键属性
+                        BranchRole.IfStart => "If",
+                        BranchRole.ElseStart => "Else",
+                        BranchRole.ElseEnd => "EndIf",
+                        _ => ifCard.BranchRole.ToString()
+                    };
+                    if (ifCard.BranchRole == BranchRole.IfStart && !string.IsNullOrEmpty(ifCard.ConditionExpression))
+                        props.Add($"条件:{ifCard.ConditionExpression}");
+                }
+                else if (card is ForLoopTaskCard loopCard)
+                {
+                    typeName = loopCard.BranchRole == BranchRole.ForLoopStart ? "ForLoop" : "EndLoop";
+                    if (loopCard.BranchRole == BranchRole.ForLoopStart)
+                        props.Add($"次数:{loopCard.LoopCount}");
+                }
+                else
+                {
+                    // 通过反射收集非空字符串属性
                     var cardType = card.GetType();
                     foreach (var prop in cardType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
                     {
@@ -384,29 +412,26 @@ namespace TaskFlow.Services
                         {
                             var val = prop.GetValue(card) as string;
                             if (!string.IsNullOrEmpty(val))
-                                sb.AppendLine($"{indent}  {prop.Name}: {val}");
+                            {
+                                // 截断过长的值（如路径），防止单行过长
+                                if (val.Length > 80) val = val[..77] + "...";
+                                props.Add($"{prop.Name}:{val}");
+                            }
                         }
                         catch { /* 忽略反射异常 */ }
                     }
                 }
+
+                // 组装单行：#序号 [类型] 名称 | 属性1 | 属性2
+                var propsStr = props.Count > 0 ? " | " + string.Join(" | ", props) : "";
+                sb.AppendLine($"{indent}#{card.Order} [{typeName}] {card.Name}{propsStr}");
             }
 
-            // 序列化其他流程的卡片摘要
-            if (tabs.Count > 1)
+            // 超大流程截断提示
+            if (isTruncated)
             {
-                foreach (var tab in tabs)
-                {
-                    if (tab == _mainViewModel.SelectedTab) continue;
-                    if (tab.TaskCards.Count == 0) continue;
-
-                    sb.AppendLine();
-                    sb.AppendLine($"流程「{tab.Name}」有 {tab.TaskCards.Count} 个卡片：");
-                    foreach (var card in tab.TaskCards)
-                    {
-                        var typeName = card.GetType().Name.Replace("TaskCard", "");
-                        sb.AppendLine($"  #{card.Order} [{typeName}] {card.Name}");
-                    }
-                }
+                var lastOrder = pagedCards.Last().Order;
+                sb.AppendLine($"⚠️ 已截断（显示到 #{lastOrder}），设置 start_order={lastOrder + 1} 查看后续。");
             }
 
             return sb.ToString();

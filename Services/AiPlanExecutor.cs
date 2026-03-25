@@ -32,6 +32,13 @@ namespace TaskFlow.Services
             var reports = new List<AiFlowReportItem>();
             int createdCount = 0;
 
+            // 画布为空时重置编号计数器，让新卡片从 #1 开始
+            if (_mainViewModel.TaskCards.Count == 0)
+            {
+                _mainViewModel.NextTaskNumber = 1;
+                AiFlowLogger.Info("画布为空，重置卡片编号计数器为 1");
+            }
+
             // 预填充已有卡片映射：方案中新步骤的 sourceStep 可能引用已有卡片的序号
             foreach (var existingCard in _mainViewModel.TaskCards)
             {
@@ -326,6 +333,9 @@ namespace TaskFlow.Services
 
             ProcessSteps(plan.Plan, stepToCard, reports, ref createdCount, mode, modelId);
 
+            // 引用重映射：将属性中的 #step引用 替换为 #actualOrder引用
+            RemapStepReferences(stepToCard);
+
             if (_mainViewModel.TaskCards.Count > 0)
                 _mainViewModel.SelectedTask = _mainViewModel.TaskCards[^1];
 
@@ -604,6 +614,61 @@ namespace TaskFlow.Services
                 AiFlowLogger.Info($"标定校正: ({click.StartX},{click.StartY}) → ({cx},{cy})");
                 click.StartX = cx;
                 click.StartY = cy;
+            }
+        }
+
+        /// <summary>
+        /// 引用重映射：将新创建卡片属性中的 #step引用 替换为 #actualOrder引用
+        /// 例如: "#1 查找浏览器.查找路径" → "#4 查找浏览器.查找路径"
+        /// </summary>
+        private void RemapStepReferences(Dictionary<int, TaskCardBase> stepToCard)
+        {
+            // 构建映射表: step编号 → 实际order
+            var stepToOrder = new Dictionary<int, int>();
+            foreach (var kv in stepToCard)
+            {
+                if (kv.Key != kv.Value.Order)
+                    stepToOrder[kv.Key] = kv.Value.Order;
+            }
+
+            if (stepToOrder.Count == 0) return; // 无需映射
+
+            AiFlowLogger.Info($"引用重映射: {string.Join(", ", stepToOrder.Select(kv => $"#{kv.Key}→#{kv.Value}"))}");
+
+            // 正则匹配 #数字 开头的引用模式（如 "#1 xxx.yyy"）
+            var refPattern = new System.Text.RegularExpressions.Regex(@"#(\d+)\s");
+
+            // 遍历所有新创建的卡片的字符串属性
+            foreach (var card in stepToCard.Values)
+            {
+                var cardType = card.GetType();
+                foreach (var prop in cardType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                {
+                    if (prop.PropertyType != typeof(string) || !prop.CanWrite) continue;
+                    if (prop.GetCustomAttributes(typeof(Newtonsoft.Json.JsonIgnoreAttribute), true).Length > 0) continue;
+
+                    try
+                    {
+                        var val = prop.GetValue(card) as string;
+                        if (string.IsNullOrEmpty(val) || !val.Contains('#')) continue;
+
+                        var newVal = refPattern.Replace(val, match =>
+                        {
+                            if (int.TryParse(match.Groups[1].Value, out int stepNum) && stepToOrder.ContainsKey(stepNum))
+                            {
+                                return $"#{stepToOrder[stepNum]} ";
+                            }
+                            return match.Value;
+                        });
+
+                        if (newVal != val)
+                        {
+                            prop.SetValue(card, newVal);
+                            AiFlowLogger.Info($"重映射 #{card.Order} {card.Name}.{prop.Name}: {val} → {newVal}");
+                        }
+                    }
+                    catch { /* 忽略反射异常 */ }
+                }
             }
         }
     }

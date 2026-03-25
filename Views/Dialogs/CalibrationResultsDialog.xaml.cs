@@ -9,6 +9,7 @@ namespace TaskFlow.Views.Dialogs
         public CalibrationResultsDialog()
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             LoadData();
         }
 

@@ -189,6 +189,21 @@ namespace TaskFlow.Models.TaskCards
     }
 
     /// <summary>
+    /// 重新开始当前流程卡片，执行后立即结束当前流程并从头开始重新执行
+    /// </summary>
+    public partial class RestartFlowTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.RestartFlow;
+
+        public RestartFlowTaskCard()
+        {
+            Name = "重开当前流程";
+        }
+
+        public override bool CanBeReferenced => false;
+    }
+
+    /// <summary>
     /// 暂停任务卡片
     /// </summary>
     public partial class PauseTaskCard : TaskCardBase

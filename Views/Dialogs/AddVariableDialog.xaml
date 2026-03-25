@@ -2,18 +2,21 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="添加变量" 
-        Height="320" Width="350"
+        SizeToContent="Height" Width="350"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="Transparent"
+        AllowsTransparency="True"
         FontFamily="{StaticResource FontBody}"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStyle="None">
 
     <Window.Resources>
         <!-- 统一圆角输入框样式 -->
         <Style x:Key="DialogTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#141413"/>
-            <Setter Property="BorderBrush" Value="#e8e6dc"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="FontSize" Value="13"/>
@@ -35,9 +38,9 @@
 
         <!-- 统一圆角下拉框样式 -->
         <Style x:Key="DialogComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#141413"/>
-            <Setter Property="BorderBrush" Value="#e8e6dc"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="FontSize" Value="13"/>
@@ -45,7 +48,7 @@
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Foreground" Value="#141413"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                     </Style>
                 </Setter.Value>
             </Setter>
@@ -54,24 +57,25 @@
                     <ControlTemplate TargetType="ComboBox">
                         <Grid>
                             <ToggleButton x:Name="ToggleButton"
+                                          Background="{TemplateBinding Background}"
                                           IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                           Focusable="false" ClickMode="Press">
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
                                         <Border x:Name="Border" Background="{TemplateBinding Background}"
-                                                BorderBrush="#e8e6dc" BorderThickness="1" CornerRadius="6">
+                                                BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition/>
                                                     <ColumnDefinition Width="20"/>
                                                 </Grid.ColumnDefinitions>
-                                                <Path Grid.Column="1" Data="M0,0 L4,4 8,0" Stroke="#6b6a65" StrokeThickness="1.5"
+                                                <Path Grid.Column="1" Data="M0,0 L4,4 8,0" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.5"
                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Grid>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Border" Property="BorderBrush" Value="#c8c6be"/>
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -88,7 +92,7 @@
                                    AllowsTransparency="True" Focusable="False"
                                    PopupAnimation="Slide">
                                 <Grid x:Name="DropDown" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}" SnapsToDevicePixels="True">
-                                    <Border x:Name="DropDownBorder" Background="White" BorderBrush="#e8e6dc" BorderThickness="1" CornerRadius="6" Margin="0,2,0,0">
+                                    <Border x:Name="DropDownBorder" Background="{DynamicResource AppBackgroundBrush}" BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Margin="0,2,0,0">
                                         <ScrollViewer SnapsToDevicePixels="True">
                                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
                                         </ScrollViewer>
@@ -103,8 +107,8 @@
 
         <!-- 确定按钮样式 -->
         <Style x:Key="OkBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="#d97757"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -116,7 +120,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#e08868"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -124,9 +128,10 @@
             </Setter>
         </Style>
         <Style x:Key="CancelBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="#141413"/>
-            <Setter Property="Foreground" Value="#faf9f5"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -137,7 +142,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2a2a28"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -146,51 +151,73 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <!-- 外层阴影边框 -->
+    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Margin="16"
+            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18" Color="{DynamicResource CardShadowColor}"/>
+        </Border.Effect>
 
-        <!-- 变量名 -->
-        <TextBlock x:Name="TxtVarNameLabel" Text="变量名称（不含@前缀）：" Foreground="#6b6a65" FontSize="12" Margin="0,0,0,4"/>
-        <TextBox x:Name="NameTextBox" 
-                 Grid.Row="1"
-                 Style="{StaticResource DialogTextBox}"/>
+    <DockPanel Margin="16">
+        <!-- 标题区域 -->
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+            <TextBlock Text="添加变量" 
+                       Foreground="{DynamicResource DialogTitleBrush}" 
+                       FontSize="16" 
+                       FontWeight="SemiBold"
+                       FontFamily="{StaticResource FontTitle}"
+                       VerticalAlignment="Center"/>
+            <Button Content="✕" Width="36" Height="36" Background="Transparent" BorderThickness="0" 
+                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="18" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,-8,-8,0"
+                    Click="Cancel_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="18">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
 
-        <!-- 变量类型 -->
-        <TextBlock x:Name="TxtVarTypeLabel" Grid.Row="2" Text="变量类型：" Foreground="#6b6a65" FontSize="12" Margin="0,0,0,4"/>
-        <ComboBox x:Name="TypeComboBox"
-                  Grid.Row="3"
-                  SelectedIndex="0"
-                  Style="{StaticResource DialogComboBox}"
-                  VerticalAlignment="Top">
-            <ComboBoxItem Content="Int (整数)" Foreground="#141413"/>
-            <ComboBoxItem Content="String (字符串)" Foreground="#141413"/>
-            <ComboBoxItem Content="Bool (布尔)" Foreground="#141413"/>
-            <ComboBoxItem Content="Double (浮点数)" Foreground="#141413"/>
-        </ComboBox>
+        <!-- 底部按钮 -->
+        <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderLightBrush}" Margin="0,16,0,0" Padding="0,12,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="BtnOK" Content="确定" Click="OK_Click" IsDefault="True" Width="80" Style="{StaticResource OkBtnStyle}"/>
+            </StackPanel>
+        </Border>
 
-        <!-- 初始值 -->
-        <TextBlock x:Name="TxtVarInitLabel" Grid.Row="4" Text="初始值：" Foreground="#6b6a65" FontSize="12" Margin="0,0,0,4"/>
-        <TextBox x:Name="InitialValueTextBox" 
-                 Grid.Row="5"
-                 Style="{StaticResource DialogTextBox}"/>
+        <!-- 主内容区 -->
+        <StackPanel Margin="0,8,0,0">
+            <!-- 变量名 -->
+            <TextBlock x:Name="TxtVarNameLabel" Text="变量名称（不含@前缀）：" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4"/>
+            <TextBox x:Name="NameTextBox" 
+                     Margin="0,0,0,12"
+                     Style="{StaticResource DialogTextBox}"/>
 
-        <!-- 确认/取消 -->
-        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="BtnOK" Content="确定" Click="OK_Click" IsDefault="True"
-                    Width="80" Height="32" Margin="0,0,8,0"
-                    Style="{StaticResource OkBtnStyle}"/>
-            <Button x:Name="BtnCancel" Content="取消" Click="Cancel_Click" IsCancel="True"
-                    Width="80" Height="32"
-                    Style="{StaticResource CancelBtnStyle}"/>
+            <!-- 变量类型 -->
+            <TextBlock x:Name="TxtVarTypeLabel" Text="变量类型：" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4"/>
+            <ComboBox x:Name="TypeComboBox"
+                      Margin="0,0,0,12"
+                      SelectedIndex="0"
+                      Style="{StaticResource DialogComboBox}">
+                <ComboBoxItem Content="Int (整数)" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <ComboBoxItem Content="String (字符串)" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <ComboBoxItem Content="Bool (布尔)" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <ComboBoxItem Content="Double (浮点数)" Foreground="{DynamicResource TextPrimaryBrush}"/>
+            </ComboBox>
+
+            <!-- 初始值 -->
+            <TextBlock x:Name="TxtVarInitLabel" Text="初始值：" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4"/>
+            <TextBox x:Name="InitialValueTextBox" 
+                     Margin="0,0,0,0"
+                     Style="{StaticResource DialogTextBox}"/>
         </StackPanel>
-    </Grid>
+    </DockPanel>
+    </Border>
 </Window>

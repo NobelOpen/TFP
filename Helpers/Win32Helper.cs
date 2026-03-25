@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using TaskFlow.Resources;
@@ -58,6 +58,118 @@ namespace TaskFlow.Helpers
         private const byte VK_CONTROL = 0x11;
         private const byte VK_SHIFT = 0x10;
         private const byte VK_MENU = 0x12; // Alt键
+
+        #endregion
+
+        #region 底层按键操作（供 InputCombo 使用）
+
+        /// <summary>按下指定键（不释放）</summary>
+        public static void KeyDown(byte vk)
+        {
+            keybd_event(vk, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero);
+        }
+
+        /// <summary>释放指定键</summary>
+        public static void KeyUp(byte vk)
+        {
+            keybd_event(vk, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        }
+
+        /// <summary>鼠标左键按下（不释放）</summary>
+        public static void MouseLeftDown()
+        {
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+        }
+
+        /// <summary>鼠标左键释放</summary>
+        public static void MouseLeftUp()
+        {
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+        }
+
+        // ----- SendInput Unicode 支持 -----
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+        private const uint INPUT_KEYBOARD = 1;
+        private const uint KEYEVENTF_UNICODE_FLAG = 0x0004;
+        private const uint KEYEVENTF_KEYUP_FLAG = 0x0002;
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public uint type;
+            public INPUTUNION u;
+        }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+        private struct INPUTUNION
+        {
+            [System.Runtime.InteropServices.FieldOffset(0)] public MOUSEINPUT mi;
+            [System.Runtime.InteropServices.FieldOffset(0)] public KEYBDINPUT ki;
+            [System.Runtime.InteropServices.FieldOffset(0)] public HARDWAREINPUT hi;
+        }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct HARDWAREINPUT
+        {
+            public uint uMsg;
+            public ushort wParamL;
+            public ushort wParamH;
+        }
+
+        /// <summary>
+        /// 通过 SendInput + KEYEVENTF_UNICODE 发送单个 Unicode 字符
+        /// 支持中文、特殊符号等 keybd_event 无法处理的字符
+        /// </summary>
+        public static void SendUnicodeChar(char c)
+        {
+            var inputs = new INPUT[2];
+            int size = System.Runtime.InteropServices.Marshal.SizeOf(typeof(INPUT));
+
+            // KeyDown
+            inputs[0].type = INPUT_KEYBOARD;
+            inputs[0].u.ki.wVk = 0;
+            inputs[0].u.ki.wScan = c;
+            inputs[0].u.ki.dwFlags = KEYEVENTF_UNICODE_FLAG;
+            inputs[0].u.ki.time = 0;
+            inputs[0].u.ki.dwExtraInfo = IntPtr.Zero;
+
+            // KeyUp
+            inputs[1].type = INPUT_KEYBOARD;
+            inputs[1].u.ki.wVk = 0;
+            inputs[1].u.ki.wScan = c;
+            inputs[1].u.ki.dwFlags = KEYEVENTF_UNICODE_FLAG | KEYEVENTF_KEYUP_FLAG;
+            inputs[1].u.ki.time = 0;
+            inputs[1].u.ki.dwExtraInfo = IntPtr.Zero;
+
+            SendInput(2, inputs, size);
+        }
+
+        /// <summary>按键名称解析为虚拟键码（公开版本）</summary>
+        public static byte ParseVirtualKeyPublic(string keyName) => ParseVirtualKey(keyName);
 
         #endregion
 

@@ -77,6 +77,35 @@ namespace TaskFlow.Models.TaskCards
 
         public override bool OutputsImage => true;
 
+        /// <summary>
+        /// 输出图像分辨率字符串（如 "1920x1080"）
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string _outputResolution = string.Empty;
+
+        /// <summary>
+        /// 输出宽度分辨率
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _outputWidth;
+
+        /// <summary>
+        /// 输出高度分辨率
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _outputHeight;
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputResolution = string.Empty;
+            OutputWidth = 0;
+            OutputHeight = 0;
+        }
+
         public override List<AiFlowReportItem> FillFromAiPlan(
             AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
         {
@@ -558,6 +587,126 @@ namespace TaskFlow.Models.TaskCards
                 UseWildcard = wildcard;
 
             return missing;
+        }
+    }
+
+    /// <summary>
+    /// 输入组合动作模式
+    /// </summary>
+    public enum InputComboMode
+    {
+        /// <summary>单击（按下后立即释放）</summary>
+        Tap,
+        /// <summary>长按（按下后不释放，卡片结束时统一释放）</summary>
+        Hold
+    }
+
+    /// <summary>
+    /// 单个输入组合动作
+    /// </summary>
+    public class InputComboAction
+    {
+        /// <summary>按键名称（如 W、A、D、Space、LeftClick 等）</summary>
+        public string Key { get; set; } = "W";
+
+        /// <summary>动作模式：单击或长按</summary>
+        public InputComboMode Mode { get; set; } = InputComboMode.Tap;
+
+        /// <summary>该动作执行后的等待时间（毫秒）</summary>
+        public int DelayAfterMs { get; set; } = 100;
+    }
+
+    /// <summary>
+    /// 输入组合任务卡片 - 支持多按键编排（长按/单击混合），非阻塞后台执行
+    /// </summary>
+    public partial class InputComboTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.InputCombo;
+
+        /// <summary>
+        /// 按键动作列表
+        /// </summary>
+        public List<InputComboAction> Actions { get; set; } = new();
+
+        /// <summary>
+        /// 动作序列重复次数（0=无限循环，配合 StopExpression 使用）
+        /// </summary>
+        [ObservableProperty]
+        private int _repeatCount = 1;
+
+        /// <summary>
+        /// 终止条件表达式（每轮循环后求值，为 false 时停止；填 "true" 表示一直运行）
+        /// </summary>
+        [ObservableProperty]
+        private string _stopExpression = "true";
+
+        /// <summary>
+        /// 最大执行时长（毫秒，0=不限时）
+        /// </summary>
+        [ObservableProperty]
+        private int _totalDurationMs = 0;
+
+        /// <summary>
+        /// 后台任务取消令牌源（运行时使用，不序列化）
+        /// </summary>
+        [JsonIgnore]
+        public CancellationTokenSource? ComboTokenSource { get; set; }
+
+        public override bool OutputsText => true;
+
+        public InputComboTaskCard()
+        {
+            Name = "Win输入组合";
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            ComboTokenSource?.Cancel();
+            ComboTokenSource = null;
+        }
+    }
+
+    /// <summary>
+    /// 文本输入方式
+    /// </summary>
+    public enum TextInputMode
+    {
+        /// <summary>逐字符模拟键盘输入（SendInput + KEYEVENTF_UNICODE）</summary>
+        CharByChar,
+        /// <summary>通过剪贴板粘贴（Ctrl+V）</summary>
+        Clipboard
+    }
+
+    /// <summary>
+    /// Win文本输入任务卡片：一次性输入一段完整文本
+    /// 支持逐字符模拟和剪贴板粘贴两种模式
+    /// </summary>
+    public partial class WinTextInputTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.WinTextInput;
+
+        /// <summary>
+        /// 输入文本（支持 @变量 和 #任务引用 表达式）
+        /// </summary>
+        [ObservableProperty]
+        private string _inputText = "";
+
+        /// <summary>
+        /// 输入方式：逐字符模拟 或 剪贴板粘贴
+        /// </summary>
+        [ObservableProperty]
+        private TextInputMode _inputMode = TextInputMode.CharByChar;
+
+        /// <summary>
+        /// 逐字符模式下每个字符之间的间隔（毫秒）
+        /// </summary>
+        [ObservableProperty]
+        private int _charIntervalMs = 50;
+
+        public WinTextInputTaskCard()
+        {
+            Name = "Win文本输入";
         }
     }
 }

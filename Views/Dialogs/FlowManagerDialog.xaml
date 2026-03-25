@@ -4,15 +4,17 @@
         Title="流程管理" 
         Height="500" Width="500"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="Transparent"
+        AllowsTransparency="True"
         FontFamily="{StaticResource FontBody}"
         ResizeMode="NoResize"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        WindowStyle="None">
 
     <Window.Resources>
         <Style x:Key="FlowButton" TargetType="Button">
-            <Setter Property="Background" Value="#f0efe8"/>
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Padding" Value="14,6"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -30,66 +32,91 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#e8e6dc"/>
+                    <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="FlowButtonRed" TargetType="Button" BasedOn="{StaticResource FlowButton}">
-            <Setter Property="Background" Value="#c45b4a"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource DangerButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource DangerButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#d06b5a"/>
+                    <Setter Property="Background" Value="{DynamicResource DangerButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="FlowButtonDark" TargetType="Button" BasedOn="{StaticResource FlowButton}">
-            <Setter Property="Background" Value="#141413"/>
-            <Setter Property="Foreground" Value="#faf9f5"/>
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2a2a28"/>
+                    <Setter Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <!-- 外层阴影边框 -->
+    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Margin="16"
+            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18" Color="{DynamicResource CardShadowColor}"/>
+        </Border.Effect>
+
+        <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 标题 -->
-        <TextBlock x:Name="TxtFlowTitle" Text="流程管理" 
-                   Foreground="#d97757" 
-                   FontSize="16" 
-                   FontWeight="SemiBold"
-                   Margin="0,0,0,12"/>
+        <!-- 标题区域 -->
+        <Grid Margin="0,0,0,12">
+            <TextBlock x:Name="TxtFlowTitle" Text="流程管理" 
+                       Foreground="{DynamicResource DialogTitleBrush}" 
+                       FontSize="16" 
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+            <Button Content="✕" Width="32" Height="32" Background="Transparent" BorderThickness="0" 
+                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="16" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,-8,-8,0"
+                    Click="Close_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="16">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
 
         <!-- 流程列表 -->
         <ListBox x:Name="FlowListBox" 
                  Grid.Row="1"
-                 Background="White"
-                 Foreground="#141413"
-                 BorderBrush="#e8e6dc"
+                 Background="{DynamicResource AppBackgroundBrush}"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 BorderBrush="{DynamicResource BorderDarkBrush}"
                  BorderThickness="1"
                  FontSize="13"
                  Padding="4"
                  SelectionMode="Single">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
-                    <Setter Property="Foreground" Value="#141413"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                     <Setter Property="Padding" Value="8,6"/>
                     <Setter Property="Cursor" Value="Hand"/>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#f5e6de"/>
-                            <Setter Property="Foreground" Value="#d97757"/>
+                            <Setter Property="Background" Value="{DynamicResource ActiveTabBgBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#f0efe8"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -103,7 +130,7 @@
                     Margin="0,12,0,0">
             <Button x:Name="BtnAdd" Content="添加流程" Click="AddFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
             <Button x:Name="BtnRename" Content="重命名" Click="RenameFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
-            <Button x:Name="BtnDelete" Content="删除流程" Click="DeleteFlow_Click" Style="{StaticResource FlowButtonRed}" Margin="0,0,8,0"/>
+            <Button x:Name="BtnDelete" Content="删除流程" Click="DeleteFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
         </StackPanel>
 
         <Button Grid.Row="2" 
@@ -113,4 +140,5 @@
                 Margin="0,12,0,0"
                 Style="{StaticResource FlowButtonDark}"/>
     </Grid>
+    </Border>
 </Window>

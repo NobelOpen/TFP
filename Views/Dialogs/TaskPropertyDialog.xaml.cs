@@ -40,26 +40,6 @@ namespace TaskFlow.Views.Dialogs
 
             // 通用属性：名称
             AddTextProperty("Name", TaskFlow.Resources.Strings.Prop_TaskName, _task.Name);
-            if (_propertyControls.TryGetValue("Name", out var nameCtrl) && nameCtrl is TextBox nameTb)
-            {
-                nameTb.TextChanged += (s, e) =>
-                {
-                    if (s is TextBox tb && tb.Text.Any(c => char.IsPunctuation(c) || char.IsSymbol(c)))
-                    {
-                        tb.Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            string currentText = tb.Text;
-                            string newText = new string(currentText.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c)).ToArray());
-                            if (currentText != newText)
-                            {
-                                int caret = tb.CaretIndex;
-                                tb.Text = newText;
-                                tb.CaretIndex = Math.Max(0, caret - (currentText.Length - newText.Length));
-                            }
-                        }), System.Windows.Threading.DispatcherPriority.Input);
-                    }
-                };
-            }
 
 
             // 根据任务类型添加特定属性
@@ -94,7 +74,7 @@ namespace TaskFlow.Views.Dialogs
                 case GetTimestampTaskCard timestampCard:
                     {
                         var label = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_OutputFormat, Style = FindResource("PropertyLabel") as Style };
-                        var combo = new ComboBox { Foreground = System.Windows.Media.Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+                        var combo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
                         combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_TimeFmt_HMS, Tag = TimestampFormat.HourMinuteSecond });
                         combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_TimeFmt_DHMS, Tag = TimestampFormat.DayHourMinuteSecond });
                         combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_TimeFmt_MDHMS, Tag = TimestampFormat.MonthDayHourMinuteSecond });
@@ -231,6 +211,14 @@ namespace TaskFlow.Views.Dialogs
 
                 case WinFindFileTaskCard findFileCard:
                     AddWinFindFileProperties(findFileCard);
+                    break;
+
+                case InputComboTaskCard comboCard:
+                    AddInputComboProperties(comboCard);
+                    break;
+
+                case WinTextInputTaskCard textInputCard:
+                    AddWinTextInputProperties(textInputCard);
                     break;
 
                 case ImgColorDetectTaskCard colorCard:
@@ -635,7 +623,7 @@ namespace TaskFlow.Views.Dialogs
 
             // 点击类型
             var clickTypeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ClickType, Style = FindResource("PropertyLabel") as Style };
-            var clickTypeCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var clickTypeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickSingle, Tag = ClickType.Single });
             clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickDouble, Tag = ClickType.Double });
             clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickSwipe, Tag = ClickType.Swipe });
@@ -736,7 +724,7 @@ namespace TaskFlow.Views.Dialogs
         {
             // 查找方式下拉框
             var searchByLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SearchBy, Style = FindResource("PropertyLabel") as Style };
-            var searchByCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var searchByCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             searchByCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SearchByName, Tag = UiSearchBy.Name });
             searchByCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SearchByAutomationId, Tag = UiSearchBy.AutomationId });
             searchByCombo.SelectedIndex = (int)card.SearchBy;
@@ -753,7 +741,7 @@ namespace TaskFlow.Views.Dialogs
 
             // 匹配方式下拉框
             var matchModeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_MatchMode, Style = FindResource("PropertyLabel") as Style };
-            var matchModeCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var matchModeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             matchModeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_MatchExact, Tag = UiMatchMode.Exact });
             matchModeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_MatchContains, Tag = UiMatchMode.Contains });
             matchModeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_MatchRegex, Tag = UiMatchMode.Regex });
@@ -806,7 +794,7 @@ namespace TaskFlow.Views.Dialogs
 
             // 输入动作
             var actionLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_InputAction, Style = FindResource("PropertyLabel") as Style };
-            var actionCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var actionCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             actionCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ScrollDown, Tag = InputActionType.ScrollDown });
             actionCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ScrollUp, Tag = InputActionType.ScrollUp });
             actionCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_KeyPress, Tag = InputActionType.KeyPress });
@@ -870,7 +858,6 @@ namespace TaskFlow.Views.Dialogs
             var modelLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SelectModel, Style = FindResource("PropertyLabel") as Style };
             var modelCombo = new ComboBox
             {
-                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
                 Style = FindResource("PropertyComboBox") as Style,
                 DisplayMemberPath = "DisplayName",
                 SelectedValuePath = "Id",
@@ -913,7 +900,6 @@ namespace TaskFlow.Views.Dialogs
                 Height = 80,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 Background = Brushes.White,
-                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
                 Padding = new Thickness(6, 4, 6, 4),
                 Margin = new Thickness(0, 0, 0, 8)
             };
@@ -939,7 +925,6 @@ namespace TaskFlow.Views.Dialogs
             var modelLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SelectModel, Style = FindResource("PropertyLabel") as Style };
             var modelCombo = new ComboBox
             {
-                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
                 Style = FindResource("PropertyComboBox") as Style,
                 DisplayMemberPath = "DisplayName",
                 SelectedValuePath = "Id",
@@ -985,7 +970,6 @@ namespace TaskFlow.Views.Dialogs
                 Height = 80,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 Background = Brushes.White,
-                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
                 Padding = new Thickness(6, 4, 6, 4),
                 Margin = new Thickness(0, 0, 0, 8)
             };
@@ -1171,7 +1155,7 @@ namespace TaskFlow.Views.Dialogs
 
             // ==================== 背景样式下拉框 ====================
             var bgLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_BackgroundStyle, Style = FindResource("PropertyLabel") as Style };
-            var bgCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var bgCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             bgCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_BgAcrylic, Tag = SubtitleBackground.Acrylic });
             bgCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_BgSolid, Tag = SubtitleBackground.SolidColor });
             bgCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_BgTransparent, Tag = SubtitleBackground.Transparent });
@@ -1352,7 +1336,7 @@ namespace TaskFlow.Views.Dialogs
                     : card.StartY.ToString());
 
             var clickTypeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ClickType, Style = FindResource("PropertyLabel") as Style };
-            var clickTypeCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var clickTypeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickSingle, Tag = ClickType.Single });
             clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickDouble, Tag = ClickType.Double });
             clickTypeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ClickSwipe, Tag = ClickType.Swipe });
@@ -1425,7 +1409,7 @@ namespace TaskFlow.Views.Dialogs
         {
             // 图像来源任务下拉框
             var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
-            var taskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var taskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
             foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
                 taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
@@ -1459,7 +1443,7 @@ namespace TaskFlow.Views.Dialogs
         private void AddImageSourcePropertyMatch(ImgTemplateMatchTaskCard card)
         {
             var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
-            var taskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var taskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
             foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
                 taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
@@ -1497,7 +1481,7 @@ namespace TaskFlow.Views.Dialogs
             // OCR 引擎选择
             var engineLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_OcrEngine, Style = FindResource("PropertyLabel") as Style };
             PropertyPanel.Children.Add(engineLabel);
-            var engineCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var engineCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             engineCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_PaddleOcr, Tag = OcrEngine.PaddleOCR });
 
             // 微信 OCR 选项：根据设置中的验证状态决定是否可选
@@ -1515,7 +1499,7 @@ namespace TaskFlow.Views.Dialogs
 
             // 图像来源（条件显示）
             var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
-            var taskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var taskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
             foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
                 taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
@@ -1709,7 +1693,7 @@ namespace TaskFlow.Views.Dialogs
 
             // ==================== 勾选：引用其他任务输出作为模板 ====================
             var templateTaskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TemplateSourceTask, Style = FindResource("PropertyLabel") as Style };
-            var templateTaskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var templateTaskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             templateTaskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
             foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
                 templateTaskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
@@ -1996,7 +1980,9 @@ namespace TaskFlow.Views.Dialogs
                 // 保存通用属性
                 if (_propertyControls.TryGetValue("Name", out var nameControl) && nameControl is TextBox nameBox)
                 {
-                    _task.Name = nameBox.Text;
+                    string safeName = new string(nameBox.Text.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c)).ToArray());
+                    if (string.IsNullOrWhiteSpace(safeName)) safeName = _task.TaskTypeName;
+                    _task.Name = safeName;
                 }
 
                 // 保存特定属性
@@ -2032,6 +2018,14 @@ namespace TaskFlow.Views.Dialogs
 
                     case WinFindFileTaskCard findFileCard:
                         SaveWinFindFileProperties(findFileCard);
+                        break;
+
+                    case InputComboTaskCard comboCard:
+                        SaveInputComboProperties(comboCard);
+                        break;
+
+                    case WinTextInputTaskCard textInputCard:
+                        SaveWinTextInputProperties(textInputCard);
                         break;
 
                     case IfElseBranchTaskCard ifCard when ifCard.BranchRole == BranchRole.IfStart:
@@ -2850,7 +2844,7 @@ namespace TaskFlow.Views.Dialogs
         private void AddBreakLoopProperties(BreakLoopTaskCard card)
         {
             var label = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TargetLoop, Style = FindResource("PropertyLabel") as Style };
-            var combo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var combo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectLoop, Tag = null });
 
             // 列出所有 ForLoopStart 卡片
@@ -3269,7 +3263,6 @@ namespace TaskFlow.Views.Dialogs
             var modelLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_SelectModel, Style = FindResource("PropertyLabel") as Style };
             var modelCombo = new ComboBox
             {
-                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
                 Style = FindResource("PropertyComboBox") as Style,
                 DisplayMemberPath = "DisplayName",
                 SelectedValuePath = "Id",
@@ -3310,7 +3303,6 @@ namespace TaskFlow.Views.Dialogs
                 Height = 100,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 Background = Brushes.White,
-                Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)),
                 Padding = new Thickness(6, 4, 6, 4),
                 Margin = new Thickness(0, 0, 0, 8)
             };
@@ -3427,7 +3419,7 @@ namespace TaskFlow.Views.Dialogs
         {
             // 图像来源任务下拉框
             var taskLabel = new TextBlock { Text = "图像来源任务", Style = FindResource("PropertyLabel") as Style };
-            var taskCombo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var taskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
 
             foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
@@ -3500,7 +3492,7 @@ namespace TaskFlow.Views.Dialogs
         private void AddEnumComboProperty<T>(string propertyName, string label, T currentValue, Dictionary<T, string> displayNames) where T : struct, Enum
         {
             var lbl = new TextBlock { Text = label, Style = FindResource("PropertyLabel") as Style };
-            var combo = new ComboBox { Foreground = new SolidColorBrush(Color.FromRgb(20, 20, 19)), Style = FindResource("PropertyComboBox") as Style };
+            var combo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
 
             int selectedIndex = 0;
             int idx = 0;
@@ -3567,7 +3559,6 @@ namespace TaskFlow.Views.Dialogs
             TitleText.Text = Strings.UI_EditProperties;
             SubtitleText.Text = Strings.UI_Properties;
             SaveButton.Content = Strings.UI_Save;
-            CancelButton.Content = Strings.UI_Cancel;
         }
 
         #region FileRead 属性
@@ -3784,6 +3775,181 @@ namespace TaskFlow.Views.Dialogs
 
             if (_propertyControls.TryGetValue("UseWildcard", out var wildCtrl) && wildCtrl is CheckBox wildCheck)
                 card.UseWildcard = wildCheck.IsChecked == true;
+        }
+
+        #endregion
+
+        #region InputCombo 属性
+
+        private readonly List<(TextBox keyBox, ComboBox modeCombo, TextBox delayBox)> _comboActionRows = new();
+
+        private void AddInputComboProperties(InputComboTaskCard card)
+        {
+            // 按键动作列表标签
+            var actionsLabel = new TextBlock { Text = Strings.Prop_InputComboActions, Style = FindResource("PropertyLabel") as Style };
+            PropertyPanel.Children.Add(actionsLabel);
+
+            // 动作列表容器
+            var actionsPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+
+            // 添加已有的动作
+            foreach (var action in card.Actions)
+            {
+                AddComboActionRow(actionsPanel, action.Key, action.Mode, action.DelayAfterMs);
+            }
+
+            // 默认至少一行
+            if (card.Actions.Count == 0)
+            {
+                AddComboActionRow(actionsPanel, "W", InputComboMode.Tap, 100);
+            }
+
+            PropertyPanel.Children.Add(actionsPanel);
+
+            // 添加按键按钮
+            var addBtn = new Button
+            {
+                Content = Strings.Prop_InputComboAddAction,
+                Style = FindResource("ActionButton") as Style,
+                Margin = new Thickness(0, 0, 0, 12),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Padding = new Thickness(12, 4, 12, 4)
+            };
+            addBtn.Click += (s, e) => AddComboActionRow(actionsPanel, "W", InputComboMode.Tap, 100);
+            PropertyPanel.Children.Add(addBtn);
+
+            // 重复次数
+            AddIntProperty("RepeatCount", Strings.Prop_InputComboRepeat, card.RepeatCount);
+
+            // 终止条件表达式
+            AddTextProperty("StopExpression", Strings.Prop_InputComboStop, card.StopExpression);
+
+            // 最大执行时长
+            AddIntProperty("TotalDurationMs", Strings.Prop_InputComboDuration, card.TotalDurationMs);
+        }
+
+        private void AddComboActionRow(StackPanel parent, string key, InputComboMode mode, int delayMs)
+        {
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            // 按键名称输入框
+            var keyBox = new TextBox
+            {
+                Text = key,
+                Style = FindResource("PropertyTextBox") as Style,
+                Margin = new Thickness(0, 0, 4, 0),
+                ToolTip = "按键名称（如 W、Space、LeftClick）"
+            };
+            Grid.SetColumn(keyBox, 0);
+            row.Children.Add(keyBox);
+
+            // 动作类型下拉框
+            var modeCombo = new ComboBox
+            {
+                Style = FindResource("PropertyComboBox") as Style,
+                Margin = new Thickness(0, 0, 4, 0)
+            };
+            modeCombo.Items.Add(new ComboBoxItem { Content = Strings.Prop_InputComboTap, Tag = InputComboMode.Tap });
+            modeCombo.Items.Add(new ComboBoxItem { Content = Strings.Prop_InputComboHold, Tag = InputComboMode.Hold });
+            modeCombo.SelectedIndex = mode == InputComboMode.Hold ? 1 : 0;
+            Grid.SetColumn(modeCombo, 1);
+            row.Children.Add(modeCombo);
+
+            // 延迟输入框
+            var delayBox = new TextBox
+            {
+                Text = delayMs.ToString(),
+                Style = FindResource("PropertyTextBox") as Style,
+                Margin = new Thickness(0, 0, 4, 0),
+                ToolTip = "延迟 (ms)"
+            };
+            Grid.SetColumn(delayBox, 2);
+            row.Children.Add(delayBox);
+
+            // 删除按钮
+            var delBtn = new Button
+            {
+                Content = "✕",
+                Width = 24,
+                Height = 24,
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Foreground = FindResource("TextSecondaryBrush") as System.Windows.Media.Brush,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            delBtn.Click += (s, e) =>
+            {
+                var idx = _comboActionRows.FindIndex(r => r.keyBox == keyBox);
+                if (idx >= 0) _comboActionRows.RemoveAt(idx);
+                parent.Children.Remove(row);
+            };
+            Grid.SetColumn(delBtn, 3);
+            row.Children.Add(delBtn);
+
+            parent.Children.Add(row);
+            _comboActionRows.Add((keyBox, modeCombo, delayBox));
+        }
+
+        private void SaveInputComboProperties(InputComboTaskCard card)
+        {
+            // 保存动作列表
+            card.Actions.Clear();
+            foreach (var (keyBox, modeCombo, delayBox) in _comboActionRows)
+            {
+                var action = new InputComboAction
+                {
+                    Key = keyBox.Text,
+                    Mode = modeCombo.SelectedItem is ComboBoxItem ci && ci.Tag is InputComboMode m ? m : InputComboMode.Tap,
+                    DelayAfterMs = int.TryParse(delayBox.Text, out int d) ? d : 100
+                };
+                card.Actions.Add(action);
+            }
+
+            // 保存其他属性
+            if (GetIntValue("RepeatCount", out int repeat)) card.RepeatCount = repeat;
+            if (GetStringValue("StopExpression", out string stopExpr)) card.StopExpression = stopExpr;
+            if (GetIntValue("TotalDurationMs", out int totalDur)) card.TotalDurationMs = totalDur;
+        }
+
+        #endregion
+
+        #region WinTextInput 属性
+
+        private void AddWinTextInputProperties(WinTextInputTaskCard card)
+        {
+            // 输入文本（支持表达式引用）
+            AddTextProperty("InputText", Strings.Prop_WinTextInputText, card.InputText);
+
+            // 输入方式下拉框
+            var modeLabel = new TextBlock { Text = Strings.Prop_WinTextInputMode, Style = FindResource("PropertyLabel") as Style };
+            var modeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            modeCombo.Items.Add(new ComboBoxItem { Content = Strings.Prop_WinTextInputCharByChar, Tag = TextInputMode.CharByChar });
+            modeCombo.Items.Add(new ComboBoxItem { Content = Strings.Prop_WinTextInputClipboard, Tag = TextInputMode.Clipboard });
+            modeCombo.SelectedIndex = card.InputMode == TextInputMode.Clipboard ? 1 : 0;
+            PropertyPanel.Children.Add(modeLabel);
+            PropertyPanel.Children.Add(modeCombo);
+            _propertyControls["InputMode"] = modeCombo;
+
+            // 按键间隔（仅逐字符模式）
+            AddIntProperty("CharIntervalMs", Strings.Prop_WinTextInputInterval, card.CharIntervalMs);
+        }
+
+        private void SaveWinTextInputProperties(WinTextInputTaskCard card)
+        {
+            if (GetStringValue("InputText", out string text)) card.InputText = text;
+
+            if (_propertyControls.TryGetValue("InputMode", out var ctrl) && ctrl is ComboBox combo
+                && combo.SelectedItem is ComboBoxItem ci && ci.Tag is TextInputMode mode)
+            {
+                card.InputMode = mode;
+            }
+
+            if (GetIntValue("CharIntervalMs", out int interval)) card.CharIntervalMs = interval;
         }
 
         #endregion

@@ -71,7 +71,7 @@ namespace TaskFlow.Views.Dialogs
 
         private void UpdateFlowName()
         {
-            FlowNameText.Text = _viewModel.SelectedTab?.Name ?? "TaskFlow";
+            FlowNameText.Text = (_viewModel.SelectedTab?.Name ?? "TaskFlow").ToUpper();
         }
 
         private void UpdateTaskDisplay()

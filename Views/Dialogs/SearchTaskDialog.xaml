@@ -4,15 +4,18 @@
         Title="查找任务" 
         SizeToContent="Height" Width="380"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="Transparent"
+        AllowsTransparency="True"
         FontFamily="{StaticResource FontBody}"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStyle="None">
 
     <Window.Resources>
         <!-- 查找按钮样式 -->
         <Style x:Key="SearchBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="#d97757"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -24,10 +27,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#c4663e"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#b55a35"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -37,9 +40,10 @@
 
         <!-- 取消按钮样式 -->
         <Style x:Key="CancelBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="#3a3a4a"/>
-            <Setter Property="Foreground" Value="#f5f0eb"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -50,10 +54,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2e2e3c"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#242432"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -61,6 +65,13 @@
             </Setter>
         </Style>
     </Window.Resources>
+
+    <!-- 外层阴影边框 -->
+    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Margin="16"
+            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18" Color="{DynamicResource CardShadowColor}"/>
+        </Border.Effect>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -71,12 +82,12 @@
         </Grid.RowDefinitions>
 
         <!-- 输入框 -->
-        <TextBlock x:Name="TxtSearchLabel" Grid.Row="0" Text="输入编号或名称" Foreground="#6b6a65" FontSize="12" Margin="0,0,0,6"/>
+        <TextBlock x:Name="TxtSearchLabel" Grid.Row="0" Text="输入编号或名称" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,6"/>
         
         <TextBox x:Name="SearchTextBox" Grid.Row="1"
                  MinHeight="36" FontSize="14"
-                 Background="White" Foreground="#141413"
-                 BorderBrush="#e8e6dc" BorderThickness="1"
+                 Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                 BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1"
                  Padding="8,8"
                  VerticalContentAlignment="Center"
                  TextChanged="SearchTextBox_TextChanged"
@@ -97,8 +108,8 @@
         <!-- 补全建议列表 -->
         <ListBox x:Name="SuggestionList" Grid.Row="2"
                  MaxHeight="180" Margin="0,4,0,0"
-                 Background="#faf9f5" Foreground="#141413"
-                 BorderBrush="#e8e6dc" BorderThickness="1"
+                 Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                 BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1"
                  Visibility="Collapsed"
                  FontSize="13"
                  PreviewMouseLeftButtonUp="SuggestionList_MouseClick">
@@ -116,11 +127,11 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="#f5e6de"/>
-                                        <Setter Property="Foreground" Value="#d97757"/>
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ActiveTabBgBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                     </Trigger>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="#f0efe8"/>
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -138,4 +149,5 @@
                     Click="CloseButton_Click" Style="{StaticResource CancelBtnStyle}"/>
         </StackPanel>
     </Grid>
+    </Border>
 </Window>

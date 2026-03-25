@@ -15,7 +15,7 @@
         <!-- 标题栏图标按钮样式 -->
         <Style x:Key="TitleIconBtn" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#6b6a65"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Width" Value="28"/>
             <Setter Property="Height" Value="28"/>
@@ -31,8 +31,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#d5cdbf"/>
-                                <Setter Property="Foreground" Value="#141413"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BorderLightBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -44,7 +44,7 @@
     <!-- 整体容器：带圆角+阴影的卡片 -->
     <Border Margin="8" MouseLeftButtonDown="Window_MouseLeftButtonDown">
         <Border.Effect>
-            <DropShadowEffect Color="#b0aea5" BlurRadius="16" ShadowDepth="3" Opacity="0.22" Direction="270"/>
+            <DropShadowEffect Color="{DynamicResource CardShadowColor}" BlurRadius="16" ShadowDepth="3" Opacity="0.22" Direction="270"/>
         </Border.Effect>
 
         <Grid>
@@ -54,16 +54,16 @@
             </Grid.RowDefinitions>
 
             <!-- 整体外边框（不透明），放到顶层以覆盖内部元素的边缘差异 -->
-            <Border Grid.Row="0" Grid.RowSpan="2" CornerRadius="12" BorderBrush="#e2d9cb" BorderThickness="1" Panel.ZIndex="10" IsHitTestVisible="False"/>
+            <Border Grid.Row="0" Grid.RowSpan="2" CornerRadius="12" BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1" Panel.ZIndex="10" IsHitTestVisible="False"/>
 
             <!-- 标题栏 -->
-            <Border Grid.Row="0" Background="#e3dacc" CornerRadius="12,12,0,0" Padding="12,8">
+            <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="12,12,0,0" Padding="12,8">
                 <Grid>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse Width="8" Height="8" Fill="#788c5d" Margin="0,0,8,0"/>
+                        <Ellipse Width="8" Height="8" Fill="{DynamicResource SuccessColorBrush}" Margin="0,0,8,0"/>
                         <TextBlock x:Name="FlowNameText"
                                    Text="流程1"
-                                   Foreground="#141413"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
@@ -75,29 +75,29 @@
                                 <RotateTransform x:Name="SwitchFlowRotateTransform" Angle="0"/>
                             </Button.RenderTransform>
                             <Button.RenderTransformOrigin>0.5,0.5</Button.RenderTransformOrigin>
-                            <TextBlock Text="↻" FontSize="13" Foreground="#6b6a65"/>
+                            <TextBlock Text="↻" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"/>
                         </Button>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <!-- 运行全部 -->
                         <Button x:Name="RunAllBtn" Click="RunAll_Click"
                                 Style="{StaticResource TitleIconBtn}" ToolTip="运行全部">
-                            <TextBlock x:Name="RunAllIcon" Text="▶▶" FontSize="11" Foreground="#388a34"/>
+                            <TextBlock x:Name="RunAllIcon" Text="▶▶" FontSize="11" Foreground="{DynamicResource SuccessColorBrush}"/>
                         </Button>
                         <!-- 运行当前 -->
                         <Button x:Name="RunCurrentBtn" Click="RunCurrent_Click"
                                 Style="{StaticResource TitleIconBtn}" ToolTip="运行当前流程">
-                            <TextBlock x:Name="RunCurrentIcon" Text="▶" FontSize="12" Foreground="#2aa198"/>
+                            <TextBlock x:Name="RunCurrentIcon" Text="▶" FontSize="12" Foreground="{DynamicResource PrimaryButtonBgBrush}"/>
                         </Button>
                         <!-- 停止 -->
                         <Button x:Name="StopBtn" Click="Stop_Click"
                                 Style="{StaticResource TitleIconBtn}" ToolTip="停止执行">
-                            <TextBlock x:Name="StopIcon" Text="⏹" FontSize="12" Foreground="#b0aea5"/>
+                            <TextBlock x:Name="StopIcon" Text="⏹" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}"/>
                         </Button>
                         <!-- 显示主窗口 -->
                         <Button Click="ShowMainWindow_Click"
                                 Style="{StaticResource TitleIconBtn}" ToolTip="显示主窗口">
-                            <TextBlock Text="◉" FontSize="15" FontWeight="Bold" Foreground="#007aca"/>
+                            <TextBlock Text="◉" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource ActiveTabBgBrush}"/>
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -106,30 +106,30 @@
             <!-- 任务卡片区容器 (可通过透明度隐藏而不影响标题栏) -->
             <Grid x:Name="TaskAreaContainer" Grid.Row="1">
                 <!-- 底部背景块 -->
-                <Border Background="#faf9f5" CornerRadius="0,0,12,12"/>
+                <Border Background="{DynamicResource AppBackgroundBrush}" CornerRadius="0,0,12,12"/>
                 
                 <StackPanel Margin="12,10,12,12">
                 
                 <!-- 上一个任务（淡化） -->
-                <Border x:Name="PrevTaskCard" Background="#e2d9cb" CornerRadius="8" Padding="10,7" Margin="0,0,0,5" Opacity="0.7">
+                <Border x:Name="PrevTaskCard" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="10,7" Margin="0,0,0,5" Opacity="0.7">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="TxtPrevLabel" Text="上一步" Foreground="#8a8880" FontSize="10" VerticalAlignment="Center" Width="38"/>
-                        <TextBlock x:Name="PrevTaskText" Grid.Column="1" Text="—" Foreground="#6b6a65" FontSize="11.5"
+                        <TextBlock x:Name="TxtPrevLabel" Text="上一步" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10" VerticalAlignment="Center" Width="38"/>
+                        <TextBlock x:Name="PrevTaskText" Grid.Column="1" Text="—" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11.5"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                     </Grid>
                 </Border>
 
                 <!-- 当前任务（高亮卡片） -->
                 <Border x:Name="CurrentTaskCard" CornerRadius="8" Padding="12,10" Margin="0,0,0,5"
-                        BorderBrush="#d97757" BorderThickness="1.5">
+                        BorderBrush="{DynamicResource TextPrimaryBrush}" BorderThickness="1.5">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="White" Offset="0"/>
-                            <GradientStop Color="#fdf6f0" Offset="1"/>
+                            <GradientStop Color="{DynamicResource BorderLightColor}" Offset="0"/>
+                            <GradientStop Color="{DynamicResource AppBackgroundColor}" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
                     <Grid>
@@ -137,32 +137,32 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="TxtCurrentLabel" Text="当前" Foreground="#d97757" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Width="38"/>
+                        <TextBlock x:Name="TxtCurrentLabel" Text="当前" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Width="38"/>
                         
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <!-- 面包屑上下文 -->
                             <TextBlock x:Name="CurrentTaskBreadcrumb" 
-                                       Foreground="#8a8880" FontSize="10" 
+                                       Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10" 
                                        Margin="0,0,0,2"
                                        TextTrimming="CharacterEllipsis"/>
                             
                             <!-- 任务名称 -->
                             <TextBlock x:Name="CurrentTaskText" Text="等待执行..."
-                                       Foreground="#141413" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12.5" FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                     </Grid>
                 </Border>
 
                 <!-- 下一个任务（淡化） -->
-                <Border x:Name="NextTaskCard" Background="#e2d9cb" CornerRadius="8" Padding="10,7" Opacity="0.7">
+                <Border x:Name="NextTaskCard" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="10,7" Opacity="0.7">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="TxtNextLabel" Text="下一步" Foreground="#8a8880" FontSize="10" VerticalAlignment="Center" Width="38"/>
-                        <TextBlock x:Name="NextTaskText" Grid.Column="1" Text="—" Foreground="#6b6a65" FontSize="11.5"
+                        <TextBlock x:Name="TxtNextLabel" Text="下一步" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="10" VerticalAlignment="Center" Width="38"/>
+                        <TextBlock x:Name="NextTaskText" Grid.Column="1" Text="—" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11.5"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                     </Grid>
                 </Border>

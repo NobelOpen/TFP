@@ -8,28 +8,13 @@ namespace TaskFlow.Views.Dialogs
     {
         public string NewName { get; private set; }
 
-        public RenameDialog(string currentName)
+        public RenameDialog(string currentName, string? dialogTitle = null, string? inputLabel = null)
         {
             InitializeComponent();
-            ApplyLocalization();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
+            ApplyLocalization(dialogTitle, inputLabel);
 
-            NameTextBox.TextChanged += (s, e) =>
-            {
-                if (NameTextBox.Text.Any(c => char.IsPunctuation(c) || char.IsSymbol(c)))
-                {
-                    NameTextBox.Dispatcher.BeginInvoke(new System.Action(() =>
-                    {
-                        string currentText = NameTextBox.Text;
-                        string newText = new string(currentText.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c)).ToArray());
-                        if (currentText != newText)
-                        {
-                            int caret = NameTextBox.CaretIndex;
-                            NameTextBox.Text = newText;
-                            NameTextBox.CaretIndex = System.Math.Max(0, caret - (currentText.Length - newText.Length));
-                        }
-                    }), System.Windows.Threading.DispatcherPriority.Input);
-                }
-            };
+
 
             NameTextBox.Text = currentName;
             NewName = currentName;
@@ -42,7 +27,16 @@ namespace TaskFlow.Views.Dialogs
         {
             if (!string.IsNullOrWhiteSpace(NameTextBox.Text))
             {
-                NewName = NameTextBox.Text.Trim();
+                string rawName = NameTextBox.Text;
+                string validName = new string(rawName.Where(c => !char.IsPunctuation(c) && !char.IsSymbol(c)).ToArray());
+                
+                if (string.IsNullOrWhiteSpace(validName))
+                {
+                    AnthropicMessageDialog.ShowWarning(Strings.Dlg_NameEmpty, Strings.Dlg_EnterValidName, this);
+                    return;
+                }
+                
+                NewName = validName.Trim();
                 DialogResult = true;
                 Close();
             }
@@ -58,12 +52,12 @@ namespace TaskFlow.Views.Dialogs
             Close();
         }
 
-        private void ApplyLocalization()
+        private void ApplyLocalization(string dialogTitle, string inputLabel)
         {
-            Title = Strings.UI_RenameTitle;
-            TxtNewNameLabel.Text = Strings.UI_NewName;
+            Title = dialogTitle ?? Strings.UI_RenameTitle;
+            DialogTitleText.Text = dialogTitle ?? Strings.UI_RenameTitle;
+            TxtNewNameLabel.Text = inputLabel ?? Strings.UI_NewName;
             BtnOK.Content = Strings.UI_OK;
-            BtnCancel.Content = Strings.UI_Cancel;
         }
     }
 }

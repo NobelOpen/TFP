@@ -270,9 +270,20 @@ namespace TaskFlow.Helpers
             if (task.TaskType == TaskType.ImgBlobAnalysis)
                 outputs.Add(new TaskOutput(Strings.AC_BlobCount, Strings.AC_BlobCount));
 
-            // 图像缩放输出缩放倍率
+            // 图像缩放输出宽度和高度缩放倍率
             if (task.TaskType == TaskType.ImgResize)
-                outputs.Add(new TaskOutput("缩放倍率", "缩放倍率"));
+            {
+                outputs.Add(new TaskOutput("宽度缩放倍率", "宽度缩放倍率"));
+                outputs.Add(new TaskOutput("高度缩放倍率", "高度缩放倍率"));
+            }
+
+            // Win截屏输出分辨率信息
+            if (task.TaskType == TaskType.WinScreenshot)
+            {
+                outputs.Add(new TaskOutput("图像分辨率", "图像分辨率"));
+                outputs.Add(new TaskOutput("宽度分辨率", "宽度分辨率"));
+                outputs.Add(new TaskOutput("高度分辨率", "高度分辨率"));
+            }
 
             // 数组生成输出：数组当前容量、保存文件路径
             if (task.TaskType == TaskType.ArrayBuilder)

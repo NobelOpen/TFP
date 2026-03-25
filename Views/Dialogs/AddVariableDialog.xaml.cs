@@ -14,6 +14,7 @@ namespace TaskFlow.Views.Dialogs
         public AddVariableDialog()
         {
             InitializeComponent();
+            this.MouseLeftButtonDown += (s, e) => { if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) this.DragMove(); };
             ApplyLocalization();
 
             NameTextBox.TextChanged += (s, e) =>
@@ -104,7 +105,6 @@ namespace TaskFlow.Views.Dialogs
             TxtVarTypeLabel.Text = Strings.UI_VarType;
             TxtVarInitLabel.Text = Strings.UI_VarInitValue;
             BtnOK.Content = Strings.UI_OK;
-            BtnCancel.Content = Strings.UI_Cancel;
         }
     }
 }

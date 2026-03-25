@@ -13,7 +13,7 @@
         Title="{Binding WindowTitle}" 
         Height="640" Width="1060"
         WindowStartupLocation="CenterScreen"
-        Background="#f0eee6"
+        Background="{DynamicResource AppBackgroundBrush}"
         ResizeMode="CanResize"
         StateChanged="Window_StateChanged"
         SizeChanged="Window_SizeChanged">
@@ -42,6 +42,7 @@
         <conv:MatToBitmapSourceConverter x:Key="MatToImageConverter"/>
         <conv:NullToVisibleConverter x:Key="NullToVisibleConverter"/>
         <conv:IndentLevelToMarginConverter x:Key="IndentLevelToMarginConverter"/>
+        <conv:ScrollableToVisibilityConverter x:Key="ScrollableToVisConverter"/>
         
         <!-- ListBoxItem 透明样式，去除默认选中高亮 -->
         <Style TargetType="ListBoxItem">
@@ -67,11 +68,11 @@
         <DataTemplate x:Key="TaskCardTemplate" DataType="{x:Type models:TaskCardBase}">
             <Border x:Name="CardBorder"
                     Margin="{Binding IndentLevel, Converter={StaticResource IndentLevelToMarginConverter}}"
-                    Padding="12"
                     CornerRadius="8"
-                    Background="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
-                    BorderBrush="{Binding IsSelected, Converter={StaticResource SelectedToBorderConverter}}"
+                    Background="{DynamicResource SurfaceBrush}"
                     BorderThickness="1.5"
+                    ClipToBounds="True"
+                    CacheMode="BitmapCache"
                     Cursor="Hand"
                     Visibility="{Binding IsHiddenByCollapse, Converter={StaticResource InverseBoolToVisConverter}}"
                     MouseLeftButtonDown="TaskCard_MouseLeftButtonDown"
@@ -80,25 +81,42 @@
                     Drop="TaskCard_Drop"
                     DragOver="TaskCard_DragOver"
                     MouseRightButtonUp="TaskCard_MouseRightButtonUp">
-                
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <!-- 外层 Grid，方便放置左侧彩色线条与右侧内容容器 -->
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <!-- 左侧状态指示线 -->
+                    <Border Width="3" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                            Margin="6,10,0,10" CornerRadius="1.5"
+                            Background="{Binding Status, Converter={StaticResource StatusToColorConverter}}"/>
+                    
+                    <!-- 原来的内层容器，代替在 CardBorder 上的 Padding -->
+                    <Grid Margin="16,12,12,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
                     
                     <!-- 折叠按钮 + 拖拽手柄 -->
                     <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding IsCollapsed, Converter={StaticResource CollapseIconConverter}}"
                                    Visibility="{Binding BranchRole, Converter={StaticResource CollapseIconVisConverter}}"
-                                   Foreground="#6b6a65"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
                                    FontSize="12"
                                    Margin="0,0,8,0"
                                    VerticalAlignment="Center"/>
                         <TextBlock Text="≡" 
                                    FontSize="18" 
-                                   Foreground="#b0aea5"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,8,0"
                                    Cursor="SizeAll">
@@ -114,11 +132,11 @@
                     <!-- 任务信息 -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Name}" 
-                                   FontFamily="Georgia, Microsoft YaHei"
+                                   FontFamily="Georgia, SimSun"
                                    FontWeight="SemiBold" 
-                                   Foreground="#141413"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    FontSize="14"/>
-                        <TextBlock Foreground="#6b6a65" FontSize="11" Margin="0,2,0,0">
+                        <TextBlock Foreground="{DynamicResource TextTertiaryBrush}" FontSize="11" Margin="0,2,0,0">
                             <Run Text="#"/>
                             <Run Text="{Binding Order, Mode=OneWay}"/>
                             <Run Text=" | "/>
@@ -126,81 +144,21 @@
                         </TextBlock>
                     </StackPanel>
                     
-                    <!-- 状态指示（直接绑定，移除 DataTrigger） -->
+                    <!-- 状态指示（同时绑定图标和强调色） -->
                     <TextBlock Grid.Column="2"
                                Text="{Binding Status, Converter={StaticResource StatusToIconConverter}}"
                                FontSize="16"
-                               Foreground="#141413"
+                               FontWeight="SemiBold"
+                               Foreground="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
                                VerticalAlignment="Center"
                                HorizontalAlignment="Right"/>
+                    </Grid>
                 </Grid>
             </Border>
         </DataTemplate>
-        
-        <!-- Anthropic 浅色极简滚动条样式 -->
-        <SolidColorBrush x:Key="ScrollBar.Static.Background" Color="#f0efe8"/>
-        <SolidColorBrush x:Key="ScrollBar.Static.Border" Color="Transparent"/>
-        <SolidColorBrush x:Key="ScrollBar.Static.Thumb" Color="#c8c6be"/>
-        <SolidColorBrush x:Key="ScrollBar.MouseOver.Thumb" Color="#b0aea5"/>
-        <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="#8a8880"/>
-
-        <Style x:Key="DarkScrollThumbStyle" TargetType="Thumb">
-            <Setter Property="IsTabStop" Value="False"/>
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Thumb">
-                        <Border CornerRadius="4" 
-                                Background="{TemplateBinding Background}"
-                                Margin="2" />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="ScrollBar">
-            <Setter Property="Background" Value="{StaticResource ScrollBar.Static.Background}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource ScrollBar.Static.Border}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <!-- 减小滚动条宽度到 10px -->
-            <Setter Property="Width" Value="10"/>
-            <Setter Property="MinWidth" Value="10"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollBar">
-                        <Grid x:Name="Bg" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-                            <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
-                            <!-- 移除上下箭头按钮，让轨道占满 -->
-                            <!-- IsEnabled 固定为 true，避免拖拽时鼠标移出滚动条区域导致 Track 被禁用而卡顿 -->
-                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="true">
-                                <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="false"/>
-                                </Track.DecreaseRepeatButton>
-                                <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="false"/>
-                                </Track.IncreaseRepeatButton>
-                                <Track.Thumb>
-                                    <!-- 赋予 Thumb 视觉反馈 -->
-                                    <Thumb Style="{StaticResource DarkScrollThumbStyle}" Background="{StaticResource ScrollBar.Static.Thumb}" x:Name="Thumb"/>
-                                </Track.Thumb>
-                            </Track>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.MouseOver.Thumb}"/>
-                            </Trigger>
-                            <Trigger Property="IsDragging" Value="true" SourceName="Thumb">
-                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.Pressed.Thumb}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
-    <Border x:Name="RootBorder" Background="#f0eee6">
+    <Border x:Name="RootBorder" Background="{DynamicResource AppBackgroundBrush}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="32"/>  <!-- 自定义标题栏 -->
@@ -209,7 +167,7 @@
             </Grid.RowDefinitions>
 
             <!-- ====== 自定义标题栏 ====== -->
-            <Grid Grid.Row="0" Background="#f0eee6">
+            <Grid Grid.Row="0" Background="{DynamicResource AppBackgroundBrush}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -217,21 +175,21 @@
 
                 <!-- 标题文字（可拖拽区域，由 WindowChrome CaptionHeight 控制） -->
                 <TextBlock Text="{Binding WindowTitle}"
-                           FontFamily="Georgia, Microsoft YaHei"
+                           FontFamily="Georgia, SimSun"
                            FontSize="17"
                            FontWeight="Bold"
-                           Foreground="#45443f"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            VerticalAlignment="Center"
                            Margin="12,0,0,0"/>
 
                 <!-- 窗口控制按钮 -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Stretch">
-                    <!-- 最小化 -->
-                    <Button Click="TitleBar_Minimize_Click"
+                    <!-- 主题切换 -->
+                    <Button Click="TitleBar_ThemeToggle_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True"
                             Width="46" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                            ToolTip="{x:Static res:Strings.Main_Minimize}">
-                        <TextBlock Text="─" FontSize="10" Foreground="#6b6a65" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            ToolTip="切换主题 / Theme">
+                        <TextBlock x:Name="ThemeIconText" Text="&#xE708;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="Bd" Background="Transparent">
@@ -239,7 +197,27 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="#e8e6dc"/>
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- 最小化 -->
+                    <Button Click="TitleBar_Minimize_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
+                            Width="46" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            ToolTip="{x:Static res:Strings.Main_Minimize}">
+                        <TextBlock Text="─" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="Transparent">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -250,7 +228,7 @@
                             WindowChrome.IsHitTestVisibleInChrome="True"
                             Width="46" Background="Transparent" BorderThickness="0" Cursor="Hand"
                             ToolTip="{x:Static res:Strings.Main_Maximize}">
-                        <TextBlock x:Name="TitleBarMaxRestoreIcon" Text="☐" FontSize="12" Foreground="#6b6a65" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="TitleBarMaxRestoreIcon" Text="☐" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="Bd" Background="Transparent">
@@ -258,7 +236,7 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="#e8e6dc"/>
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -269,7 +247,7 @@
                             WindowChrome.IsHitTestVisibleInChrome="True"
                             Width="46" Background="Transparent" BorderThickness="0" Cursor="Hand"
                             ToolTip="{x:Static res:Strings.Common_Close}">
-                        <TextBlock Text="✕" FontSize="11" Foreground="#6b6a65" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <TextBlock Text="✕" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="Bd" Background="Transparent">
@@ -277,8 +255,8 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="#c45b4a"/>
-                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerButtonBgBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource DangerButtonTextBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -288,7 +266,10 @@
             </Grid>
 
             <!-- 顶部工具栏 -->
-            <Border Grid.Row="1" Background="#faf9f5" Padding="6,4" BorderBrush="#e3dacc" BorderThickness="1" CornerRadius="8" Margin="8,2,8,2">
+            <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" Padding="6,4" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1" CornerRadius="8" Margin="8,2,8,2">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Opacity="0.06" BlurRadius="8" ShadowDepth="3" Direction="270" />
+                </Border.Effect>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/> <!-- 左侧文件操作 -->
@@ -298,10 +279,10 @@
 
                     <!-- 左侧核心 -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Command="{Binding NewProjectCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📋 "/><TextBlock Text="{x:Static res:Strings.Main_NewProject}"/></StackPanel></Button>
-                        <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="💾 "/><TextBlock Text="{x:Static res:Strings.Main_SaveProject}"/></StackPanel></Button>
-                        <Button Command="{Binding SaveAsCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📄 "/><TextBlock Text="{x:Static res:Strings.Main_SaveAs}"/></StackPanel></Button>
-                        <Button Command="{Binding LoadCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📂 "/><TextBlock Text="{x:Static res:Strings.Main_Load}"/></StackPanel></Button>
+                        <Button Command="{Binding NewProjectCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A5; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_NewProject}"/></StackPanel></Button>
+                        <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74E; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_SaveProject}"/></StackPanel></Button>
+                        <Button Command="{Binding SaveAsCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE792; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_SaveAs}"/></StackPanel></Button>
+                        <Button Command="{Binding LoadCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE838; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Load}"/></StackPanel></Button>
                         <Separator Style="{StaticResource VerticalSeparator}"/>
                     </StackPanel>
 
@@ -310,34 +291,38 @@
                         <ToolBar x:Name="MainToolBar" Style="{DynamicResource FlatToolBar}"  MinHeight="0" Padding="0,0,0,0" ToolBarTray.IsLocked="True">
                             <!-- Button在ToolBar中默认样式会被覆盖，必须显式指定Style -->
                             <Button Click="HideToTray_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="🔽 "/><TextBlock Text="{x:Static res:Strings.Main_Hide}"/></StackPanel></Button>
-                            <Button Click="OpenSettings_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13" Margin="0,1,2,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Settings}"/></StackPanel></Button>
-                            <Button Click="OpenVariableManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📦 "/><TextBlock Text="{x:Static res:Strings.Main_Variables}"/></StackPanel></Button>
-                            <Button Click="OpenFlowManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📑 "/><TextBlock Text="{x:Static res:Strings.Main_Flows}"/></StackPanel></Button>
-                            <Button Click="OpenModelManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="📱 "/><TextBlock Text="{x:Static res:Strings.Main_Models}"/></StackPanel></Button>
-                            <Button Click="OpenHelp_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="❓ "/><TextBlock Text="{x:Static res:Strings.Common_Help}"/></StackPanel></Button>
+                            <Button Click="OpenSettings_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Settings}"/></StackPanel></Button>
                             <Button Click="ToggleAiPanel_Click" Style="{StaticResource ToolbarButton}" Margin="4,0" ToolTip="Orchid AI Assistant"><StackPanel Orientation="Horizontal"><TextBlock Text="✦ "/><TextBlock Text="Orchid"/></StackPanel></Button>
+                            <Button Click="OpenVariableManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8F1; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Variables}"/></StackPanel></Button>
+                            <Button Click="OpenFlowManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9F5; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Flows}"/></StackPanel></Button>
+                            <Button Click="OpenModelManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9FA; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Models}"/></StackPanel></Button>
+                            <Button Click="OpenHelp_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE897; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Common_Help}"/></StackPanel></Button>
                         </ToolBar>
                     </ToolBarTray>
 
                     <!-- 右侧核心 -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Separator Style="{StaticResource VerticalSeparator}"/>
-                        <Button Command="{Binding RunSelectedCommand}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="▷ "/><TextBlock Text="{x:Static res:Strings.Main_RunOnce}"/></StackPanel></Button>
+                        <Button Command="{Binding RunSelectedCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE768; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_RunOnce}"/></StackPanel></Button>
                         <!-- 运行组合按钮（带下拉切换运行当前/运行全部）— 深色一体化 -->
                         <Grid x:Name="RunModeGrid" Margin="4,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Button x:Name="RunModeButton" Content="{x:Static res:Strings.Main_RunCurrent}" 
+                            <Button x:Name="RunModeButton" 
                                     Command="{Binding RunCurrentFlowCommand}" 
                                     IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
                                     Padding="12,6,4,6" Cursor="Hand" BorderThickness="0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="RunModeIcon" Text="&#xE768; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="RunModeText" Text="{x:Static res:Strings.Main_RunCurrent}"/>
+                                </StackPanel>
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
                                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                                 CornerRadius="6,0,0,6" Padding="{TemplateBinding Padding}"
-                                                BorderBrush="#e3dacc" BorderThickness="1,1,0,1">
+                                                BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1,1,0,1">
                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -346,22 +331,19 @@
                                                     <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                                     <Condition Binding="{Binding IsRunning}" Value="False"/>
                                                 </MultiDataTrigger.Conditions>
-                                                <Setter TargetName="Bd" Property="Background" Value="#2a2a28"/>
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource RunReadyButtonHoverBrush}"/>
                                             </MultiDataTrigger>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
-                                                    <Condition Binding="{Binding IsRunning}" Value="True"/>
-                                                </MultiDataTrigger.Conditions>
-                                                <Setter TargetName="Bd" Property="Background" Value="#f0efe8"/>
-                                            </MultiDataTrigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
+                                            </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </Button.Template>
                                 <Button.Style>
                                     <Style TargetType="Button">
-                                        <Setter Property="Background" Value="#141413"/>
-                                        <Setter Property="Foreground" Value="#faf9f5"/>
+                                        <Setter Property="Background" Value="{DynamicResource RunReadyButtonBgBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
                                     </Style>
                                 </Button.Style>
                             </Button>
@@ -370,12 +352,12 @@
                                           IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
                                           WindowChrome.IsHitTestVisibleInChrome="True"
                                           Cursor="Hand" Padding="4,6" BorderThickness="0">
-                                <TextBlock x:Name="RunModeDropdownIcon" Text="▾" FontSize="10" Foreground="#faf9f5"/>
+                                <TextBlock x:Name="RunModeDropdownIcon" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource PrimaryButtonTextBrush}"/>
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
                                         <Border x:Name="Bd" Background="{TemplateBinding Background}" 
                                                 CornerRadius="0,6,6,0" Padding="{TemplateBinding Padding}"
-                                                BorderBrush="#e3dacc" BorderThickness="0,1,1,1">
+                                                BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="0,1,1,1">
                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -384,21 +366,18 @@
                                                     <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                                     <Condition Binding="{Binding IsRunning}" Value="False"/>
                                                 </MultiDataTrigger.Conditions>
-                                                <Setter TargetName="Bd" Property="Background" Value="#2a2a28"/>
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource RunReadyButtonHoverBrush}"/>
                                             </MultiDataTrigger>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
-                                                    <Condition Binding="{Binding IsRunning}" Value="True"/>
-                                                </MultiDataTrigger.Conditions>
-                                                <Setter TargetName="Bd" Property="Background" Value="#f0efe8"/>
-                                            </MultiDataTrigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
+                                            </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </ToggleButton.Template>
                                 <ToggleButton.Style>
                                     <Style TargetType="ToggleButton">
-                                        <Setter Property="Background" Value="#141413"/>
+                                        <Setter Property="Background" Value="{DynamicResource RunReadyButtonBgBrush}"/>
                                     </Style>
                                 </ToggleButton.Style>
                                 <ToggleButton.ContextMenu>
@@ -409,13 +388,17 @@
                                 </ToggleButton.ContextMenu>
                             </ToggleButton>
                         </Grid>
-                        <Button x:Name="StopAllButton" Content="{x:Static res:Strings.Main_StopAll}" Command="{Binding StopExecutionCommand}" Margin="4,0"
+                        <Button x:Name="StopAllButton" Command="{Binding StopExecutionCommand}" Margin="4,0"
                                 Padding="12,6" Cursor="Hand" BorderThickness="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE71A; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{x:Static res:Strings.Main_StopAll}"/>
+                            </StackPanel>
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                             CornerRadius="6" Padding="{TemplateBinding Padding}"
-                                            BorderBrush="#e3dacc" BorderThickness="1">
+                                            BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1">
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <ControlTemplate.Triggers>
@@ -425,7 +408,7 @@
                                                 <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                                 <Condition Binding="{Binding IsRunning}" Value="False"/>
                                             </MultiDataTrigger.Conditions>
-                                            <Setter TargetName="Bd" Property="Background" Value="#f0efe8"/>
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                         </MultiDataTrigger>
                                         <!-- 运行状态 hover：橙色微深 -->
                                         <MultiDataTrigger>
@@ -433,17 +416,20 @@
                                                 <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
                                                 <Condition Binding="{Binding IsRunning}" Value="True"/>
                                             </MultiDataTrigger.Conditions>
-                                            <Setter TargetName="Bd" Property="Background" Value="#c4623f"/>
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerButtonHoverBrush}"/>
                                         </MultiDataTrigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Button.Template>
                             <Button.Style>
                                 <Style TargetType="Button">
-                                    <Setter Property="Background" Value="#faf9f5"/>
-                                    <Setter Property="Foreground" Value="#141413"/>
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                     <Style.Triggers>
-                                        <!-- 空，由 code-behind 动画驱动颜色变化 -->
+                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource StopActiveButtonBgBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
@@ -470,19 +456,30 @@
                           Background="Transparent" Visibility="Collapsed"/>
 
             <!-- 左侧任务卡片画布 -->
-                <Border Grid.Column="2" Background="#f0eee6"  Margin="8"  CornerRadius="8" BorderThickness="1" BorderBrush="#e3dacc">
+                <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" Margin="8" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource BorderLightBrush}">
+                <Border.Effect>
+                    <DropShadowEffect Color="{DynamicResource CardShadowColor}" Opacity="0.18" BlurRadius="8" ShadowDepth="3" Direction="270" />
+                </Border.Effect>
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="42"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
+                    
+                    <Border Grid.Row="0" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderLightBrush}" Margin="0,0,0,0"/>
 
                     <!-- 左侧分页标签栏 -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <ScrollViewer x:Name="TabScrollViewer" 
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <ScrollViewer x:Name="TabScrollViewer" Grid.Column="0"
+
                                       HorizontalScrollBarVisibility="Hidden" 
-                                      VerticalScrollBarVisibility="Disabled"
-                                      VerticalAlignment="Center">
+                                      VerticalScrollBarVisibility="Disabled">
                         <Grid>
                             <ItemsControl x:Name="FlowTabItemsControl" ItemsSource="{Binding Tabs}">
                             <ItemsControl.ItemsPanel>
@@ -492,7 +489,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding Name}" 
+                                    <Button Content="{Binding Name, Converter={StaticResource ToUpperConverter}}" 
                                             Click="TabItem_Click"
                                             Tag="{Binding}"
                                             Margin="2,0"
@@ -504,13 +501,14 @@
                                         <Button.Style>
                                             <Style TargetType="Button">
                                                 <Setter Property="Background" Value="Transparent"/>
-                                                <Setter Property="Foreground" Value="#b0aea5"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
                                                 <Setter Property="Template">
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="Button">
                                                             <Border x:Name="TabBd"
                                                                     Background="{TemplateBinding Background}"
-                                                                    CornerRadius="6,6,0,0"
+                                                                    CornerRadius="0"
                                                                     Padding="{TemplateBinding Padding}"
                                                                     BorderThickness="0,0,0,2"
                                                                     BorderBrush="Transparent">
@@ -518,8 +516,7 @@
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="TabBd" Property="Background" Value="#e8e6dc"/>
-                                                                    <Setter Property="Foreground" Value="#6b6a65"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
                                                                 </Trigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
@@ -527,13 +524,13 @@
                                                 </Setter>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="Foreground" Value="#141413"/>
-                                                        <Setter Property="Background" Value="White"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                                        <Setter Property="Background" Value="Transparent"/>
                                                         <Setter Property="Template">
                                                             <Setter.Value>
                                                                 <ControlTemplate TargetType="Button">
-                                                                    <Border Background="White"
-                                                                            CornerRadius="6,6,0,0"
+                                                                    <Border Background="Transparent"
+                                                                            CornerRadius="0"
                                                                             Padding="{TemplateBinding Padding}"
                                                                             BorderThickness="0,0,0,2"
                                                                             BorderBrush="Transparent">
@@ -552,7 +549,7 @@
                         </ItemsControl>
                             <!-- 流程标签滑动指示条 -->
                             <Border x:Name="FlowTabIndicator"
-                                    Height="2" Background="#d97757"
+                                    Height="2" Background="{DynamicResource TitleUnderlineBrush}"
                                     VerticalAlignment="Bottom"
                                     HorizontalAlignment="Left"
                                     Width="0" IsHitTestVisible="False">
@@ -565,11 +562,13 @@
 
                         
                         <!-- 向左滚动按钮 -->
-                        <Button Content="◀" 
+                        <Button Grid.Column="1"
+                                Content="◀" 
                                 Click="TabScrollLeft_Click"
+                                Visibility="{Binding ScrollableWidth, ElementName=TabScrollViewer, Converter={StaticResource ScrollableToVisConverter}}"
                                 Width="20" Height="24" 
                                 FontSize="10"
-                                Foreground="#b0aea5" Background="Transparent" 
+                                Foreground="{DynamicResource TextSecondaryBrush}" Background="Transparent" 
                                 BorderThickness="0" Cursor="Hand"
                                 VerticalAlignment="Center" Margin="4,0,0,0"
                                 ToolTip="向左滚动">
@@ -583,7 +582,7 @@
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Bd" Property="Background" Value="#e8e6dc"/>
+                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -594,11 +593,13 @@
                         </Button>
                         
                         <!-- 向右滚动按钮 -->
-                        <Button Content="▶" 
+                        <Button Grid.Column="2"
+                                Content="▶" 
                                 Click="TabScrollRight_Click"
+                                Visibility="{Binding ScrollableWidth, ElementName=TabScrollViewer, Converter={StaticResource ScrollableToVisConverter}}"
                                 Width="20" Height="24" 
                                 FontSize="10"
-                                Foreground="#b0aea5" Background="Transparent" 
+                                Foreground="{DynamicResource TextSecondaryBrush}" Background="Transparent" 
                                 BorderThickness="0" Cursor="Hand"
                                 VerticalAlignment="Center" Margin="2,0,0,0"
                                 ToolTip="向右滚动">
@@ -612,7 +613,7 @@
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Bd" Property="Background" Value="#e8e6dc"/>
+                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -622,10 +623,11 @@
                             </Button.Style>
                         </Button>
                         
-                    </StackPanel>
+                    </Grid>
 
                         <!-- 流程画布容器：每个 Tab 拥有独立的 ListBox，切换时翻转 Visibility 实现瞬切 -->
-                        <Grid x:Name="FlowCanvasHost" Grid.Row="1">
+                        <Grid Grid.Row="1">
+                            <Grid x:Name="FlowCanvasHost">
                             <Grid.Resources>
                                 <!-- 画布右键菜单（共享给所有动态 ListBox） -->
                                 <ContextMenu x:Key="CanvasContextMenu">
@@ -638,6 +640,7 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_GetTimestamp}" Click="AddTask_Click" Tag="GetTimestamp"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_EndTask}" Click="AddTask_Click" Tag="EndTask"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_EndAllFlows}" Click="AddTask_Click" Tag="EndAllFlows"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_RestartFlow}" Click="AddTask_Click" Tag="RestartFlow"/>
                                         </MenuItem>
                                         <!-- Windows -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_WinOps}">
@@ -649,6 +652,8 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinSimulateInput}" Click="AddTask_Click" Tag="WinSimulateInput"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinSubtitle}" Click="AddTask_Click" Tag="WinSubtitle"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinFindFile}" Click="AddTask_Click" Tag="WinFindFile"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_WinTextInput}" Click="AddTask_Click" Tag="WinTextInput"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_InputCombo}" Click="AddTask_Click" Tag="InputCombo"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_EventListener}" Click="AddTask_Click" Tag="EventListener"/>
                                         </MenuItem>
                                         <!-- ADB -->
@@ -696,16 +701,16 @@
                                     </MenuItem>
                                 </ContextMenu>
                             </Grid.Resources>
-                        </Grid>
+                                </Grid>
 
-                    <!-- 空状态提示 -->
-                    <TextBlock Text="{x:Static res:Strings.Main_EmptyHint}"
-                               Grid.Row="1"
-                               Foreground="#b0aea5"
-                               FontSize="16"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Visibility="{Binding TaskCards.Count, Converter={StaticResource ZeroToVisibleConverter}, FallbackValue=Visible}"/>
+                                <!-- 空状态提示 -->
+                                <TextBlock Text="{x:Static res:Strings.Main_EmptyHint}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="16"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding TaskCards.Count, Converter={StaticResource ZeroToVisibleConverter}, FallbackValue=Visible}"/>
+                        </Grid>
                 </Grid>
             </Border>
             
@@ -721,12 +726,16 @@
                 </Grid.RowDefinitions>
                 
                 <!-- 可切换显示窗口 -->
-                    <Border Grid.Row="0" Background="#faf9f5" CornerRadius="8" BorderBrush="#e8e6dc" BorderThickness="1">
+                    <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect Color="{DynamicResource CardShadowColor}" Opacity="0.18" BlurRadius="8" ShadowDepth="3" Direction="270" />
+                    </Border.Effect>
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="32"/>
+                            <RowDefinition Height="42"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
+                        <Border Grid.Row="0" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderLightBrush}" Margin="0,0,0,0"/>
                         
                         <!-- 标签切换按钮 -->
                         <Grid Margin="8,0">
@@ -750,7 +759,7 @@
                                 </StackPanel>
                                 <!-- 上方标签滑动指示条 -->
                                 <Border x:Name="TopTabIndicator"
-                                        Height="2" Background="#d97757"
+                                        Height="2" Background="{DynamicResource TitleUnderlineBrush}"
                                         VerticalAlignment="Bottom"
                                         HorizontalAlignment="Left"
                                         Width="0" IsHitTestVisible="False">
@@ -763,7 +772,7 @@
                             <TextBlock x:Name="ImageCoordinateText"
                                        Grid.Column="1"
                                        Text=""
-                                       Foreground="#6a9bcc" 
+                                       Foreground="{DynamicResource TextSecondaryBrush}" 
                                        FontFamily="{StaticResource FontMono}"
                                        FontSize="12"
                                        HorizontalAlignment="Right"
@@ -771,12 +780,13 @@
                         </Grid>
                         
                         <!-- 图像预览页面 -->
-                            <Border x:Name="ImagePreviewPanel" Grid.Row="1" Margin="5" Background="#f0eee6" CornerRadius="6" ClipToBounds="True">
+                        <Border x:Name="ImagePreviewPanel" Grid.Row="1" Background="Transparent" ClipToBounds="True">
                             <Grid>
                                 <!-- 无图像时居中显示文字 -->
-                                <TextBlock Text="No image (∀&lt;)"
-                                           Foreground="#c8c6be" FontSize="16"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                <TextBlock Text="{x:Static res:Strings.Main_NoImageHint}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center"
+                                           FontFamily="Lora, Georgia, SimSun, Segoe UI"
                                            Visibility="{Binding DisplayImage, Converter={StaticResource NullToVisibleConverter}}"/>
                                 <ScrollViewer x:Name="ImageScrollViewer"
                                               HorizontalScrollBarVisibility="Auto"
@@ -805,7 +815,7 @@
                         </Border>
                         
                         <!-- 实时显示页面 -->
-                            <Border x:Name="LivePreviewPanel" Grid.Row="1" Margin="5" Background="#f0eee6" CornerRadius="6" ClipToBounds="True" Visibility="Collapsed">
+                        <Border x:Name="LivePreviewPanel" Grid.Row="1" Background="Transparent" ClipToBounds="True" Visibility="Collapsed">
                             <Grid>
                                 <!-- 实时画面（支持缩放和滚动） -->
                                 <ScrollViewer x:Name="LiveScrollViewer"
@@ -833,10 +843,9 @@
                                 <!-- 无内容提示 -->
                                 <TextBlock x:Name="LivePreviewHint"
                                            Text="{x:Static res:Strings.Main_LiveStartHint}"
-                                           Foreground="#b0aea5"
-                                           FontSize="12"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center"
+                                           FontFamily="Lora, Georgia, SimSun, Segoe UI"/>
                                 
                                 <!-- 左下角浮动按钮组 -->
                                     <StackPanel Orientation="Horizontal" 
@@ -845,7 +854,7 @@
                                     <!-- 播放按钮 -->
                                     <Button x:Name="BtnLiveStart" Content="▶" Click="LivePreviewStart_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
                                             Width="28"  FontSize="22" Padding="0"
-                                            Background="Transparent" Foreground="#b0aea5" BorderThickness="0" Cursor="Hand"
+                                            Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
                                             ToolTip="开始实时显示">
                                         <Button.Template>
                                             <ControlTemplate TargetType="Button">
@@ -855,7 +864,7 @@
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="Bg" Property="Opacity" Value="1"/>
-                                                            <Setter TargetName="Bg" Property="Background" Value="#e3dacc"/>
+                                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                                     </Trigger>
                                                     <Trigger Property="IsEnabled" Value="False">
                                                         <Setter TargetName="Bg" Property="Opacity" Value="0.3"/>
@@ -867,7 +876,7 @@
                                     <!-- 停止按钮 -->
                                     <Button x:Name="BtnLiveStop" Content="■" Click="LivePreviewStop_Click"
                                             Width="28" FontSize="22" Padding="0"
-                                            Background="Transparent" Foreground="White" BorderThickness="0" Cursor="Hand"
+                                            Background="Transparent" Foreground="{DynamicResource CreamyWhiteBrush}" BorderThickness="0" Cursor="Hand"
                                             ToolTip="停止实时显示" Visibility="Collapsed">
                                         <Button.Template>
                                             <ControlTemplate TargetType="Button">
@@ -877,7 +886,7 @@
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="Bg" Property="Opacity" Value="1"/>
-                                                            <Setter TargetName="Bg" Property="Background" Value="#c4623f"/>
+                                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource DangerButtonHoverBrush}"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -886,7 +895,7 @@
                                     <!-- 设置按钮 -->
                                     <Button x:Name="BtnLiveSettings" Content="◉" Click="LivePreviewSettings_Click"
                                         Width="28" Height="28" FontSize="22" Padding="0" VerticalAlignment="Center"
-                                        Background="Transparent" Foreground="#b0aea5" BorderThickness="0"  Cursor="Hand" 
+                                        Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0"  Cursor="Hand" 
                                         ToolTip="{x:Static res:Strings.Main_LiveSettings}" Margin="4,2,0,0">
                                         <Button.Template>
                                             <ControlTemplate TargetType="Button">
@@ -897,7 +906,7 @@
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="Bg" Property="Opacity" Value="1"/>
-                                                            <Setter TargetName="Bg" Property="Background" Value="#e3dacc"/>
+                                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                                         </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -913,12 +922,16 @@
                 <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="Transparent"/>
                 
                 <!-- 可切换通知窗口 -->
-                    <Border Grid.Row="2" Background="#faf9f5" CornerRadius="8" BorderBrush="#e8e6dc" BorderThickness="1">
+                    <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect Color="{DynamicResource CardShadowColor}" Opacity="0.18" BlurRadius="8" ShadowDepth="3" Direction="270" />
+                    </Border.Effect>
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="32"/>
+                            <RowDefinition Height="42"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
+                        <Border Grid.Row="0" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderLightBrush}" Margin="0,0,0,0"/>
                         
                         <!-- 标签切换按钮 -->
                         <Grid x:Name="BottomTabContainer" Margin="8,0">
@@ -937,7 +950,7 @@
                             </StackPanel>
                             <!-- 下方标签滑动指示条 -->
                             <Border x:Name="BottomTabIndicator"
-                                    Height="2" Background="#d97757"
+                                    Height="2" Background="{DynamicResource TitleUnderlineBrush}"
                                     VerticalAlignment="Bottom"
                                     HorizontalAlignment="Left"
                                     Width="0" IsHitTestVisible="False">
@@ -947,20 +960,22 @@
                             </Border>
                         </Grid>
                         
-                        <!-- 日志页面 -->
-                            <Border x:Name="LogPanel" Grid.Row="1" Margin="5" Background="#f0eee6" CornerRadius="6">
+                        <!-- 执行日志页面 -->
+                        <Border x:Name="LogPanel" Grid.Row="1" Background="Transparent" ClipToBounds="True">
+                            <!-- TODO: Replace with RichTextBox if formatted text is needed -->
                             <Grid>
                                 <!-- 无日志时居中显示提示 -->
-                                <TextBlock Text="No logs ∠)_"
-                                           Foreground="#c8c6be" FontSize="16"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                <TextBlock Text="{x:Static res:Strings.Main_NoLogsHint}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center"
+                                           FontFamily="Lora, Georgia, SimSun, Segoe UI"
                                            Visibility="{Binding LogText, Converter={StaticResource NullToVisibleConverter}}"/>
                                 <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto">
                                     <TextBox x:Name="LogTextBox"
                                              Text="{Binding LogText, Mode=OneWay}"
                                              IsReadOnly="True"
                                              Background="Transparent"
-                                             Foreground="#45443f"
+                                             Foreground="{DynamicResource TextSecondaryBrush}"
                                              FontFamily="{StaticResource FontMono}"
                                              FontSize="11"
                                              BorderThickness="0"
@@ -978,15 +993,14 @@
                         </Border>
                         
                         <!-- 输出信息页面 -->
-                            <Border x:Name="OutputPanel" Grid.Row="1" Margin="5" Background="#f0eee6" CornerRadius="6" Visibility="Collapsed">
+                        <Border x:Name="OutputPanel" Grid.Row="1" Background="Transparent" ClipToBounds="True" Visibility="Collapsed">
                             <Grid>
                                 <!-- 空状态居中提示 -->
                                 <TextBlock x:Name="OutputEmptyHint"
                                            Text="{x:Static res:Strings.Main_NoTaskSelected}" 
-                                           Foreground="#b0aea5" 
-                                           FontSize="12"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center"
+                                           FontFamily="Lora, Georgia, SimSun, Segoe UI"/>
                                 <!-- 有数据时的输出信息 -->
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <StackPanel x:Name="OutputInfoPanel" Margin="10"/>
@@ -996,6 +1010,51 @@
                     </Grid>
                 </Border>
             </Grid>
+        </Grid>
+        
+        <!-- ==== 加载动画遮罩层 ==== -->
+        <Grid x:Name="LoadingOverlay" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}" Background="{DynamicResource AppBackgroundBrush}" Grid.RowSpan="10" Grid.ColumnSpan="10" Panel.ZIndex="1000">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <!-- 圆弧旋转 Spinner（纯 Path，不依赖字体） -->
+                <Grid Width="56" Height="56" HorizontalAlignment="Center" Margin="0,0,0,18"
+                      RenderTransformOrigin="0.5,0.5">
+                    <Grid.RenderTransform>
+                        <RotateTransform x:Name="LoadingSpinnerTransform" Angle="0"/>
+                    </Grid.RenderTransform>
+                    <Grid.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetName="LoadingSpinnerTransform"
+                                                     Storyboard.TargetProperty="Angle"
+                                                     From="0" To="360" Duration="0:0:0.9"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Grid.Triggers>
+                    <!-- 轨道圆环（暗色底） -->
+                    <Ellipse Width="56" Height="56"
+                             Stroke="{DynamicResource BorderLightBrush}"
+                             StrokeThickness="5"
+                             Fill="Transparent"/>
+                    <!-- 进度弧（亮色，覆盖约 270° 的弧段） -->
+                    <Path Stroke="{DynamicResource PrimaryButtonBgBrush}"
+                          StrokeThickness="5"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round"
+                          Data="M 28,3 A 25,25 0 1 1 3,28"
+                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+                <TextBlock Text="正在加载流程 / Loading Workflow..." FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ==== 主题切换遮罩层 ==== -->
+        <Grid x:Name="ThemeTransitionOverlay" Visibility="Collapsed" Background="{DynamicResource AppBackgroundBrush}" Grid.RowSpan="10" Grid.ColumnSpan="10" Panel.ZIndex="999">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock x:Name="ThemeTransitionIcon" Text="&#xE708;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="64" Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                <TextBlock Text="切换主题 / Theme" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+            </StackPanel>
         </Grid>
     </Grid>
     </Border>
@@ -1010,8 +1069,8 @@
                 </Style>
                 <!-- 工具栏按钮样式 -->
                 <Style x:Key="ToolbarButton" TargetType="Button">
-                    <Setter Property="Background" Value="#faf9f5"/>
-                    <Setter Property="Foreground" Value="#141413"/>
+                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                     <Setter Property="Padding" Value="12,6"/>
                     <Setter Property="BorderThickness" Value="0"/>
                     <Setter Property="Cursor" Value="Hand"/>
@@ -1021,7 +1080,7 @@
                                 <Border Background="{TemplateBinding Background}"
                                         CornerRadius="6"
                                         Padding="{TemplateBinding Padding}"
-                                        BorderBrush="#e3dacc"
+                                        BorderBrush="{DynamicResource BorderDarkBrush}"
                                         BorderThickness="1">
                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
@@ -1030,35 +1089,35 @@
                     </Setter>
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#f0efe8"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
                 
                 <Style x:Key="ToolbarButtonGreen" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-                    <Setter Property="Foreground" Value="#788c5d"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SuccessColorBrush}"/>
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#f0efe8"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
                 
                 <Style x:Key="ToolbarButtonRed" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-                    <Setter Property="Foreground" Value="#c45b4a"/>
+                    <Setter Property="Foreground" Value="{DynamicResource DangerButtonBgBrush}"/>
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#f0efe8"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
                 
                 <Style x:Key="ToolbarButtonDark" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-                    <Setter Property="Background" Value="#141413"/>
-                    <Setter Property="Foreground" Value="#faf9f5"/>
+                    <Setter Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#2a2a28"/>
+                            <Setter Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -1066,7 +1125,7 @@
                 <Style x:Key="VerticalSeparator" TargetType="Separator">
                     <Setter Property="Width" Value="1"/>
                     <Setter Property="Margin" Value="8,4"/>
-                    <Setter Property="Background" Value="#e8e6dc"/>
+                    <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
                 </Style>
                 
                 <!-- 平滑自适应工具栏样式 -->
@@ -1093,14 +1152,14 @@
                                         <ToggleButton.Template>
                                             <ControlTemplate TargetType="ToggleButton">
                                                 <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="4">
-                                                    <TextBlock Text="···" Foreground="#8a8880" FontSize="16" FontWeight="Bold" Margin="4,0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="···" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="16" FontWeight="Bold" Margin="4,0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Bg" Property="Background" Value="#f0efe8"/>
+                                                        <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                                     </Trigger>
                                                     <Trigger Property="IsChecked" Value="True">
-                                                        <Setter TargetName="Bg" Property="Background" Value="#e8e6dc"/>
+                                                        <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ActiveTabBgBrush}"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -1111,9 +1170,9 @@
                                     <Popup x:Name="OverflowPopup" AllowsTransparency="True" Placement="Bottom" 
                                            IsOpen="{Binding IsOverflowOpen, RelativeSource={RelativeSource TemplatedParent}}" 
                                            StaysOpen="False" Focusable="False">
-                                        <Border Background="White" BorderBrush="#e2d9cb" BorderThickness="1" CornerRadius="6" Margin="0,4,0,0" Padding="4">
+                                        <Border Background="{DynamicResource AppBackgroundBrush}" BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Margin="0,4,0,0" Padding="4">
                                             <Border.Effect>
-                                                <DropShadowEffect Color="#b0aea5" BlurRadius="12" ShadowDepth="2" Opacity="0.15" Direction="270"/>
+                                                <DropShadowEffect Color="{DynamicResource CardShadowColor}" BlurRadius="12" ShadowDepth="2" Opacity="0.15" Direction="270"/>
                                             </Border.Effect>
                                             <ToolBarOverflowPanel x:Name="PART_ToolBarOverflowPanel" WrapWidth="NaN" Focusable="True" FocusVisualStyle="{x:Null}">
                                                 <!-- 这里由于默认也是换行机制，可以直接定义它的布局机制为 StackPanel -->
@@ -1137,7 +1196,7 @@
                 <!-- Anthropic 风格标签切换按钮样式 -->
                 <Style x:Key="TabToggleStyle" TargetType="RadioButton">
                     <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="Foreground" Value="#b0aea5"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                     <Setter Property="FontWeight" Value="SemiBold"/>
                     <Setter Property="FontSize" Value="12"/>
                     <Setter Property="Padding" Value="12,4"/>
@@ -1149,7 +1208,7 @@
                             <ControlTemplate TargetType="RadioButton">
                                 <Border x:Name="TabBorder" 
                                         Background="{TemplateBinding Background}" 
-                                        CornerRadius="6,6,0,0" 
+                                        CornerRadius="0" 
                                         Padding="{TemplateBinding Padding}"
                                         BorderThickness="0,0,0,2"
                                         BorderBrush="Transparent">
@@ -1157,13 +1216,13 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="Foreground" Value="#141413"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                         <Setter TargetName="TabBorder" Property="BorderBrush" Value="Transparent"/>
-                                        <Setter TargetName="TabBorder" Property="Background" Value="White"/>
+                                        <Setter TargetName="TabBorder" Property="Background" Value="Transparent"/>
                                     </Trigger>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Foreground" Value="#6b6a65"/>
-                                        <Setter TargetName="TabBorder" Property="Background" Value="#f0efe8"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
+                                        <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -1174,3 +1233,4 @@
         </Style>
     </Window.Style>
 </Window>
+

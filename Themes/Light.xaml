@@ -1,0 +1,48 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Anthropic Light Theme Palette -->
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#f0eee6" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#faf9f5" />
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#f5f4ef" />
+    <SolidColorBrush x:Key="BorderLightBrush" Color="#e8e6dc" />
+    <SolidColorBrush x:Key="BorderDarkBrush" Color="#d3d1c8" />
+    
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#141413" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#b0aea5" />
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#9c9990" />
+    <SolidColorBrush x:Key="TextIconBrush" Color="#6b6a65" />
+    
+    <SolidColorBrush x:Key="TitleUnderlineBrush" Color="#141413" />
+    <SolidColorBrush x:Key="DialogTitleBrush" Color="#d9744e" />
+    
+    <SolidColorBrush x:Key="CreamyWhiteBrush" Color="#faf9f5" />
+    
+    <SolidColorBrush x:Key="AccentBrush" Color="#d97757" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#c4623f" />
+    
+    <!-- Action Buttons -->
+    <SolidColorBrush x:Key="PrimaryButtonBgBrush" Color="#141413" />
+    <SolidColorBrush x:Key="PrimaryButtonTextBrush" Color="#faf9f5" />
+    <SolidColorBrush x:Key="PrimaryButtonHoverBrush" Color="#2a2a28" />
+    
+    <SolidColorBrush x:Key="RunReadyButtonBgBrush" Color="#141413" />
+
+    <!-- Danger/Error Colors -->
+    <SolidColorBrush x:Key="DangerButtonBgBrush" Color="#d93b3b" />
+    <SolidColorBrush x:Key="DangerButtonHoverBrush" Color="#c23434" />
+    <SolidColorBrush x:Key="DangerButtonTextBrush" Color="#faf9f5" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="#d93b3b" />
+    <SolidColorBrush x:Key="RunReadyButtonHoverBrush" Color="#2a2a28" />
+    <SolidColorBrush x:Key="StopActiveButtonBgBrush" Color="#d97757" />
+    
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#e8e6dc" />
+    
+    <SolidColorBrush x:Key="SecondaryButtonBgBrush" Color="Transparent" />
+    <SolidColorBrush x:Key="SecondaryButtonHoverBrush" Color="#e8e6dc" />
+    <SolidColorBrush x:Key="ActiveTabBgBrush" Color="#e8e6dc" />
+
+    <!-- Shadows -->
+    <Color x:Key="CardShadowColor">#10000000</Color> <!-- Black with ~6% opacity -->
+
+</ResourceDictionary>

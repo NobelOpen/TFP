@@ -4,15 +4,17 @@
         Title="LLM 模型管理" 
         Height="500" Width="800"
         WindowStartupLocation="CenterOwner"
-        Background="#faf9f5"
+        Background="Transparent"
+        AllowsTransparency="True"
         FontFamily="{StaticResource FontBody}"
         ResizeMode="NoResize"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        WindowStyle="None">
 
     <Window.Resources>
         <Style x:Key="ModelButton" TargetType="Button">
-            <Setter Property="Background" Value="#f0efe8"/>
-            <Setter Property="Foreground" Value="#141413"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Padding" Value="14,6"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -30,7 +32,7 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#e8e6dc"/>
+                    <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Opacity" Value="0.5"/>
@@ -38,48 +40,48 @@
             </Style.Triggers>
         </Style>
         <Style x:Key="ModelButtonRed" TargetType="Button" BasedOn="{StaticResource ModelButton}">
-            <Setter Property="Background" Value="#c45b4a"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource DangerButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource DangerButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#d06b5a"/>
+                    <Setter Property="Background" Value="{DynamicResource DangerButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="ModelButtonDark" TargetType="Button" BasedOn="{StaticResource ModelButton}">
-            <Setter Property="Background" Value="#141413"/>
-            <Setter Property="Foreground" Value="#faf9f5"/>
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2a2a28"/>
+                    <Setter Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="ModelButtonGreen" TargetType="Button" BasedOn="{StaticResource ModelButton}">
-            <Setter Property="Background" Value="#447821"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource SuccessColorBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource CreamyWhiteBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#558f2c"/>
+                    <Setter Property="Background" Value="{DynamicResource SuccessHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="ModelButtonBlue" TargetType="Button" BasedOn="{StaticResource ModelButton}">
-            <Setter Property="Background" Value="#3878b5"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource ActiveTabBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#4a8ec8"/>
+                    <Setter Property="Background" Value="{DynamicResource BorderDarkBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <!-- Anthropic 浅色极简滚动条样式 -->
-        <SolidColorBrush x:Key="ScrollBar.Static.Background" Color="#f0efe8"/>
+        <SolidColorBrush x:Key="ScrollBar.Static.Background" Color="Transparent"/>
         <SolidColorBrush x:Key="ScrollBar.Static.Border" Color="Transparent"/>
-        <SolidColorBrush x:Key="ScrollBar.Static.Thumb" Color="#c8c6be"/>
-        <SolidColorBrush x:Key="ScrollBar.MouseOver.Thumb" Color="#b0aea5"/>
-        <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="#8a8880"/>
+        <SolidColorBrush x:Key="ScrollBar.Static.Thumb" Color="{DynamicResource BorderDarkColor}"/>
+        <SolidColorBrush x:Key="ScrollBar.MouseOver.Thumb" Color="{DynamicResource TextTertiaryColor}"/>
+        <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="{DynamicResource TextSecondaryColor}"/>
 
         <Style x:Key="DarkScrollThumbStyle" TargetType="Thumb">
             <Setter Property="IsTabStop" Value="False"/>
@@ -96,58 +98,48 @@
             </Setter>
         </Style>
 
-        <Style TargetType="ScrollBar">
-            <Setter Property="Background" Value="{StaticResource ScrollBar.Static.Background}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource ScrollBar.Static.Border}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <!-- 减小滚动条宽度到 10px -->
-            <Setter Property="Width" Value="10"/>
-            <Setter Property="MinWidth" Value="10"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollBar">
-                        <Grid x:Name="Bg" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-                            <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
-                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="true">
-                                <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="false"/>
-                                </Track.DecreaseRepeatButton>
-                                <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="false"/>
-                                </Track.IncreaseRepeatButton>
-                                <Track.Thumb>
-                                    <Thumb Style="{StaticResource DarkScrollThumbStyle}" Background="{StaticResource ScrollBar.Static.Thumb}" x:Name="Thumb"/>
-                                </Track.Thumb>
-                            </Track>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.MouseOver.Thumb}"/>
-                            </Trigger>
-                            <Trigger Property="IsDragging" Value="true" SourceName="Thumb">
-                                <Setter Property="Background" TargetName="Thumb" Value="{StaticResource ScrollBar.Pressed.Thumb}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+
     </Window.Resources>
 
-    <Grid Margin="16">
+    <!-- 外层阴影边框 -->
+    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Margin="16"
+            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18" Color="{DynamicResource CardShadowColor}"/>
+        </Border.Effect>
+
+        <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 标题 -->
-        <TextBlock x:Name="TxtModelsTitle" Text="全局模型管理" 
-                   Foreground="#d97757" 
-                   FontSize="16" 
-                   FontWeight="SemiBold"
-                   FontFamily="{StaticResource FontTitle}"
-                   Margin="0,0,0,12"/>
+        <!-- 标题区域 -->
+        <Grid Margin="0,0,0,12">
+            <TextBlock x:Name="TxtModelsTitle" Text="全局模型管理" 
+                       Foreground="{DynamicResource DialogTitleBrush}" 
+                       FontSize="16" 
+                       FontWeight="SemiBold"
+                       FontFamily="{StaticResource FontTitle}"
+                       VerticalAlignment="Center"/>
+            <Button Content="✕" Width="32" Height="32" Background="Transparent" BorderThickness="0" 
+                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="16" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,-8,-8,0"
+                    Click="CloseBtn_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="16">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
 
         <!-- 模型列表 -->
         <DataGrid x:Name="ModelGrid" 
@@ -158,9 +150,9 @@
                   CanUserReorderColumns="False"
                   SelectionMode="Single"
                   Background="Transparent"
-                  Foreground="#141413"
-                  RowBackground="#faf9f5"
-                  AlternatingRowBackground="#f5f4ee"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  RowBackground="{DynamicResource AppBackgroundBrush}"
+                  AlternatingRowBackground="{DynamicResource SurfaceBrush}"
                   BorderThickness="0"
                   GridLinesVisibility="None"
                   HeadersVisibility="Column"
@@ -175,8 +167,8 @@
             </DataGrid.Resources>
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#f0efe8"/>
-                    <Setter Property="Foreground" Value="#8a8880"/>
+                    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                     <Setter Property="Padding" Value="12,8"/>
                     <Setter Property="BorderThickness" Value="0"/>
                     <Setter Property="FontWeight" Value="Normal"/>
@@ -186,7 +178,7 @@
                             <ControlTemplate TargetType="DataGridColumnHeader">
                                 <Border Background="{TemplateBinding Background}" 
                                         Padding="{TemplateBinding Padding}"
-                                        BorderBrush="#e8e6dc" BorderThickness="0,0,0,1">
+                                        BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="0,0,0,1">
                                     <ContentPresenter VerticalAlignment="Center"/>
                                 </Border>
                             </ControlTemplate>
@@ -196,7 +188,7 @@
             </DataGrid.ColumnHeaderStyle>
             <DataGrid.CellStyle>
                 <Style TargetType="DataGridCell">
-                    <Setter Property="Foreground" Value="#141413"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                     <Setter Property="BorderThickness" Value="0"/>
                     <Setter Property="Padding" Value="12,0"/>
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -212,8 +204,8 @@
                     </Setter>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#e6ddd5"/>
-                            <Setter Property="Foreground" Value="#141413"/>
+                            <Setter Property="Background" Value="{DynamicResource ActiveTabBgBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -224,10 +216,10 @@
                     <Setter Property="Margin" Value="0"/>
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#ede9e2"/>
+                            <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#e6ddd5"/>
+                            <Setter Property="Background" Value="{DynamicResource ActiveTabBgBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -253,8 +245,8 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Left" 
                     Margin="0,12,0,0">
-            <Button x:Name="BtnAdd" Content="添加模型" Click="AddBtn_Click" Style="{StaticResource ModelButtonGreen}" Margin="0,0,8,0"/>
-            <Button x:Name="BtnDelete" Content="删除模型" Click="DeleteBtn_Click" Style="{StaticResource ModelButtonRed}" Margin="0,0,8,0" IsEnabled="False"/>
+            <Button x:Name="BtnAdd" Content="添加模型" Click="AddBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0"/>
+            <Button x:Name="BtnDelete" Content="删除模型" Click="DeleteBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0" IsEnabled="False"/>
             <Button x:Name="BtnEdit" Content="修改模型" Click="EditBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0" IsEnabled="False"/>
             <Button x:Name="BtnTest" Content="测试连接" Click="TestBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0" IsEnabled="False"/>
             <Button x:Name="BtnReset" Content="重置统计" Click="ResetStatsBtn_Click" Style="{StaticResource ModelButton}" Margin="0,0,8,0" IsEnabled="False"/>
@@ -267,4 +259,5 @@
                 Margin="0,12,0,0"
                 Style="{StaticResource ModelButtonDark}"/>
     </Grid>
+    </Border>
 </Window>
