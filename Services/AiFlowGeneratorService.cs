@@ -32,6 +32,60 @@ namespace TaskFlow.Services
         }
         private List<CardDescriptionDef>? _cardDescriptions;
 
+        // ===== Prompt 模板缓存系统 =====
+        // 缓存已加载的模板内容和文件最后修改时间
+        private static readonly Dictionary<string, (string Content, DateTime LastModified)> _promptCache = new();
+        private static readonly object _promptCacheLock = new();
+
+        /// <summary>
+        /// 加载 Prompt 模板文件（带文件时间戳缓存，文件修改后自动刷新）
+        /// </summary>
+        private static string LoadPromptTemplate(string fileName)
+        {
+            var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
+            var filePath = Path.Combine(assemblyDir, "Resources", "Prompts", fileName);
+
+            if (!File.Exists(filePath))
+            {
+                AiFlowLogger.Warn($"Prompt 模板文件不存在: {filePath}");
+                return "";
+            }
+
+            var lastWrite = File.GetLastWriteTimeUtc(filePath);
+
+            lock (_promptCacheLock)
+            {
+                if (_promptCache.TryGetValue(fileName, out var cached) && cached.LastModified == lastWrite)
+                {
+                    return cached.Content;
+                }
+            }
+
+            // 读取文件（在锁外执行 I/O）
+            var content = File.ReadAllText(filePath, Encoding.UTF8);
+
+            lock (_promptCacheLock)
+            {
+                _promptCache[fileName] = (content, lastWrite);
+            }
+
+            AiFlowLogger.Info($"已加载 Prompt 模板: {fileName}");
+            return content;
+        }
+
+        /// <summary>
+        /// 渲染模板：将 {{占位符}} 替换为实际值
+        /// </summary>
+        private static string RenderTemplate(string template, Dictionary<string, string> variables)
+        {
+            var result = template;
+            foreach (var (key, value) in variables)
+            {
+                result = result.Replace($"{{{{{key}}}}}", value ?? "");
+            }
+            return result;
+        }
+
         /// <summary>
         /// 加载卡片能力描述资源
         /// </summary>
@@ -129,13 +183,12 @@ namespace TaskFlow.Services
             var allCategories = GetAllCategories();
             var categoryList = string.Join("、", allCategories);
 
-            var systemPrompt = $@"你是 TaskFlow 自动化流程设计助手。用户会描述他想实现的自动化功能。
-你的任务是判断这个需求涉及哪些卡片类别。
-
-可用的类别有：{categoryList}
-
-请只返回一个 JSON 数组，包含需要的类别名称。例如：[""Windows操作"", ""图像处理""]
-不要返回任何其他文字。";
+            // 从模板文件加载阶段1 Prompt
+            var categoryTemplate = LoadPromptTemplate("CategoryJudge.md");
+            var systemPrompt = RenderTemplate(categoryTemplate, new Dictionary<string, string>
+            {
+                ["类别列表"] = categoryList
+            });
 
             var requestBody = new
             {
@@ -350,7 +403,6 @@ namespace TaskFlow.Services
             var flowContextSection = string.IsNullOrEmpty(currentFlowContext)
                 ? ""
                 : $@"
-
 用户当前画布上的流程摘要如下：
 {currentFlowContext}
 注意：以上仅为流程列表摘要（流程名和卡片数），不包含卡片属性详情。
@@ -360,112 +412,19 @@ namespace TaskFlow.Services
 如果用户在询问关于已有流程的问题（如分析、审查、解释），先调用 analyze_flow 获取详情再回答。
 如果用户想在已有流程基础上追加新步骤，请只生成新增的步骤（不要重复已有步骤），step 编号从已有流程之后继续。";
 
-            // 自主模式专属指令
-            var autonomousSection = mode == AiAssistantMode.Autonomous ? @"
+            // 根据模式加载对应的模式指令模板
+            var modeTemplate = mode == AiAssistantMode.Autonomous
+                ? LoadPromptTemplate("ModeAutonomous.md")
+                : LoadPromptTemplate("ModeDesign.md");
 
-自主执行模式（当前已启用）：
-你处于自主模式，应优先考虑直接运行已有卡片来完成用户任务：
-- 在 submit_plan 工具的 runCards 参数中指定要运行的已有卡片序号（即 order 值）
-- 系统会运行这些卡片并将结果（状态、路径输出、文本输出等）反馈给你
-- 收到运行结果后，如果还有后续卡片需要运行，必须在下一轮调用 submit_plan 继续运行它们
-- 绝对不要在还有后续步骤需要执行时就设置 done 为 true
-- 只有当所有需要的操作真正全部完成后，才设置 done 为 true
-- **重要规则**：当全部任务完成准备设置 done 为 true 时，如果这是一项查询、收集信息或测试的任务（如查询进程列表、读取文件内容等），你**必须**在调用工具的同时，用自然语言向用户详细总结并报告你获得的结果！绝对不要只默默调用 submit_plan 结束，用户需要看到你的回复！
-- 每次 runCards 只放一个批次，不要把所有步骤放在一次中
-- 可以混合使用 modifyCards 和 runCards（如先修改卡片属性再运行）
-- 如果需要创建新卡片后再运行，先用 submit_plan 创建，下一轮再用 runCards 运行
-- 当卡片运行失败时，必须指定 failureStrategy（retry/fallback/abort）
-- 可使用 deleteCards 删除失败卡片，再用 plan 或 fallbackPlan 创建替代方案
-
-视觉点击策略（重要）：
-当用户要求点击屏幕上的某个视觉元素（按钮、图标等）时，你必须使用以下流程：
-1. 第一步：创建或运行 WinScreenshot 截图卡片（processName 留空截全屏），通过 runCards 执行
-2. 第二步：在收到截图结果后，你能直接看到截图图像，结合图像分辨率估算目标元素的坐标
-3. 第三步：创建 WinClick 卡片，在 startX/startY 中设置估算的坐标，设置 clickType
-不要使用 WinUiAutomation 来点击桌面图标或视觉元素，它对桌面图标和很多应用不可靠。
-
-屏幕截图（按需请求）：
-- 系统不会自动截屏，你需要调用 request_screenshot 工具来请求截取屏幕
-- 可在 target 参数中指定截取特定窗口的进程名（如 ""msedge""、""notepad""），留空则截全屏
-- 操作浏览器网页时建议指定浏览器进程名以获得更精确的窗口内容
-- 只在需要查看屏幕内容时才调用 request_screenshot（如需要估算坐标、分析界面状态时）
-- 不需要视觉信息时不要请求截图（如执行 PowerShell 查询、打开应用等）
-
-PowerShell 后台能力（当前已启用）：
-当任务卡片的功能无法满足需求时，你可以调用 execute_shell 工具执行 PowerShell 命令：
-- 在 commands 数组中指定要执行的命令、用途说明和超时时间（秒）
-- 系统会执行命令并将输出结果反馈给你
-- 只读查询类命令（如 Get-Process、Get-ChildItem、Test-Path）会自动执行
-- 写操作命令需要用户批准
-- 危险命令（如递归删除等）会被拦截，拦截结果会反馈给你，请改用其他方式
-- 优先使用任务卡片，只有卡片无法实现时才用 PowerShell
-- 常见用途：查询系统信息、检查环境、文件操作、安装依赖、运行脚本、打开应用等" : @"
-
-设计模式（当前已启用）：
-你处于设计模式，主要职责是帮用户设计和优化流程蓝图：
-- 优先通过 submit_plan 工具的 plan 参数生成卡片蓝图，而不是直接运行
-- 不要主动使用 runCards，除非用户明确要求执行/运行";
-
-            flowContextSection += autonomousSection;
-
-            var systemPrompt = $@"你是 TaskFlow 自动化流程设计助手。你需要根据用户的需求，使用下列可用的任务卡片来设计一个自动化流程。
-
-{detailedCards}
-
-请用自然语言回复用户的问题和需求。当你需要执行具体操作时，**必须直接调用**提供的工具（通过 tool_calls / function_call），而不是用自然语言说「我需要先查看…」「请让我读取…」等表达意图的文字：
-- 需要查看某个流程的详细卡片结构时，**直接调用** analyze_flow 工具，不要用文字描述意图
-- 需要创建/修改/删除卡片或变量、管理流程等操作时，**直接调用** submit_plan 工具
-- 纯对话回复（如回答问题、解释方案）不需要调用工具，直接用自然语言回答
-- 重要：任何需要操作的场景都必须通过工具调用执行，严禁仅用文字描述意图而不调用工具
-
-submit_plan 工具的 plan 参数中每个卡片步骤格式：
-{{ ""step"": 1, ""taskType"": ""卡片类型枚举名"", ""name"": ""步骤名称"", ""description"": ""为什么需要这一步"", ""properties"": {{ ""属性名"": ""值"" }}, ""sourceStep"": null, ""templateSourceStep"": null }}
-
-变量系统：
-- variables 数组用于声明流程需要的变量，type 可选值：Int、String、Bool、Double
-- 当流程需要计数器、状态标记、循环条件等场景时，应声明变量
-- 在卡片属性中可使用 @变量名 引用变量，如 @retryCount
-- 使用 ExpressionEval 卡片可以对变量赋值，格式：@变量名 = 表达式
-
-输出引用语法（在 properties 中使用）：
-引用格式为 #N 卡片名.输出属性（N 是步骤编号），例如：
-- #3 查找 MAA 程序.查找路径 — 引用第 3 步的查找路径输出
-- #1 Win截图.X — 引用第 1 步的 X 坐标输出
-可用的输出属性有：
-  输出文本（或 文本）、X、Y、执行结果、循环索引、匹配率、
-  转换结果、当前时间、匹配数量、解析结果、查找路径、
-  匹配索引、匹配值、保存文件路径、已翻译文件路径、数组元素数量
-- 在 properties 中直接使用该引用格式（不需要花括号包裹）
-- 支持在条件表达式中使用，如 #3 颜色识别.匹配率>0.5
-
-控制流支持（IfElseBlock 和 ForLoopBlock）：
-- 当需要条件分支时，使用 taskType=""IfElseBlock""，并在 ifBody 和 elseBody（可选）中嵌套子步骤：
-  {{ ""step"": 2, ""taskType"": ""IfElseBlock"", ""name"": ""判断匹配结果"", ""properties"": {{ ""conditionExpression"": ""#1 模板匹配.匹配结果==True"" }}, ""ifBody"": [ ... ], ""elseBody"": [ ... ] }}
-- 当需要循环时，使用 taskType=""ForLoopBlock""，并在 loopBody 中嵌套子步骤：
-  {{ ""step"": 5, ""taskType"": ""ForLoopBlock"", ""name"": ""重复检测"", ""properties"": {{ ""loopCount"": ""5"" }}, ""loopBody"": [ ... ] }}
-- 嵌套体内的步骤格式与顶层步骤完全一致，可以多层嵌套。
-{flowContextSection}
-重要规则：
-1. taskType 的值必须是上面列出的 TaskType 名称之一，不能自创。
-2. sourceStep 用于建立步骤间的数据传递关系：
-   - 当某步骤需要使用前面步骤输出的图像时，必须设置 sourceStep 为输出图像的步骤编号。
-   - 以下图像处理类卡片必须通过 sourceStep 引用图像来源（如 WinScreenshot 步骤）才能工作：
-      ImgOcr、ImgTemplateMatch、ImgCrop、ImgColorDetect、ImgColorSegment、ImgPreprocess、ImgBlobAnalysis、ImgResize、LlmVision
-   - templateSourceStep 仅用于 ImgTemplateMatch，指定模板图来源步骤（如 ImgCrop 裁剪出的区域）。
-   - ImgCrop 支持通过 properties 设置裁剪区域：roiX、roiY、roiWidth、roiHeight。
-3. properties 中只填写你能确定的值，不确定的属性不要填写。
-4. 在 properties 中引用其他步骤输出时，使用 #N 步骤名.输出属性 格式（如 #3 查找MAA.查找路径），不要使用花括号。
-5. 当用户要求删除变量时，通过 submit_plan 的 deleteVariables 参数。
-6. 当用户要求修改变量值时，通过 submit_plan 的 modifyVariables 参数。
-7. 当用户要求修改已有卡片属性时，通过 submit_plan 的 modifyCards 参数，格式：[{{ ""order"": 3, ""properties"": {{ ""Delay"": ""2000"" }} }}]。
-8. 当用户要求删除已有卡片时，通过 submit_plan 的 deleteCards 参数。
-9. 当用户要求在已有的 IfElse 分支或 ForLoop 循环中插入卡片时，通过 submit_plan 的 insertCards 参数，不要删除重建整个 block。targetBlockOrder 是 block 起始卡片的序号，branch 可选 if/else/loop。
-10. 使用 runCards 指定要运行的卡片序号。每轮只运行一批，运行后分析结果再决定下一批。所有卡片都运行完毕后才设置 done: true。
-11. 任务步骤名称和变量名称中严禁使用任何标点符号（如 . 等特殊字符），只能包含中文、字母和数字，以防止引用解析失败。
-12. 流程管理：用户可拥有多个流程（Tab），每个流程包含独立的卡片集合。通过 submit_plan 的 createFlows/deleteFlows/switchFlow 参数管理。
-13. 点击界面元素时，结合图像分辨率信息直接估算坐标，在 WinClick 的 startX/startY 中设置。无需创建额外的裁剪或模板匹配步骤。
-14. 截图获取：系统不会自动截屏。在自主模式下，需要查看屏幕内容时调用 request_screenshot 工具（target 填进程名如 msedge 截特定窗口，留空则截全屏）。设计模式下用户可能主动附带截图。
-15. PowerShell：仅在自主模式下可用，通过 execute_shell 工具执行。优先使用任务卡片完成工作，只有卡片无法实现时才使用。每次最多 3 条命令。";
+            // 从模板文件加载阶段2系统 Prompt，填充占位符
+            var baseTemplate = LoadPromptTemplate("SystemBase.md");
+            var systemPrompt = RenderTemplate(baseTemplate, new Dictionary<string, string>
+            {
+                ["卡片描述"] = detailedCards,
+                ["流程上下文"] = flowContextSection,
+                ["模式指令"] = modeTemplate
+            });
 
             // 构建消息数组（含历史对话）
             var messages = new List<object> { new { role = "system", content = systemPrompt } };

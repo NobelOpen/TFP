@@ -65,6 +65,13 @@
     </Content>
   </ItemGroup>
 
+  <!-- AI Prompt 模板文件 -->
+  <ItemGroup>
+    <Content Include="Resources\Prompts\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <!-- 本地 API 代理脚本 -->
   <ItemGroup>
     <Content Include="local_proxy.mjs">
