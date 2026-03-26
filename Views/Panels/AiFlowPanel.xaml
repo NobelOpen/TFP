@@ -6,92 +6,13 @@
              mc:Ignorable="d"
              xmlns:conv="clr-namespace:TaskFlow.Converters"
              xmlns:res="clr-namespace:TaskFlow.Resources"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
              d:DesignHeight="500" d:DesignWidth="320"
              Background="Transparent">
 
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
         <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisConverter"/>
-        
-        <!-- 用户消息气泡样式 -->
-        <DataTemplate x:Key="UserMessageTemplate">
-            <Border Background="{DynamicResource SurfaceHoverBrush}" CornerRadius="16" Padding="14,10" Margin="12,8,12,8"
-                    HorizontalAlignment="Right" MaxWidth="600">
-                <TextBox Text="{Binding Content, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14.5"
-                         FontFamily="Lora, Georgia, SimSun, Segoe UI" IsReadOnly="True"
-                         Background="Transparent" BorderThickness="0" Padding="0" Cursor="IBeam"/>
-            </Border>
-        </DataTemplate>
-
-        <!-- AI 消息气泡样式 -->
-        <DataTemplate x:Key="AssistantMessageTemplate">
-            <StackPanel Margin="0,0,0,0">
-                <!-- 分割线（用于区分多个 AI 回复） -->
-                <Border Height="1" Background="{DynamicResource BorderDarkBrush}" Margin="12,4,12,2" Opacity="0.6"/>
-                <!-- 思考过程（可折叠，仅当 ThinkingContent 非空时显示） -->
-                <Expander Margin="12,4,12,0"
-                          Visibility="{Binding ThinkingContent, Converter={StaticResource StringNotEmptyToVisConverter}}"
-                          IsExpanded="False" BorderThickness="0" Background="Transparent">
-                    <Expander.Header>
-                        <TextBlock Text="💭 思考过程" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}"
-                                   FontFamily="Lora, Georgia, SimSun, Segoe UI" FontStyle="Italic"/>
-                    </Expander.Header>
-                    <TextBox Text="{Binding ThinkingContent, Mode=OneWay}" TextWrapping="Wrap"
-                             Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12.5"
-                             FontFamily="Lora, Georgia, SimSun, Segoe UI" FontStyle="Italic"
-                             IsReadOnly="True" Background="Transparent" BorderThickness="0"
-                             Padding="0,4,0,4" Margin="0,0,0,0" Cursor="IBeam"
-                             MaxHeight="200" VerticalScrollBarVisibility="Auto"/>
-                </Expander>
-                <!-- 内容 -->
-                <TextBox Margin="12,6,12,8" HorizontalAlignment="Left" MaxWidth="700"
-                         Text="{Binding Content, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14.5"
-                         FontFamily="Lora, Georgia, SimSun, Segoe UI" IsReadOnly="True"
-                         Background="Transparent" BorderThickness="0" Padding="0" Cursor="IBeam"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- 系统消息样式（含配置气泡） -->
-        <DataTemplate x:Key="SystemMessageTemplate">
-            <StackPanel Margin="8,4">
-                <!-- 文字部分 -->
-                <TextBox Text="{Binding Content, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12.5"
-                         FontFamily="Lora, Georgia, SimSun, Segoe UI" FontStyle="Italic"
-                         HorizontalAlignment="Center" IsReadOnly="True"
-                         Background="Transparent" BorderThickness="0" Padding="0" Cursor="IBeam"/>
-                <!-- 配置提示气泡（仅当有 ReportItems 时显示） -->
-                <ItemsControl ItemsSource="{Binding ReportItems}" Margin="12,4,12,0"
-                              Visibility="{Binding ReportItems, Converter={StaticResource NullToCollapsedConverter}, FallbackValue=Collapsed}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Click="ReportItem_Click" Cursor="Hand"
-                                    HorizontalContentAlignment="Left"
-                                    Background="Transparent" BorderThickness="0"
-                                    Padding="0" Margin="0,2">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="Bd" Background="{DynamicResource SurfaceHoverBrush}" CornerRadius="8"
-                                                BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1" Padding="10,6">
-                                            <ContentPresenter HorizontalAlignment="Left"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BorderLightBrush}"/>
-                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderDarkBrush}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
-                                <TextBlock FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"
-                                           FontFamily="Lora, Georgia, SimSun" Margin="0">
-                                    <Run Text="{Binding CardName, Mode=OneWay}"/><Run Text=" → " Foreground="{DynamicResource TextTertiaryBrush}"/><Run Text="{Binding Hint, Mode=OneWay}"/>
-                                </TextBlock>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </DataTemplate>
 
         <!-- 圆角按钮模板 -->
         <Style x:Key="ToolbarButton" TargetType="Button">
@@ -303,103 +224,102 @@
                     <Grid Grid.Row="0">
                         <!-- 底部背景提示语 (仅在无消息时居中显示) -->
 
-                        <!-- 历史对话内联面板（覆盖在消息区上方） -->
-                        <Border x:Name="HistoryPanel" Background="{DynamicResource SurfaceBrush}" Panel.ZIndex="10" CornerRadius="6,6,0,0"
-                                Visibility="{Binding IsHistoryOpen, Converter={StaticResource BoolToVisConverter}}">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <TextBlock Text="{x:Static res:Strings.AiPanel_HistoryTitle}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
-                                           Margin="12,10,12,6" FontFamily="Poppins, Arial, SimSun"/>
-                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl x:Name="HistoryList" ItemsSource="{Binding Sessions}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Margin="6,2" Padding="10,8" CornerRadius="6" Cursor="Hand"
-                                                        Background="{DynamicResource AppBackgroundBrush}" MouseLeftButtonDown="HistoryItem_Click">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Title}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"
-                                                                       TextTrimming="CharacterEllipsis" FontFamily="Lora, Georgia, SimSun"/>
-                                                            <TextBlock Text="{Binding UpdatedAt, StringFormat='{}{0:MM/dd HH:mm}'}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
-                                                        </StackPanel>
-                                                        <Button Grid.Column="1" Click="DeleteHistory_Click" ToolTip="{x:Static res:Strings.AiPanel_DeleteTooltip}" Cursor="Hand"
-                                                                Width="24" Height="24" BorderThickness="0" VerticalAlignment="Center">
-                                                            <Button.Template>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="4">
-                                                                        <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}"
-                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Button.Template>
-                                                        </Button>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
-                                <!-- 无历史时的空状态提示 -->
-                                <TextBlock Grid.Row="1" Text="{x:Static res:Strings.AiPanel_NoHistory}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           Visibility="{Binding Sessions.Count, Converter={StaticResource ZeroToVisibleConverter}, FallbackValue=Visible}"/>
-                            </Grid>
-                        </Border>
-                        <!-- 底部背景提示语 (仅在无消息时居中显示) -->
-                        <TextBlock Text="{x:Static res:Strings.Main_OrchidDisclaimer}"
-                                   Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   TextWrapping="Wrap" TextAlignment="Center"
-                                   FontFamily="Lora, Georgia, SimSun, Segoe UI"
-                                   Visibility="{Binding Messages.Count, Converter={StaticResource ZeroToVisibleConverter}, FallbackValue=Visible}"/>
+                        <!-- 历史对话内联面板（由于 WebView2 是 HwndHost，必须使用 Popup 突破空域限制置顶显示） -->
+                        <Popup IsOpen="{Binding IsHistoryOpen, Mode=TwoWay}" StaysOpen="False" 
+                               PlacementTarget="{Binding ElementName=HistoryButton}" Placement="Bottom" 
+                               HorizontalOffset="-220" VerticalOffset="8" AllowsTransparency="True" PopupAnimation="Fade">
+                            <Border x:Name="HistoryPanel" Width="260" MaxHeight="450" Background="{DynamicResource SurfaceBrush}" CornerRadius="8"
+                                    BorderThickness="1" BorderBrush="{DynamicResource BorderLightBrush}">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="{DynamicResource CardShadowColor}" BlurRadius="16" Opacity="0.15" ShadowDepth="4" Direction="270"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="{x:Static res:Strings.AiPanel_HistoryTitle}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
+                                               Margin="12,10,12,6" FontFamily="Poppins, Arial, SimSun"/>
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,4">
+                                        <ItemsControl x:Name="HistoryList" ItemsSource="{Binding Sessions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="6,2" Padding="10,8" CornerRadius="6"
+                                                            Background="{DynamicResource AppBackgroundBrush}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            
+                                                            <Border Grid.Column="0" Background="Transparent" Cursor="Hand" PreviewMouseLeftButtonDown="HistoryItem_Click">
+                                                                <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                                                    <TextBlock Text="{Binding Title}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                               TextTrimming="CharacterEllipsis" FontFamily="Lora, Georgia, SimSun"/>
+                                                                    <TextBlock Text="{Binding UpdatedAt, StringFormat='{}{0:MM/dd HH:mm}'}" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+                                                                </StackPanel>
+                                                            </Border>
 
-                        <!-- 消息滚动区 -->
-                        <ScrollViewer x:Name="MessageScrollViewer"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel>
-                            <ItemsControl x:Name="MessageList" Margin="0,4">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <ContentControl Content="{Binding}">
-                            <ContentControl.Style>
-                                <Style TargetType="ContentControl">
-                                    <Setter Property="ContentTemplate" Value="{StaticResource AssistantMessageTemplate}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Role}" Value="User">
-                                            <Setter Property="ContentTemplate" Value="{StaticResource UserMessageTemplate}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding Role}" Value="System">
-                                            <Setter Property="ContentTemplate" Value="{StaticResource SystemMessageTemplate}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ContentControl.Style>
-                        </ContentControl>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                                                            <Button Grid.Column="1" Click="DeleteHistory_Click" ToolTip="{x:Static res:Strings.AiPanel_DeleteTooltip}" Cursor="Hand"
+                                                                    Width="24" Height="24" BorderThickness="0" VerticalAlignment="Center">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4">
+                                                                            <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}"
+                                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                            </Button>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                    <!-- 无历史时的空状态提示 -->
+                                    <TextBlock Grid.Row="1" Text="{x:Static res:Strings.AiPanel_NoHistory}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding Sessions.Count, Converter={StaticResource ZeroToVisibleConverter}, FallbackValue=Visible}"/>
+                                </Grid>
+                            </Border>
+                        </Popup>
+                        <!-- WebView2 加载提示 (极简呼吸灯) -->
+                        <StackPanel x:Name="WebViewLoading" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="✦" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,12"
+                                       Foreground="{DynamicResource TextTertiaryBrush}">
+                                <TextBlock.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                 From="0.3" To="1" Duration="0:0:1.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <SineEase EasingMode="EaseInOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </TextBlock.Triggers>
+                            </TextBlock>
+                        </StackPanel>
 
-                        <!-- 加载状态提示（紧贴最后一条消息下方） -->
+                        <!-- WebView2 聊天消息区 -->
+                        <wv2:WebView2 x:Name="ChatWebView" Visibility="Collapsed"/>
+
+                        <!-- 加载状态提示 -->
                         <TextBlock Text="{Binding LoadingStatusText}"
                                    Foreground="{DynamicResource TextTertiaryBrush}" FontSize="13"
                                    FontFamily="Poppins, Arial, SimSun, Segoe UI" FontStyle="Italic"
                                    HorizontalAlignment="Left"
                                    Margin="16,4,0,6"
                                    Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisConverter}}"/>
-                            </StackPanel>
-        </ScrollViewer>
                     </Grid>
 
         <!-- 确认/重新生成 按钮区 -->
@@ -443,11 +363,105 @@
             </Button>
         </StackPanel>
 
-        <!-- 重试按钮（生成失败时显示） -->
-        <StackPanel Grid.Row="1" x:Name="RetryButtonPanel" Orientation="Horizontal"
+        <!-- 重试卡片（生成失败时显示） -->
+        <Border Grid.Row="1" x:Name="RetryCard" Margin="12,8" Padding="16,14" CornerRadius="8"
+                Background="{DynamicResource SurfaceBrush}" 
+                BorderThickness="1" BorderBrush="{DynamicResource BorderDarkBrush}"
+                Visibility="{Binding ShowRetryButton, Converter={StaticResource BoolToVisConverter}}">
+            <Border.Effect>
+                <DropShadowEffect Color="{DynamicResource CardShadowColor}" BlurRadius="8" Opacity="0.1" ShadowDepth="2" Direction="270"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- 标题行 -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="✕" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Arial" FontSize="12" 
+                               Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="{x:Static res:Strings.AiPanel_ErrorTerminated}" FontSize="14" FontWeight="SemiBold" 
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                
+                <!-- 描述行 -->
+                <TextBlock Grid.Row="1" Text="{x:Static res:Strings.AiPanel_ErrorTerminatedDesc}" FontSize="13" 
+                           Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16" LineHeight="18"/>
+                
+                <!-- 操作区 -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Button Grid.Column="0" Content="Dismiss" Click="DismissRetry_Click"
+                            Padding="12,6" Cursor="Hand" FontSize="12" FontWeight="Medium"
+                            Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}" 
+                            BorderThickness="1" BorderBrush="{DynamicResource BorderDarkBrush}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                                        BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    
+                    <Button Grid.Column="2" Content="{x:Static res:Strings.AiPanel_CopyDebug}" Click="CopyDebug_Click"
+                            Padding="12,6" Margin="0,0,8,0" Cursor="Hand" FontSize="12" FontWeight="Medium"
+                            Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}" 
+                            BorderThickness="1" BorderBrush="{DynamicResource BorderDarkBrush}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                                        BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    
+                    <Button Grid.Column="3" Content="Retry" Click="RetryButton_Click"
+                            Padding="16,6" Cursor="Hand" FontSize="12" FontWeight="SemiBold"
+                            Background="{DynamicResource PrimaryButtonBgBrush}" Foreground="{DynamicResource PrimaryButtonTextBrush}" BorderThickness="0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- 继续按钮（回复被截断时显示） -->
+        <StackPanel Grid.Row="1" x:Name="ContinueButtonPanel" Orientation="Horizontal"
                     HorizontalAlignment="Center" Margin="8,4"
-                    Visibility="{Binding ShowRetryButton, Converter={StaticResource BoolToVisConverter}}">
-            <Button x:Name="RetryButton" Content="🔄 重试" Click="RetryButton_Click"
+                    Visibility="{Binding ShowContinueButton, Converter={StaticResource BoolToVisConverter}}">
+            <Button x:Name="ContinueButton" Content="请继续" Click="ContinueButton_Click"
                     Padding="16,6" Margin="4,0" Cursor="Hand" FontSize="13"
                     Background="{DynamicResource PrimaryButtonBgBrush}" Foreground="{DynamicResource PrimaryButtonTextBrush}" BorderThickness="0">
                 <Button.Template>
@@ -459,6 +473,24 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Button x:Name="DismissContinueButton" Content="取消" Click="DismissContinueButton_Click"
+                    Padding="16,6" Margin="4,0" Cursor="Hand" FontSize="13"
+                    Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="1" BorderBrush="{DynamicResource BorderDarkBrush}">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}"
+                                BorderBrush="{DynamicResource BorderDarkBrush}" BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -561,8 +593,14 @@
             </ScrollViewer>
         </Border>
 
-        <!-- 整合输入区 -->
-        <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" CornerRadius="16" Margin="16,8,16,8" Padding="12,10,12,10" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+        <!-- 整合输入区（WebView2 就绪前隐藏） -->
+        <!-- 底部输入区域，带有入场上浮动画属性预设 -->
+        <Border Grid.Row="3" x:Name="InputAreaBorder" Visibility="Collapsed" Opacity="0"
+                Background="{DynamicResource SurfaceBrush}" CornerRadius="16" Margin="16,8,16,8" Padding="12,10,12,10"
+                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="InputAreaTranslate" Y="20"/>
+            </Border.RenderTransform>
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/> <!-- 附件预览 -->

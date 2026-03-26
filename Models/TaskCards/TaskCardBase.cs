@@ -400,6 +400,11 @@ namespace TaskFlow.Models.TaskCards
         public virtual bool OutputsStringArray => false;
 
         /// <summary>
+        /// 是否输出任意形式的数组
+        /// </summary>
+        public virtual bool OutputsArray => OutputsStringArray;
+
+        /// <summary>
         /// AI 方案属性填充（子类覆写以处理自身特有属性）。
         /// 返回未填写的必要属性列表，供 UI 提示用户手动配置。
         /// </summary>

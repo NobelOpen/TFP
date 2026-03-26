@@ -116,7 +116,7 @@ namespace TaskFlow.ViewModels
                     // 已标记完成，退出循环
                     if (currentPlan.Done)
                     {
-                        AddMessage(AiChatRole.System, $"✅ AI 自主任务完成: {currentPlan.Summary}");
+                        AiFlowLogger.Info($"AI 自主任务完成: {currentPlan.Summary}");
                         break;
                     }
 
@@ -382,6 +382,11 @@ namespace TaskFlow.ViewModels
                     int tokensIn, tokensOut;
                     int maxRetries = 3;
                     int retryCount = 0;
+
+                    // 为自主循环的决策轮也提供流式回调，让 AI 的总结文本能实时显示
+                    var loopStreamBuilder = new System.Text.StringBuilder();
+                    StreamingStarted?.Invoke();
+
                     while (true)
                     {
                         try
@@ -390,6 +395,11 @@ namespace TaskFlow.ViewModels
                                 autonomousPrompt.ToString(),
                                 categories, SelectedModelId, _cts.Token, flowContext, history, AiAssistantMode.Autonomous,
                                 autoImageList,
+                                onDelta: delta =>
+                                {
+                                    loopStreamBuilder.Append(delta);
+                                    StreamingDelta?.Invoke(delta);
+                                },
                                 getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                                 captureScreenshot: async target => await CaptureScreenForAiAsync(
                                     string.IsNullOrWhiteSpace(target) ? "windows" : target));
@@ -412,6 +422,26 @@ namespace TaskFlow.ViewModels
                             AddMessage(AiChatRole.System, $"⚠️ API 调用失败，{waitSec} 秒后自动重试 ({retryCount}/{maxRetries})...");
                             await Task.Delay(TimeSpan.FromSeconds(waitSec), _cts.Token);
                         }
+                    }
+
+                    // 结束流式输出
+                    StreamingEnded?.Invoke();
+                    // 如果有流式文本，持久化为 Assistant 消息
+                    var loopStreamedText = loopStreamBuilder.ToString();
+                    if (!string.IsNullOrWhiteSpace(loopStreamedText))
+                    {
+                        var streamMsg = new AiChatMessage { Role = AiChatRole.Assistant, Content = loopStreamedText, IsStreamedToWebView = true };
+                        Application.Current.Dispatcher.Invoke(() => Messages.Add(streamMsg));
+                    }
+                    else if (nextPlan.Done)
+                    {
+                        // 兜底：如果 AI 宣告自主任务完成，但完全没有输出文本（高冷），强制塞一条回复，避免对话界面死寂
+                        var fallbackMsg = new AiChatMessage { Role = AiChatRole.Assistant, Content = string.IsNullOrWhiteSpace(shellResultsText) ? "任务已执行完毕。" : "我已经执行了命令，收集到的结果已输出在右侧全局日志面板中，请查看。", IsStreamedToWebView = false };
+                        Application.Current.Dispatcher.Invoke(() => 
+                        {
+                            Messages.Add(fallbackMsg);
+                            MessagesUpdated?.Invoke();
+                        });
                     }
 
                     AiFlowLogger.Info($"AI 决策完成（Token: {tokensIn}+{tokensOut}）");
@@ -445,8 +475,8 @@ namespace TaskFlow.ViewModels
                         AddMessage(AiChatRole.Assistant, nextPlan.Summary);
                     }
 
-                    // 处理失败回退策略
-                    if (!string.IsNullOrEmpty(nextPlan.FailureStrategy))
+                    // 处理失败回退策略（仅当任务未完成时才生效；done=true 时忽略 failureStrategy）
+                    if (!nextPlan.Done && !string.IsNullOrEmpty(nextPlan.FailureStrategy))
                     {
                         var strategy = nextPlan.FailureStrategy.ToLowerInvariant();
                         if (strategy == "retry")
@@ -468,7 +498,9 @@ namespace TaskFlow.ViewModels
                         }
                         else if (strategy == "abort")
                         {
-                            AddMessage(AiChatRole.System, $"⛔ AI 决定中止任务: {nextPlan.Summary}");
+                            AiFlowLogger.Warn($"AI 中止任务: {nextPlan.Summary}");
+                            AddMessage(AiChatRole.System, $"⚠️ AI 未能完成此任务，请尝试更详细地描述您的需求。");
+                            ShowRetryButton = true;
                             break;
                         }
                     }
@@ -489,6 +521,7 @@ namespace TaskFlow.ViewModels
             {
                 AiFlowLogger.Error("自主执行异常", ex);
                 AddMessage(AiChatRole.System, $"❌ AI 自主执行异常: {ex.Message}");
+                ShowRetryButton = true;
             }
             finally
             {
@@ -503,13 +536,18 @@ namespace TaskFlow.ViewModels
             List<Models.AiFlow.AiShellCommand> commands, CancellationToken ct)
         {
             var results = new List<(Models.AiFlow.AiShellCommand Cmd, PowerShellExecutorService.ShellResult Result)>();
+            
+            string? originalLoadingText = LoadingText;
+            LoadingText = "⚡ 正在执行 PowerShell 命令...";
 
-            foreach (var cmd in commands)
+            try
             {
-                if (ct.IsCancellationRequested) break;
+                foreach (var cmd in commands)
+                {
+                    if (ct.IsCancellationRequested) break;
 
-                // 安全检查
-                var safety = _psService.CheckCommandSafety(cmd);
+                    // 安全检查
+                    var safety = _psService.CheckCommandSafety(cmd);
 
                 if (!string.IsNullOrEmpty(safety.BlockReason))
                 {
@@ -552,7 +590,7 @@ namespace TaskFlow.ViewModels
                 }
 
                 // 面板提示
-                AddMessage(AiChatRole.System, $"💻 执行 PowerShell: `{cmd.Command}`");
+                App.Current.Dispatcher.Invoke(() => _mainViewModel.AddLog($"[AiFlow] 开始执行 PowerShell:\n{cmd.Command}"));
 
                 // 执行命令
                 var result = await _psService.ExecuteAsync(cmd, ct);
@@ -561,21 +599,28 @@ namespace TaskFlow.ViewModels
                 // 显示结果摘要
                 if (result.Success)
                 {
-                    var outputPreview = result.Output.Length > 100
-                        ? result.Output[..100] + "..."
+                    var outputPreview = result.Output.Length > 800
+                        ? result.Output[..800] + "..."
                         : result.Output;
                     if (!string.IsNullOrWhiteSpace(outputPreview))
-                        AddMessage(AiChatRole.System, $"📋 输出: {outputPreview}");
+                        App.Current.Dispatcher.Invoke(() => _mainViewModel.AddLog($"[AiFlow] PowerShell 成功，部分输出:\n{outputPreview}"));
+                    else
+                        App.Current.Dispatcher.Invoke(() => _mainViewModel.AddLog($"[AiFlow] PowerShell 成功执行 (无输出)"));
                 }
                 else
                 {
-                    AddMessage(AiChatRole.System, $"❌ PowerShell 执行失败: {result.Error}");
+                    App.Current.Dispatcher.Invoke(() => _mainViewModel.AddLog($"[AiFlow] PowerShell 执行失败:\n{result.Error}"));
                 }
             }
 
             return results.Count > 0
                 ? PowerShellExecutorService.SerializeResults(results)
                 : "";
+            }
+            finally
+            {
+                LoadingText = originalLoadingText ?? "✦ 正在生成方案...";
+            }
         }
     }
 }

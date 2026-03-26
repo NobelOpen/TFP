@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
+using Newtonsoft.Json;
 using TaskFlow.Helpers;
 using TaskFlow.Models;
 using TaskFlow.Models.AiFlow;
@@ -28,6 +29,11 @@ namespace TaskFlow.Views.Panels
         /// </summary>
         public event Action? ClosePanelRequested;
 
+        // WebView2 是否已就绪
+        private bool _webViewReady;
+        // 缓存待发消息（WebView2 尚未就绪时）
+        private readonly System.Collections.Generic.List<string> _pendingMessages = new();
+
         public AiFlowPanel()
         {
             InitializeComponent();
@@ -41,23 +47,58 @@ namespace TaskFlow.Views.Panels
             _vm = viewModel;
             DataContext = _vm;
 
-            // 绑定消息列表
-            MessageList.ItemsSource = _vm.Messages;
-
             // 绑定报告列表
             ReportList.ItemsSource = _vm.ReportItems;
 
             // 监听方案变化，控制按钮区显示
             _vm.PropertyChanged += ViewModel_PropertyChanged;
 
-            // 监听滚动请求
-            _vm.ScrollToEndRequested += (s, e) =>
+            // WebView2 流式事件桥接
+            _vm.StreamingStarted += () => PostWebMessage(new { action = "startStreaming" });
+            _vm.StreamingDelta += text => PostWebMessage(new { action = "appendDelta", text });
+            _vm.StreamingThinking += text => PostWebMessage(new { action = "appendThinking", text });
+            _vm.StreamingEnded += () => PostWebMessage(new { action = "endStreaming" });
+            _vm.MessagesUpdated += () =>
             {
-                Dispatcher.BeginInvoke(new Action(() =>
+                var msgs = _vm.Messages.Select(m => new
                 {
-                    MessageScrollViewer.ScrollToEnd();
-                }), System.Windows.Threading.DispatcherPriority.Background);
+                    role = m.Role.ToString().ToLower(),
+                    content = m.Content ?? "",
+                    thinking = m.ThinkingContent
+                }).ToArray();
+                PostWebMessage(new { action = "clearMessages" });
+                PostWebMessage(new { action = "loadHistory", messages = msgs });
             };
+
+            // 消息集合变化时同步非流式消息（系统消息、用户消息等）到 WebView2
+            _vm.Messages.CollectionChanged += (s, e) =>
+            {
+                if (_isSwitchingSession) return;
+                
+                if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && e.NewItems != null)
+                {
+                    foreach (AiChatMessage msg in e.NewItems)
+                    {
+                        // 跳过已通过 StreamingDelta 流式渲染的消息，避免重复显示
+                        if (msg.IsStreamedToWebView) continue;
+
+                        PostWebMessage(new
+                        {
+                            action = "addMessage",
+                            role = msg.Role.ToString().ToLower(),
+                            content = msg.Content ?? "",
+                            thinking = msg.ThinkingContent
+                        });
+                    }
+                }
+                else if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                {
+                    PostWebMessage(new { action = "clearMessages" });
+                }
+            };
+
+            // 初始化 WebView2
+            InitWebView2Async();
 
             // 初始化模型列表
             RefreshModelList();
@@ -66,8 +107,163 @@ namespace TaskFlow.Views.Panels
             LlmModelManager.ModelsChanged -= OnModelsChanged;
             LlmModelManager.ModelsChanged += OnModelsChanged;
 
+            // 订阅主程序主题变化事件
+            TaskFlow.Helpers.ThemeManager.ThemeChanged -= OnAppThemeChanged;
+            TaskFlow.Helpers.ThemeManager.ThemeChanged += OnAppThemeChanged;
+
             // 从设置恢复模式选择
             RestoreModeFromSettings();
+        }
+
+        private void OnAppThemeChanged(string themeName)
+        {
+            PostWebMessage(new { action = "setTheme", theme = themeName });
+        }
+
+        /// <summary>
+        /// 初始化 WebView2 控件
+        /// </summary>
+        private async void InitWebView2Async()
+        {
+            try
+            {
+                AiFlowLogger.Info("[WebView2] 开始初始化...");
+                
+                // 指定 WebView2 数据目录（避免默认使用可执行目录导致的 UnauthorizedAccessException）
+                string userDataFolder = Path.Combine(Path.GetTempPath(), "TaskFlow_WebView2");
+                var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
+                
+                await ChatWebView.EnsureCoreWebView2Async(env);
+                AiFlowLogger.Info("[WebView2] CoreWebView2 就绪");
+
+                // 将 Assets 文件夹映射为虚拟主机，解决本地资源加载问题
+                var assetsPath = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory, "Assets");
+                AiFlowLogger.Info($"[WebView2] Assets 路径: {assetsPath}, 存在: {Directory.Exists(assetsPath)}");
+
+                ChatWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    "orchid.local", assetsPath,
+                    Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+
+                // 监听导航完成
+                ChatWebView.CoreWebView2.NavigationCompleted += (s, args) =>
+                {
+                    AiFlowLogger.Info($"[WebView2] 导航完成, 成功: {args.IsSuccess}, 状态码: {args.HttpStatusCode}");
+                };
+
+                // 拦截外部链接点击，阻止在组件内跳转，改用系统默认浏览器打开
+                ChatWebView.CoreWebView2.NavigationStarting += (s, e) =>
+                {
+                    if (e.Uri != null && e.Uri.StartsWith("http", StringComparison.OrdinalIgnoreCase) && !e.Uri.Contains("orchid.local"))
+                    {
+                        e.Cancel = true;
+                        try
+                        {
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = e.Uri,
+                                UseShellExecute = true
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Error($"[WebView2] 打开外部链接失败: {ex.Message}");
+                        }
+                    }
+                };
+
+                // 监听 JS 控制台输出（用于调试）
+                ChatWebView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+
+                // 监听 JS 回调
+                ChatWebView.CoreWebView2.WebMessageReceived += (s, e) =>
+                {
+                    try
+                    {
+                        AiFlowLogger.Info($"[WebView2] 收到 JS 消息: {e.WebMessageAsJson}");
+                        var msg = JsonConvert.DeserializeObject<dynamic>(e.WebMessageAsJson);
+                        string? type = msg?.type;
+                        if (type == "ready")
+                        {
+                            _webViewReady = true;
+                            ChatWebView.Visibility = Visibility.Visible;
+                            WebViewLoading.Visibility = Visibility.Collapsed;
+                            InputAreaBorder.Visibility = Visibility.Visible;
+                            AiFlowLogger.Info("[WebView2] 页面就绪，已播放出场动画");
+
+                            // 执行优雅出场动画
+                            var sb = new System.Windows.Media.Animation.Storyboard();
+                            
+                            // 输入框淡入与上浮
+                            var easeOut = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+                            var opacityAnim = new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(400)) { EasingFunction = easeOut };
+                            System.Windows.Media.Animation.Storyboard.SetTarget(opacityAnim, InputAreaBorder);
+                            System.Windows.Media.Animation.Storyboard.SetTargetProperty(opacityAnim, new PropertyPath("Opacity"));
+
+                            var translateAnim = new System.Windows.Media.Animation.DoubleAnimation(20, 0, TimeSpan.FromMilliseconds(400)) { EasingFunction = easeOut };
+                            System.Windows.Media.Animation.Storyboard.SetTarget(translateAnim, InputAreaBorder);
+                            System.Windows.Media.Animation.Storyboard.SetTargetProperty(translateAnim, new PropertyPath("RenderTransform.Y"));
+
+                            sb.Children.Add(opacityAnim);
+                            sb.Children.Add(translateAnim);
+                            sb.Begin();
+
+                            // 发送初始主题
+                            PostWebMessage(new { action = "setTheme", theme = TaskFlow.Helpers.ThemeManager.CurrentIsDark ? "Dark" : "Light" });
+
+                            // 发送缓存的消息
+                            foreach (var pending in _pendingMessages)
+                                ChatWebView.CoreWebView2.PostWebMessageAsJson(pending);
+                            _pendingMessages.Clear();
+
+                            // 加载已有的历史消息
+                            if (_vm != null && _vm.Messages.Count > 0)
+                            {
+                                var msgs = _vm.Messages.Select(m => new
+                                {
+                                    role = m.Role.ToString().ToLower(),
+                                    content = m.Content ?? "",
+                                    thinking = m.ThinkingContent
+                                }).ToArray();
+                                
+                                PostWebMessage(new { action = "loadHistory", messages = msgs });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AiFlowLogger.Error("[WebView2] 消息处理异常", ex);
+                    }
+                };
+
+                // 导航到虚拟主机页面
+                AiFlowLogger.Info("[WebView2] 开始导航到 orchid_chat.html");
+                ChatWebView.Source = new Uri("https://orchid.local/orchid_chat.html");
+            }
+            catch (Exception ex)
+            {
+                AiFlowLogger.Error("WebView2 初始化失败", ex);
+            }
+        }
+
+        /// <summary>
+        /// 向 WebView2 发送 JSON 消息
+        /// </summary>
+        private void PostWebMessage(object msg)
+        {
+            var json = JsonConvert.SerializeObject(msg);
+            // 必须在 UI 线程访问 ChatWebView 属性，否则在后台流式线程中会抛出 InvalidOperationException
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (_webViewReady && ChatWebView.CoreWebView2 != null)
+                {
+                    ChatWebView.CoreWebView2.PostWebMessageAsJson(json);
+                }
+                else
+                {
+                    _pendingMessages.Add(json);
+                }
+            });
         }
 
         private void OnModelsChanged(object? sender, EventArgs e)
@@ -243,8 +439,6 @@ namespace TaskFlow.Views.Panels
                     if (awaiting)
                     {
                         ApprovalText.Text = _vm?.ApprovalDescription ?? "";
-                        // 滚动到底部让用户看到批准面板
-                        MessageScrollViewer.ScrollToEnd();
                     }
                 });
             }
@@ -252,8 +446,15 @@ namespace TaskFlow.Views.Panels
             {
                 Dispatcher.Invoke(() =>
                 {
-                    RetryButtonPanel.Visibility = (_vm?.ShowRetryButton ?? false)
+                    RetryCard.Visibility = (_vm?.ShowRetryButton ?? false)
                         ? Visibility.Visible : Visibility.Collapsed;
+                });
+            }
+            else if (e.PropertyName == nameof(AiFlowViewModel.LoadingText))
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    PostWebMessage(new { action = "setLoading", text = _vm?.LoadingText });
                 });
             }
         }
@@ -265,6 +466,49 @@ namespace TaskFlow.Views.Panels
         {
             if (_vm == null) return;
             await _vm.RetryCommand.ExecuteAsync(null);
+        }
+
+        /// <summary>
+        /// 取消重试对话框
+        /// </summary>
+        private void DismissRetry_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm != null)
+            {
+                _vm.ShowRetryButton = false;
+            }
+        }
+
+        /// <summary>
+        /// 复制最后一条错误诊断信息
+        /// </summary>
+        private void CopyDebug_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm != null)
+            {
+                var sysMsg = _vm.Messages.LastOrDefault(m => m.Role == Models.AiFlow.AiChatRole.System);
+                if (sysMsg != null && !string.IsNullOrWhiteSpace(sysMsg.Content))
+                {
+                    Clipboard.SetText(sysMsg.Content);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 继续按钮点击（回复被截断时）
+        /// </summary>
+        private async void ContinueButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm == null) return;
+            await _vm.ContinueGenerationCommand.ExecuteAsync(null);
+        }
+
+        /// <summary>
+        /// 取消继续按钮点击
+        /// </summary>
+        private void DismissContinueButton_Click(object sender, RoutedEventArgs e)
+        {
+            _vm?.DismissContinueCommand.Execute(null);
         }
 
         /// <summary>
@@ -380,6 +624,8 @@ namespace TaskFlow.Views.Panels
         private void NewChat_Click(object sender, RoutedEventArgs e)
         {
             _vm?.NewChatCommand.Execute(null);
+            // 清空 WebView2 消息
+            PostWebMessage(new { action = "clearMessages" });
         }
 
         /// <summary>
@@ -398,6 +644,8 @@ namespace TaskFlow.Views.Panels
             ClosePanelRequested?.Invoke();
         }
 
+        private bool _isSwitchingSession = false;
+
         /// <summary>
         /// 点击历史对话项，切换会话
         /// </summary>
@@ -405,7 +653,22 @@ namespace TaskFlow.Views.Panels
         {
             if (sender is FrameworkElement fe && fe.DataContext is AiChatSession session && _vm != null)
             {
+                _isSwitchingSession = true;
+                
                 _vm.SwitchSessionCommand.Execute(session);
+                
+                // 序列化后单次大包传输，彻底防止前端竞态
+                var msgs = _vm.Messages.Select(m => new
+                {
+                    role = m.Role.ToString().ToLower(),
+                    content = m.Content ?? "",
+                    thinking = m.ThinkingContent
+                }).ToArray();
+
+                PostWebMessage(new { action = "clearMessages" });
+                PostWebMessage(new { action = "loadHistory", messages = msgs });
+                
+                _isSwitchingSession = false;
             }
         }
 

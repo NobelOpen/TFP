@@ -141,6 +141,7 @@
   <data name="Menu_Paste" xml:space="preserve"><value>粘贴</value></data>
   <data name="Menu_Cut" xml:space="preserve"><value>剪切</value></data>
   <data name="Menu_AddElifBranch" xml:space="preserve"><value>增加Elif分支</value></data>
+  <data name="Menu_DeleteElifBranch" xml:space="preserve"><value>删除Elif分支</value></data>
   <data name="Menu_ShowElse" xml:space="preserve"><value>显示Else</value></data>
   <data name="Menu_HideElse" xml:space="preserve"><value>隐藏Else</value></data>
   <data name="Menu_General" xml:space="preserve"><value>通用</value></data>
@@ -247,6 +248,7 @@
   <data name="Msg_SavedSuccessfully" xml:space="preserve"><value>保存成功</value></data>
   <data name="Msg_LanguageRestart" xml:space="preserve"><value>语言已更改，请重启应用使其生效。</value></data>
   <data name="Msg_ConfirmDeleteBranchGroup" xml:space="preserve"><value>确定删除整个分支组吗？</value></data>
+  <data name="Msg_ConfirmDeleteElifBranch" xml:space="preserve"><value>确定删除该Elif分支及其内容吗？</value></data>
   <data name="Msg_ConfirmDeleteTask" xml:space="preserve"><value>确定删除任务 "{0}" 吗？</value></data>
   <data name="Msg_NoImageToSave" xml:space="preserve"><value>没有可保存的图像</value></data>
   <data name="Main_OrchidDisclaimer" xml:space="preserve"><value>Orchid 可能会犯错。请核对重要信息。</value></data>
@@ -929,4 +931,15 @@
   <data name="AiPanel_HistoryTitle" xml:space="preserve"><value>历史对话</value></data>
   <data name="AiPanel_NoHistory" xml:space="preserve"><value>暂无历史对话</value></data>
   <data name="AiPanel_DeleteTooltip" xml:space="preserve"><value>删除</value></data>
+  <data name="AiPanel_ErrorTerminated" xml:space="preserve">
+    <value>AI 助手因错误而终止</value>
+  </data>
+  <data name="AiPanel_ErrorTerminatedDesc" xml:space="preserve">
+    <value>如果错误持续存在，您可以点击重试或开启新的对话。
+
+查阅网络代理与故障排除指南以获取更多帮助。</value>
+  </data>
+  <data name="AiPanel_CopyDebug" xml:space="preserve">
+    <value>复制诊断信息</value>
+  </data>
 </root>

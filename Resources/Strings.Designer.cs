@@ -159,6 +159,7 @@ namespace TaskFlow.Resources {
         public static string Menu_Paste => ResourceManager.GetString("Menu_Paste", resourceCulture) ?? "Paste";
         public static string Menu_Cut => ResourceManager.GetString("Menu_Cut", resourceCulture) ?? "Cut";
         public static string Menu_AddElifBranch => ResourceManager.GetString("Menu_AddElifBranch", resourceCulture) ?? "Add Elif Branch";
+        public static string Menu_DeleteElifBranch => ResourceManager.GetString("Menu_DeleteElifBranch", resourceCulture) ?? "Delete Elif Branch";
         public static string Menu_ShowElse => ResourceManager.GetString("Menu_ShowElse", resourceCulture) ?? "Show Else";
         public static string Menu_HideElse => ResourceManager.GetString("Menu_HideElse", resourceCulture) ?? "Hide Else";
         public static string Menu_General => ResourceManager.GetString("Menu_General", resourceCulture) ?? "General";
@@ -257,6 +258,7 @@ namespace TaskFlow.Resources {
         public static string Msg_SavedSuccessfully => ResourceManager.GetString("Msg_SavedSuccessfully", resourceCulture) ?? "Saved successfully";
         public static string Msg_LanguageRestart => ResourceManager.GetString("Msg_LanguageRestart", resourceCulture) ?? "Language changed. Please restart the application.";
         public static string Msg_ConfirmDeleteBranchGroup => ResourceManager.GetString("Msg_ConfirmDeleteBranchGroup", resourceCulture) ?? "Are you sure you want to delete the entire branch group?";
+        public static string Msg_ConfirmDeleteElifBranch => ResourceManager.GetString("Msg_ConfirmDeleteElifBranch", resourceCulture) ?? "Are you sure you want to delete this Elif branch and its contents?";
         public static string Msg_ConfirmDeleteTask => ResourceManager.GetString("Msg_ConfirmDeleteTask", resourceCulture) ?? "Are you sure you want to delete task \"{0}\"?";
         public static string Msg_NoImageToSave => ResourceManager.GetString("Msg_NoImageToSave", resourceCulture) ?? "No image to save";
         public static string Msg_ImageSaved => ResourceManager.GetString("Msg_ImageSaved", resourceCulture) ?? "Image saved: {0}";
@@ -965,7 +967,9 @@ namespace TaskFlow.Resources {
         public static string AiPanel_HistoryTitle => ResourceManager.GetString("AiPanel_HistoryTitle", resourceCulture) ?? "Chat History";
         public static string AiPanel_NoHistory => ResourceManager.GetString("AiPanel_NoHistory", resourceCulture) ?? "No chat history";
         public static string AiPanel_DeleteTooltip => ResourceManager.GetString("AiPanel_DeleteTooltip", resourceCulture) ?? "Delete";
-
+        public static string AiPanel_ErrorTerminated => ResourceManager.GetString("AiPanel_ErrorTerminated", resourceCulture) ?? "Agent terminated due to error";
+        public static string AiPanel_ErrorTerminatedDesc => ResourceManager.GetString("AiPanel_ErrorTerminatedDesc", resourceCulture) ?? "You can prompt the model to try again or start a new conversation if the error persists.\n\nSee our troubleshooting guide for more help.";
+        public static string AiPanel_CopyDebug => ResourceManager.GetString("AiPanel_CopyDebug", resourceCulture) ?? "Copy debug info";
         public static string Main_OrchidDisclaimer => ResourceManager.GetString("Main_OrchidDisclaimer", resourceCulture) ?? "Orchid can make mistakes. Please double-check responses.";
         public static string Main_NoImageHint => ResourceManager.GetString("Main_NoImageHint", resourceCulture) ?? "Awaiting visual signal...";
         public static string Main_NoLogsHint => ResourceManager.GetString("Main_NoLogsHint", resourceCulture) ?? "System ready, awaiting execution traces...";

@@ -252,5 +252,11 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>AI 思考/推理过程文本（可折叠显示）</summary>
         [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
         private string? _thinkingContent;
+
+        /// <summary>
+        /// 该消息是否已通过 StreamingDelta 事件流式渲染到 WebView2。
+        /// 若为 true，CollectionChanged 处理时应跳过 addMessage，避免重复显示。
+        /// </summary>
+        public bool IsStreamedToWebView { get; set; }
     }
 }

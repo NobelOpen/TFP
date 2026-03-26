@@ -681,6 +681,7 @@ namespace TaskFlow.Services
                     task.ErrorMessage = "引用的数组来源任务不存在";
                     return false;
                 }
+                arrayProperty = task.SourcePropertyForArray ?? string.Empty;
             }
             else if (!string.IsNullOrWhiteSpace(task.SourceExpression))
             {

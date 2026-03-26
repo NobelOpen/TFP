@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Orchid Chat</title>
+<script src="libs/marked.min.js"></script>
+<script src="libs/highlight.min.js"></script>
+<link rel="stylesheet" href="libs/highlight-dark.min.css"/>
+<style>
+:root {
+  --bg-color: #1a1714;
+  --text-primary: #f0ebe3;
+  --text-secondary: #a09890;
+  --text-tertiary: #c0b8a8;
+  --border-color: #332e26;
+  --bubble-bg: #2a251e;
+  --divider-color: #453f34;
+  --accent-color: #d97757;
+  --code-color: #d9744e;
+  --bg-secondary: #242019;
+  --bg-tertiary: #1e1b16;
+  --code-block-bg: #1a1714;
+  --code-block-border: #332e26;
+}
+
+[data-theme="Light"] {
+  --bg-color: #f6f4f0;
+  --text-primary: #1e1b16;
+  --text-secondary: #706860;
+  --text-tertiary: #453f34;
+  --border-color: #e6dfd5;
+  --bubble-bg: #ffffff;
+  --divider-color: #d4cec5;
+  --accent-color: #c05c3b;
+  --code-color: #b84a26;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #fdfaf7;
+  --code-block-bg: #1a1714;
+  --code-block-border: #332e26;
+}
+
+/* ===== 基础重置 ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg-color); color: var(--text-primary);
+  font-family: 'Lora', 'Georgia', 'SimSun', 'Segoe UI', sans-serif;
+  font-size: 14.5px; line-height: 1.65;
+  transition: background 0.3s, color 0.3s;
+}
+body {
+  display: flex; flex-direction: column;
+}
+
+/* ===== 消息容器 ===== */
+#chat-container {
+  flex: 1; overflow-y: auto; padding: 8px 0;
+  scroll-behavior: smooth;
+}
+#chat-container::-webkit-scrollbar { width: 6px; }
+#chat-container::-webkit-scrollbar-track { background: transparent; }
+#chat-container::-webkit-scrollbar-thumb { background: var(--divider-color); border-radius: 3px; }
+#chat-container::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* ===== 消息通用 ===== */
+.message { padding: 6px 14px; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== 用户消息 ===== */
+.msg-user {
+  display: flex; justify-content: flex-end; padding: 8px 12px;
+}
+.msg-user .bubble {
+  background: var(--bubble-bg); border-radius: 16px; padding: 10px 14px;
+  max-width: 600px; color: var(--text-primary); word-break: break-word;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* ===== AI 消息 ===== */
+.msg-assistant { padding: 0 12px 8px 12px; }
+.msg-assistant .divider {
+  height: 1px; background: var(--divider-color); margin: 4px 0 6px 0; opacity: 0.6;
+}
+.msg-assistant .content {
+  color: var(--text-primary); word-break: break-word;
+}
+
+/* ===== 思考过程 ===== */
+.thinking-toggle {
+  cursor: pointer; font-size: 12px; color: var(--text-secondary); font-style: italic;
+  margin: 4px 0; user-select: none; display: flex; align-items: center; gap: 4px;
+}
+.thinking-toggle:hover { color: var(--text-tertiary); }
+.thinking-toggle .arrow { transition: transform 0.2s; font-size: 10px; }
+.thinking-toggle .arrow.open { transform: rotate(90deg); }
+.thinking-content {
+  display: none; font-size: 12.5px; color: var(--text-secondary); font-style: italic;
+  max-height: 200px; overflow-y: auto; padding: 4px 0; line-height: 1.5;
+}
+.thinking-content.show { display: block; }
+
+/* ===== 系统消息 ===== */
+.msg-system {
+  text-align: left; padding: 4px 12px;
+}
+.msg-system .content {
+  font-size: 12.5px; color: var(--text-secondary); font-style: italic;
+}
+
+/* ===== Markdown 样式 ===== */
+.content h1, .content h2, .content h3 {
+  color: var(--text-primary); margin: 16px 0 8px 0; font-family: 'Poppins', 'Arial', 'SimSun', sans-serif;
+}
+.content h1 { font-size: 1.4em; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+.content h2 { font-size: 1.2em; }
+.content h3 { font-size: 1.05em; }
+.content p { margin: 6px 0; }
+.content ul, .content ol { margin: 6px 0 6px 20px; }
+.content li { margin: 2px 0; }
+.content blockquote {
+  border-left: 3px solid var(--accent-color); padding: 4px 12px; margin: 8px 0;
+  color: var(--text-tertiary); background: var(--bg-secondary);
+}
+.content a { color: var(--accent-color); text-decoration: none; }
+.content a:hover { text-decoration: underline; }
+.content strong { color: var(--text-primary); }
+.content em { color: var(--text-tertiary); }
+.content hr { border: none; border-top: 1px solid var(--border-color); margin: 12px 0; }
+
+/* ===== 代码块 ===== */
+.content code {
+  background: var(--bg-secondary); color: var(--code-color); padding: 2px 5px;
+  border-radius: 4px; font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.9em;
+  border: 1px solid var(--border-color);
+}
+.content pre {
+  background: var(--code-block-bg); border: 1px solid var(--code-block-border); border-radius: 8px;
+  padding: 12px; margin: 8px 0; overflow-x: auto; position: relative;
+}
+.content pre code {
+  background: none; color: #f0ebe3; padding: 0; font-size: 13px;
+  line-height: 1.5; border: none;
+}
+
+/* 代码块复制按钮 */
+.code-copy-btn {
+  position: absolute; top: 6px; right: 6px;
+  background: #2a251e; border: 1px solid #453f34; border-radius: 4px;
+  color: #a09890; font-size: 11px; padding: 2px 8px; cursor: pointer;
+  opacity: 0; transition: opacity 0.2s;
+}
+.content pre:hover .code-copy-btn { opacity: 1; }
+.code-copy-btn:hover { background: #332e26; color: #f0ebe3; }
+
+/* ===== 表格 ===== */
+.content table {
+  border-collapse: collapse; margin: 8px 0; width: 100%;
+}
+.content th, .content td {
+  border: 1px solid var(--border-color); padding: 6px 10px; text-align: left;
+}
+.content th { background: var(--bg-secondary); color: var(--code-color); font-weight: 600; }
+.content tr:nth-child(even) { background: var(--bg-tertiary); }
+
+/* ===== 流式光标 ===== */
+.streaming-cursor::after {
+  content: '▋'; animation: blink 0.8s infinite; color: var(--accent-color);
+}
+@keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+/* ===== 加载状态 ===== */
+#loading-indicator {
+  display: none; padding: 6px 16px 12px 16px; color: var(--text-secondary);
+  font-size: 13px; font-style: italic; text-align: left;
+  border-top: 1px solid var(--border-color); background: var(--bg-color);
+  flex-shrink: 0;
+}
+#loading-indicator.show { display: block; }
+#empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; opacity: 1; transition: opacity 0.3s ease;
+}
+#empty-state.hidden { opacity: 0; }
+#empty-state img { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.8; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+#empty-state .disclaimer {
+  color: var(--text-secondary); font-size: 13px; font-family: Lora, Georgia, SimSun, "Segoe UI";
+  text-align: center; max-width: 80%; line-height: 1.6;
+}
+</style>
+</head>
+<body>
+<div id="chat-container"></div>
+<div id="empty-state">
+  <img src="https://orchid.local/orchid_logo.png" alt="Orchid Logo" onerror="this.style.display='none'" />
+  <div class="disclaimer">Orchid 可能会犯错。请核对重要信息。</div>
+</div>
+<div id="loading-indicator"></div>
+
+<script>
+// ===== 全局状态 =====
+const container = document.getElementById('chat-container');
+const loadingEl = document.getElementById('loading-indicator');
+let streamingEl = null;        // 当前流式消息内容元素
+let streamingThinkingEl = null; // 当前流式思考元素
+let streamingRawText = '';      // 流式原始文本累积
+let streamingRawThinking = '';  // 思考原始文本累积
+let autoScroll = true;
+
+// 初始化库
+try {
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      highlight: function(code, lang) {
+        try {
+          if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+          }
+          if (typeof hljs !== 'undefined') {
+            return hljs.highlightAuto(code).value;
+          }
+        } catch (e) {
+          console.error("Highlight error:", e);
+        }
+        return code;
+      }
+    });
+  } else {
+    console.error("Marked.js not loaded");
+  }
+} catch (e) {
+  console.error("Init error:", e);
+}
+
+// 通知 C# 页面已就绪 (确保尽早发出)
+window.addEventListener('DOMContentLoaded', () => {
+    try {
+        window.chrome.webview.postMessage({ type: 'ready' });
+    } catch(e) {
+        console.error("Failed to post ready message", e);
+    }
+});
+
+// 自动滚动检测
+container.addEventListener('scroll', () => {
+  const threshold = 60;
+  autoScroll = (container.scrollHeight - container.scrollTop - container.clientHeight) < threshold;
+});
+
+function scrollToBottom() {
+  if (autoScroll) {
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
+  }
+}
+
+// ===== 渲染 Markdown 并添加复制按钮 =====
+function renderMarkdown(text) {
+  if (typeof marked === 'undefined') {
+      return escapeHtml(text || '');
+  }
+  try {
+      const html = marked.parse(text || '');
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      // 为每个 <pre> 添加复制按钮
+      temp.querySelectorAll('pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'code-copy-btn';
+        btn.textContent = '复制';
+        btn.onclick = () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            setTimeout(() => btn.textContent = '复制', 1500);
+          });
+        };
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+      return temp.innerHTML;
+  } catch(e) {
+      console.error("Markdown render error", e);
+      return escapeHtml(text || '');
+  }
+}
+
+// ===== 创建思考区域 =====
+function createThinkingSection(thinkingText) {
+  const wrap = document.createElement('div');
+  const toggle = document.createElement('div');
+  toggle.className = 'thinking-toggle';
+  toggle.innerHTML = '<span class="arrow">▶</span> 💭 思考过程';
+  const content = document.createElement('div');
+  content.className = 'thinking-content';
+  content.textContent = thinkingText;
+  toggle.onclick = () => {
+    content.classList.toggle('show');
+    toggle.querySelector('.arrow').classList.toggle('open');
+  };
+  wrap.appendChild(toggle);
+  wrap.appendChild(content);
+  return wrap;
+}
+
+// ===== 添加完整消息 =====
+function addMessage(role, content, thinking) {
+  const msg = document.createElement('div');
+  msg.className = 'message msg-' + role;
+
+  if (role === 'user') {
+    msg.innerHTML = '<div class="bubble">' + escapeHtml(content) + '</div>';
+  } else if (role === 'assistant') {
+    let html = '<div class="divider"></div>';
+    msg.innerHTML = html;
+    if (thinking) {
+      msg.appendChild(createThinkingSection(thinking));
+    }
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'content';
+    contentDiv.innerHTML = renderMarkdown(content);
+    msg.appendChild(contentDiv);
+  } else {
+    msg.innerHTML = '<div class="content">' + escapeHtml(content) + '</div>';
+  }
+
+  container.appendChild(msg);
+  updateEmptyState();
+  scrollToBottom();
+}
+
+// ===== 流式消息 =====
+function startStreaming() {
+  // 如果之前存在未正常结束的流（如发生严重异常），强制结束它以防出现多个闪烁光标
+  if (streamingEl) {
+    endStreaming();
+  }
+
+  // 兜底清理其他可能的游离光标
+  document.querySelectorAll('.streaming-cursor').forEach(el => {
+    el.classList.remove('streaming-cursor');
+    const parent = el.closest('.message');
+    if (parent && !parent.textContent.trim()) parent.remove();
+  });
+
+  streamingRawText = '';
+  streamingRawThinking = '';
+
+  const msg = document.createElement('div');
+  msg.className = 'message msg-assistant';
+  msg.id = 'streaming-msg';
+  msg.innerHTML = '<div class="divider"></div>';
+
+  // 思考区（初始隐藏，收到 thinking 时才显示）
+  const thinkWrap = document.createElement('div');
+  thinkWrap.id = 'streaming-think-wrap';
+  thinkWrap.style.display = 'none';
+  const toggle = document.createElement('div');
+  toggle.className = 'thinking-toggle';
+  toggle.innerHTML = '<span class="arrow open">▶</span> 💭 思考中...';
+  const thinkContent = document.createElement('div');
+  thinkContent.className = 'thinking-content show';
+  thinkContent.id = 'streaming-thinking';
+  toggle.onclick = () => {
+    thinkContent.classList.toggle('show');
+    toggle.querySelector('.arrow').classList.toggle('open');
+  };
+  thinkWrap.appendChild(toggle);
+  thinkWrap.appendChild(thinkContent);
+  msg.appendChild(thinkWrap);
+
+  // 正文内容
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'content streaming-cursor';
+  contentDiv.id = 'streaming-content';
+  msg.appendChild(contentDiv);
+
+  streamingEl = contentDiv;
+  streamingThinkingEl = thinkContent;
+
+  container.appendChild(msg);
+  updateEmptyState();
+  scrollToBottom();
+}
+
+function appendDelta(text) {
+  if (!streamingEl) return;
+  streamingRawText += text;
+  // 流式中使用 Markdown 渲染（增量）
+  streamingEl.innerHTML = renderMarkdown(streamingRawText);
+  scrollToBottom();
+}
+
+function appendThinking(text) {
+  if (!streamingThinkingEl) return;
+  streamingRawThinking += text;
+  // 显示思考区
+  const wrap = document.getElementById('streaming-think-wrap');
+  if (wrap) wrap.style.display = 'block';
+  streamingThinkingEl.textContent = streamingRawThinking;
+  scrollToBottom();
+}
+
+function endStreaming() {
+  if (streamingEl) {
+    // 移除流式光标
+    streamingEl.classList.remove('streaming-cursor');
+    // 如果没有任何内容（包括思考），移除整个消息元素
+    const parentMsg = streamingEl.closest('.message');
+    if (!streamingRawText.trim() && !streamingRawThinking.trim() && parentMsg) {
+      parentMsg.remove();
+    } else {
+      // 最终渲染
+      streamingEl.innerHTML = renderMarkdown(streamingRawText);
+    }
+  }
+  // 收起思考面板标题
+  const wrap = document.getElementById('streaming-think-wrap');
+  if (wrap) {
+    if (streamingRawThinking) {
+      const toggle = wrap.querySelector('.thinking-toggle');
+      if (toggle) {
+        toggle.innerHTML = '<span class="arrow">▶</span> 💭 思考过程';
+        const ct = wrap.querySelector('.thinking-content');
+        if (ct) ct.classList.remove('show');
+        toggle.querySelector('.arrow').classList.remove('open');
+      }
+    } else {
+      wrap.remove();
+    }
+  }
+  streamingEl = null;
+  streamingThinkingEl = null;
+  scrollToBottom();
+}
+
+// ===== 清空消息 =====
+function clearMessages() {
+  container.innerHTML = '';
+  streamingEl = null;
+  streamingThinkingEl = null;
+  updateEmptyState();
+}
+
+function updateEmptyState() {
+  const emptyState = document.getElementById('empty-state');
+  if (emptyState && container) {
+    if (container.children.length === 0) {
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+    }
+  }
+}
+
+// ===== 加载状态 =====
+function setLoading(text) {
+  if (text) {
+    loadingEl.textContent = text;
+    loadingEl.classList.add('show');
+  } else {
+    loadingEl.classList.remove('show');
+  }
+}
+
+// ===== HTML 转义 =====
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ===== 接收 C# PostWebMessageAsJson =====
+window.chrome.webview.addEventListener('message', (event) => {
+  const msg = event.data;
+  switch (msg.action) {
+    case 'addMessage':
+      addMessage(msg.role, msg.content, msg.thinking);
+      break;
+    case 'startStreaming':
+      startStreaming();
+      break;
+    case 'appendDelta':
+      appendDelta(msg.text);
+      break;
+    case 'appendThinking':
+      appendThinking(msg.text);
+      break;
+    case 'endStreaming':
+      endStreaming();
+      break;
+    case 'clearMessages':
+      clearMessages();
+      break;
+    case 'loadHistory':
+      if (msg.messages && Array.isArray(msg.messages)) {
+         msg.messages.forEach(m => {
+             addMessage(m.role, m.content, m.thinking);
+         });
+      }
+      break;
+    case 'setLoading':
+      setLoading(msg.text);
+      break;
+    case 'setTheme':
+      document.documentElement.setAttribute('data-theme', msg.theme);
+      break;
+  }
+});
+
+// 通知 C# 页面已就绪 (已在 DOMContentLoaded 中处理)
+</script>
+</body>
+</html>

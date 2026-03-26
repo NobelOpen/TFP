@@ -23,6 +23,8 @@ namespace TaskFlow.Helpers
 
         public static bool CurrentIsDark { get; private set; } = false;
 
+        public static event Action<string>? ThemeChanged;
+
         public static void ApplyTheme(string themeName)
         {
             if (themeName != "Light" && themeName != "Dark")
@@ -50,6 +52,7 @@ namespace TaskFlow.Helpers
             {
                 SetTitleBarDarkMode(window, CurrentIsDark);
             }
+            ThemeChanged?.Invoke(themeName);
         }
 
         public static void SetTitleBarDarkMode(Window window, bool isDark)

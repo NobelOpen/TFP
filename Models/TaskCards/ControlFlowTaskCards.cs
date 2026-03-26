@@ -500,6 +500,12 @@ namespace TaskFlow.Models.TaskCards
         private Guid? _sourceTaskIdForArray;
 
         /// <summary>
+        /// 当任务有多重数组输出时，指定的数组属性名（如"匹配坐标"、"结果分数"）
+        /// </summary>
+        [ObservableProperty]
+        private string _sourcePropertyForArray = string.Empty;
+
+        /// <summary>
         /// 输出索引（固定值，0-based）
         /// </summary>
         [ObservableProperty]

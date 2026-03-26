@@ -1031,6 +1031,14 @@ namespace TaskFlow.ViewModels
             return TaskCards.Where(t => t.OutputsStringArray);
         }
 
+        /// <summary>
+        /// 获取输出任意数组形式的任务列表
+        /// </summary>
+        public IEnumerable<TaskCardBase> GetArrayOutputTasks()
+        {
+            return TaskCards.Where(t => t.OutputsArray);
+        }
+
         #endregion
     }
 }

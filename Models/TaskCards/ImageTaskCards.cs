@@ -178,6 +178,7 @@ namespace TaskFlow.Models.TaskCards
         public override bool OutputsImage => true;
         public override bool OutputsBoolResult => true;
         public override bool OutputsCoordinates => true;
+        public override bool OutputsArray => true;
 
         public override void Reset()
         {
@@ -641,6 +642,7 @@ namespace TaskFlow.Models.TaskCards
         public override bool OutputsBoolResult => true;
         public override bool OutputsCoordinates => true;
         public override bool OutputsText => false;
+        public override bool OutputsArray => true;
 
         public override void Reset()
         {

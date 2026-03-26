@@ -53,11 +53,12 @@ namespace TaskFlow.Services
 
             try
             {
-                // 设置环境变量传递目标域名
+                // 设置环境变量传递目标域名，并传入当前进程PID给代理用于存活监控（自动殉葬）
+                var parentPid = Process.GetCurrentProcess().Id;
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "node",
-                    Arguments = $"\"{scriptPath}\" {_port} {targetHost}",
+                    Arguments = $"\"{scriptPath}\" {_port} {targetHost} {parentPid}",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,

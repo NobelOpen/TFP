@@ -722,9 +722,21 @@ namespace TaskFlow
                     if (item is MenuItem menuItem)
                     {
                         string? tag = menuItem.Tag as string;
-                        if (tag == "EditProperty" || tag == "Rename" || tag == "Delete")
+                        if (tag == "EditProperty" || tag == "Rename")
                         {
                             menuItem.Visibility = isNonEditableBranch ? Visibility.Collapsed : Visibility.Visible;
+                        }
+                        else if (tag == "Delete")
+                        {
+                            menuItem.Visibility = isNonEditableBranch ? Visibility.Collapsed : Visibility.Visible;
+                            if (task.BranchRole == BranchRole.ElifStart)
+                            {
+                                menuItem.Header = TaskFlow.Resources.Strings.Menu_DeleteElifBranch;
+                            }
+                            else
+                            {
+                                menuItem.Header = TaskFlow.Resources.Strings.Common_Delete;
+                            }
                         }
                         else if (tag == "AddElif")
                         {

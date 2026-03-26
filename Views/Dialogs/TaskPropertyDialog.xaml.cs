@@ -2550,7 +2550,7 @@ namespace TaskFlow.Views.Dialogs
         private void AddImageSourcePropertyColor(ImgColorDetectTaskCard card)
         {
             var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
-            var taskCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var taskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
             foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
                 taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
@@ -2631,7 +2631,7 @@ namespace TaskFlow.Views.Dialogs
         private void AddImageSourcePropertyColorSegment(ImgColorSegmentTaskCard card)
         {
             var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
-            var taskCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var taskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
             foreach (var task in _viewModel.GetImageOutputTasks().Where(t => t.Id != _task.Id))
                 taskCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
@@ -2898,7 +2898,7 @@ namespace TaskFlow.Views.Dialogs
         {
             // 文本来源任务
             var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TextSourceTask, Style = FindResource("PropertyLabel") as Style };
-            var taskCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var taskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
 
             foreach (var task in _viewModel.GetTextOutputTasks().Where(t => t.Id != _task.Id))
@@ -2928,7 +2928,7 @@ namespace TaskFlow.Views.Dialogs
 
             // 起始位置模式
             var modeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_StartMode, Style = FindResource("PropertyLabel") as Style };
-            var modeCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var modeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             modeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ManualMode, Tag = StartIndexMode.Manual });
             modeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_FindCharMode, Tag = StartIndexMode.FindChar });
             modeCombo.SelectedIndex = (int)card.StartMode;
@@ -3013,7 +3013,7 @@ namespace TaskFlow.Views.Dialogs
         {
             // 文本来源任务
             var taskLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TextSourceTask, Style = FindResource("PropertyLabel") as Style };
-            var taskCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var taskCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             taskCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
 
             foreach (var task in _viewModel.GetTextOutputTasks().Where(t => t.Id != _task.Id))
@@ -3060,7 +3060,7 @@ namespace TaskFlow.Views.Dialogs
         {
             // 数组类型选择
             var typeLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ArrayType, Style = FindResource("PropertyLabel") as Style };
-            var typeCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var typeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             typeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ArrayInt, Tag = ArrayDataType.Int });
             typeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ArrayString, Tag = ArrayDataType.String });
             typeCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_ArrayCoord, Tag = ArrayDataType.Coordinate });
@@ -3073,23 +3073,49 @@ namespace TaskFlow.Views.Dialogs
 
             // 数组来源任务下拉框
             var arrayLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_ArraySourceTask, Style = FindResource("PropertyLabel") as Style };
-            var arrayCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var arrayCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             arrayCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
 
-            foreach (var task in _viewModel.GetStringArrayOutputTasks().Where(t => t.Id != _task.Id))
+            foreach (var task in _viewModel.GetArrayOutputTasks().Where(t => t.Id != _task.Id))
             {
-                arrayCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+                if (task is ImgTemplateMatchTaskCard)
+                {
+                    arrayCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name} (匹配坐标)", Tag = $"{task.Id}|匹配坐标" });
+                    arrayCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name} (结果分数)", Tag = $"{task.Id}|结果分数" });
+                }
+                else if (task is ImgBlobAnalysisTaskCard)
+                {
+                    arrayCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name} (边界框)", Tag = $"{task.Id}|边界框" });
+                }
+                else
+                {
+                    arrayCombo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = $"{task.Id}|" });
+                }
             }
 
             arrayCombo.SelectedIndex = 0;
             if (card.SourceTaskIdForArray.HasValue)
             {
+                string targetTag = $"{card.SourceTaskIdForArray.Value}|{card.SourcePropertyForArray ?? ""}";
                 for (int i = 1; i < arrayCombo.Items.Count; i++)
                 {
-                    if (((ComboBoxItem)arrayCombo.Items[i]).Tag is Guid id && id == card.SourceTaskIdForArray)
+                    if (arrayCombo.Items[i] is ComboBoxItem cbItem && cbItem.Tag is string tag && tag == targetTag)
                     {
                         arrayCombo.SelectedIndex = i;
                         break;
+                    }
+                }
+                
+                // 向后兼容：如果找不到完全匹配的（例如旧版本只保存了Guid没保存属性名）
+                if (arrayCombo.SelectedIndex == 0)
+                {
+                    for (int i = 1; i < arrayCombo.Items.Count; i++)
+                    {
+                        if (arrayCombo.Items[i] is ComboBoxItem cbItem && cbItem.Tag is string tag && tag.StartsWith(card.SourceTaskIdForArray.Value.ToString()))
+                        {
+                            arrayCombo.SelectedIndex = i;
+                            break;
+                        }
                     }
                 }
             }
@@ -3341,13 +3367,21 @@ namespace TaskFlow.Views.Dialogs
                     card.ArrayDataType = dataType;
             }
 
-            // 保存数组来源任务ID
+            // 保存数组来源任务ID及属性名
             if (_propertyControls.TryGetValue("SourceTaskIdForArray", out var arrayCtrl) && arrayCtrl is ComboBox arrayCombo)
             {
-                if (arrayCombo.SelectedItem is ComboBoxItem item && item.Tag is Guid taskId)
-                    card.SourceTaskIdForArray = taskId;
+                if (arrayCombo.SelectedItem is ComboBoxItem item && item.Tag is string tagValue)
+                {
+                    var parts = tagValue.Split('|');
+                    if (Guid.TryParse(parts[0], out Guid taskId))
+                        card.SourceTaskIdForArray = taskId;
+                    card.SourcePropertyForArray = parts.Length > 1 ? parts[1] : string.Empty;
+                }
                 else
+                {
                     card.SourceTaskIdForArray = null;
+                    card.SourcePropertyForArray = string.Empty;
+                }
             }
 
             // 保存索引：智能判断是整数还是表达式
@@ -3597,7 +3631,7 @@ namespace TaskFlow.Views.Dialogs
             };
 
             var label = new TextBlock { Text = Strings.Prop_EventType, Style = FindResource("PropertyLabel") as Style };
-            var combo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var combo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             foreach (var et in eventTypes)
             {
                 combo.Items.Add(new ComboBoxItem { Content = et.Display, Tag = et.Value });
@@ -3638,7 +3672,7 @@ namespace TaskFlow.Views.Dialogs
 
             // 数组来源任务下拉框
             var arrayLabel = new TextBlock { Text = Strings.Prop_ArraySourceTask, Style = FindResource("PropertyLabel") as Style };
-            var arrayCombo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var arrayCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             arrayCombo.Items.Add(new ComboBoxItem { Content = Strings.Prop_SelectTask, Tag = null });
 
             foreach (var task in _viewModel.GetStringArrayOutputTasks().Where(t => t.Id != _task.Id))
@@ -3672,7 +3706,7 @@ namespace TaskFlow.Views.Dialogs
             };
 
             var label = new TextBlock { Text = Strings.Prop_MatchMode, Style = FindResource("PropertyLabel") as Style };
-            var combo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            var combo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
             foreach (var mm in matchModes)
             {
                 combo.Items.Add(new ComboBoxItem { Content = mm.Display, Tag = mm.Value });

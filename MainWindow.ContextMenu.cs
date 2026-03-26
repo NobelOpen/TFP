@@ -297,9 +297,19 @@ namespace TaskFlow
                 var task = FindTaskFromMenuItem(menuItem);
                 if (task == null) return;
 
-                string confirmMessage = task.BranchGroupId.HasValue
-                    ? TaskFlow.Resources.Strings.Msg_ConfirmDeleteBranchGroup
-                    : string.Format(TaskFlow.Resources.Strings.Msg_ConfirmDeleteTask, task.Name);
+                string confirmMessage;
+                if (task.BranchRole == BranchRole.ElifStart)
+                {
+                    confirmMessage = TaskFlow.Resources.Strings.Msg_ConfirmDeleteElifBranch;
+                }
+                else if (task.BranchGroupId.HasValue)
+                {
+                    confirmMessage = TaskFlow.Resources.Strings.Msg_ConfirmDeleteBranchGroup;
+                }
+                else
+                {
+                    confirmMessage = string.Format(TaskFlow.Resources.Strings.Msg_ConfirmDeleteTask, task.Name);
+                }
 
                 if (AnthropicMessageDialog.ShowConfirm(TaskFlow.Resources.Strings.Common_Confirm, confirmMessage, this))
                 {

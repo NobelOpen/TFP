@@ -329,13 +329,14 @@ namespace TaskFlow.Services
         /// <summary>
         /// 阶段2：生成详细的流程方案（Tool Use 模式）
         /// </summary>
-        public async Task<(AiFlowPlanResponse Plan, int InputTokens, int OutputTokens)> GeneratePlanAsync(
+        public async Task<(AiFlowPlanResponse Plan, int InputTokens, int OutputTokens, bool IsTruncated)> GeneratePlanAsync(
             string userPrompt, List<string> categories, string modelId, CancellationToken cancellationToken,
             string currentFlowContext = "", List<(string Role, string Content)>? conversationHistory = null,
             AiAssistantMode mode = AiAssistantMode.Design,
             List<string>? imageBase64List = null,
             Action<string>? onDelta = null,
             Action<string>? onThinking = null,
+            Action<string?>? onStatus = null,
             Func<string, int, int, string?>? getFlowDetail = null,
             Func<string, Task<(string? Base64, int Width, int Height)>>? captureScreenshot = null)
         {
@@ -369,6 +370,7 @@ namespace TaskFlow.Services
 - 收到运行结果后，如果还有后续卡片需要运行，必须在下一轮调用 submit_plan 继续运行它们
 - 绝对不要在还有后续步骤需要执行时就设置 done 为 true
 - 只有当所有需要的操作真正全部完成后，才设置 done 为 true
+- **重要规则**：当全部任务完成准备设置 done 为 true 时，如果这是一项查询、收集信息或测试的任务（如查询进程列表、读取文件内容等），你**必须**在调用工具的同时，用自然语言向用户详细总结并报告你获得的结果！绝对不要只默默调用 submit_plan 结束，用户需要看到你的回复！
 - 每次 runCards 只放一个批次，不要把所有步骤放在一次中
 - 可以混合使用 modifyCards 和 runCards（如先修改卡片属性再运行）
 - 如果需要创建新卡片后再运行，先用 submit_plan 创建，下一轮再用 runCards 运行
@@ -410,10 +412,11 @@ PowerShell 后台能力（当前已启用）：
 
 {detailedCards}
 
-请用自然语言回复用户的问题和需求。当你需要执行具体操作时，调用提供的工具：
-- 需要查看某个流程的详细卡片结构时，调用 analyze_flow 工具
-- 需要创建/修改/删除卡片或变量、管理流程等操作时，调用 submit_plan 工具
+请用自然语言回复用户的问题和需求。当你需要执行具体操作时，**必须直接调用**提供的工具（通过 tool_calls / function_call），而不是用自然语言说「我需要先查看…」「请让我读取…」等表达意图的文字：
+- 需要查看某个流程的详细卡片结构时，**直接调用** analyze_flow 工具，不要用文字描述意图
+- 需要创建/修改/删除卡片或变量、管理流程等操作时，**直接调用** submit_plan 工具
 - 纯对话回复（如回答问题、解释方案）不需要调用工具，直接用自然语言回答
+- 重要：任何需要操作的场景都必须通过工具调用执行，严禁仅用文字描述意图而不调用工具
 
 submit_plan 工具的 plan 参数中每个卡片步骤格式：
 {{ ""step"": 1, ""taskType"": ""卡片类型枚举名"", ""name"": ""步骤名称"", ""description"": ""为什么需要这一步"", ""properties"": {{ ""属性名"": ""值"" }}, ""sourceStep"": null, ""templateSourceStep"": null }}
@@ -481,31 +484,32 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                 && conversationHistory[^1].Role == "user"
                 && conversationHistory[^1].Content == userPrompt;
 
-            if (!lastHistoryIsCurrentUser)
+            if (imageBase64List != null && imageBase64List.Count > 0)
             {
-                if (imageBase64List != null && imageBase64List.Count > 0)
+                // 有图像时：若历史末尾已含用户纯文本消息，先移除以避免重复
+                if (lastHistoryIsCurrentUser)
+                    messages.RemoveAt(messages.Count - 1);
+
+                // OpenAI Vision 格式：content 为数组
+                var contentParts = new List<object>
                 {
-                    // OpenAI Vision 格式：content 为数组
-                    var contentParts = new List<object>
-                    {
-                        new { type = "text", text = userPrompt }
-                    };
-                    foreach (var imgB64 in imageBase64List)
-                    {
-                        // 根据 base64 头自动检测格式（PNG 以 iVBOR 开头）
-                        var mime = imgB64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
-                        contentParts.Add(new
-                        {
-                            type = "image_url",
-                            image_url = new { url = $"data:{mime};base64,{imgB64}", detail = "high" }
-                        });
-                    }
-                    messages.Add(new { role = "user", content = (object)contentParts });
-                }
-                else
+                    new { type = "text", text = userPrompt }
+                };
+                foreach (var imgB64 in imageBase64List)
                 {
-                    messages.Add(new { role = "user", content = (object)userPrompt });
+                    // 根据 base64 头自动检测格式（PNG 以 iVBOR 开头）
+                    var mime = imgB64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
+                    contentParts.Add(new
+                    {
+                        type = "image_url",
+                        image_url = new { url = $"data:{mime};base64,{imgB64}", detail = "high" }
+                    });
                 }
+                messages.Add(new { role = "user", content = (object)contentParts });
+            }
+            else if (!lastHistoryIsCurrentUser)
+            {
+                messages.Add(new { role = "user", content = (object)userPrompt });
             }
 
             // 构建工具定义
@@ -527,10 +531,11 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
             string responseText;
             int inputTokens, outputTokens;
             List<(string Id, string Name, string Arguments)>? toolCalls;
+            bool isTruncated = false;
 
             if (onDelta != null)
             {
-                (responseText, inputTokens, outputTokens, toolCalls) =
+                (responseText, inputTokens, outputTokens, toolCalls, isTruncated) =
                     await CallLlmStreamAsync(modelConfig, requestObj, onDelta, cancellationToken, onThinking);
             }
             else
@@ -653,7 +658,7 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
 
                             if (onDelta != null)
                             {
-                                (respN, inN, outN, tcN) =
+                                (respN, inN, outN, tcN, _) =
                                     await CallLlmStreamAsync(modelConfig, requestN, onDelta, cancellationToken, onThinking);
                             }
                             else
@@ -688,54 +693,37 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                         {
                             var ssArg = JObject.Parse(ssArgs);
                             var target = ssArg["target"]?.ToString() ?? "";
+                            // 防御：AI 可能违反指令使用 explorer 作为截图目标，会导致 1x1 空图
+                            if (target.Equals("explorer", StringComparison.OrdinalIgnoreCase) ||
+                                target.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase))
+                            {
+                                AiFlowLogger.Warn($"[ToolUse] AI 错误使用 explorer 作为截图目标，自动纠正为全屏截图");
+                                target = "";
+                            }
                             AiFlowLogger.Info($"[ToolUse] request_screenshot(target=\"{target}\") → 截图中...");
 
-                            onDelta?.Invoke("\n\n📸 正在截取屏幕...\n\n");
+                            onStatus?.Invoke("正在截取屏幕...");
                             var (base64, sw, sh) = await captureScreenshot(target);
 
                             if (base64 == null)
                             {
                                 AiFlowLogger.Warn("[ToolUse] 截图失败");
+                                onStatus?.Invoke(null);
                                 onDelta?.Invoke("⚠️ 截图失败\n");
                                 break;
                             }
 
-                            AiFlowLogger.Info($"[ToolUse] 截图成功 ({sw}x{sh})，注入 tool result 发起下一轮对话...");
+                            AiFlowLogger.Info($"[ToolUse] 截图成功 ({sw}x{sh})，注入截图发起下一轮对话...");
 
-                            // 构建 assistant 消息（含 tool_call）
-                            var assistantMsg = new JObject
-                            {
-                                ["role"] = "assistant",
-                                ["content"] = currentResponseText ?? ""
-                            };
-                            assistantMsg["tool_calls"] = new JArray(new JObject
-                            {
-                                ["id"] = ssId,
-                                ["type"] = "function",
-                                ["function"] = new JObject
-                                {
-                                    ["name"] = "request_screenshot",
-                                    ["arguments"] = ssArgs
-                                }
-                            });
-                            messagesJson.Add(assistantMsg);
-
-                            // tool result：返回截图信息（图片作为下一条 user 消息附带）
-                            messagesJson.Add(new JObject
-                            {
-                                ["role"] = "tool",
-                                ["tool_call_id"] = ssId,
-                                ["content"] = $"截图成功，分辨率 {sw}x{sh}。截图已附在下方。"
-                            });
-
-                            // 附加截图作为 user 消息（OpenAI Vision 格式）
+                            // 将截图直接嵌入 user 消息（不使用 tool_calls/tool 历史格式，
+                            // 因为部分第三方 API 代理商不支持 Responses API 的 function_call input 类型）
                             var mime = base64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
                             messagesJson.Add(new JObject
                             {
                                 ["role"] = "user",
                                 ["content"] = new JArray
                                 {
-                                    new JObject { ["type"] = "text", ["text"] = $"这是截取的屏幕截图（{sw}x{sh}），请分析内容。" },
+                                    new JObject { ["type"] = "text", ["text"] = $"[系统截图结果] 截图成功，分辨率 {sw}x{sh}。以下是截取的屏幕截图，请分析内容并继续完成任务。" },
                                     new JObject
                                     {
                                         ["type"] = "image_url",
@@ -763,7 +751,7 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
 
                             if (onDelta != null)
                             {
-                                (respN, inN, outN, tcN) =
+                                (respN, inN, outN, tcN, _) =
                                     await CallLlmStreamAsync(modelConfig, requestN, onDelta, cancellationToken, onThinking);
                             }
                             else
@@ -782,7 +770,13 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                         }
                         catch (Exception ex)
                         {
+                            var errMsg = ex.Message.Contains("BadGateway") || ex.Message.Contains("502")
+                                ? "❌ 截图后 API 请求被拦截（502 Bad Gateway），当前模型可能需要配置代理才能使用。请在模型设置中启用代理后重试。"
+                                : $"❌ 截图分析失败: {ex.Message}";
                             AiFlowLogger.Warn($"[ToolUse] request_screenshot 处理失败: {ex.Message}");
+                            onDelta?.Invoke($"\n\n{errMsg}\n");
+                            // 设置 Summary 让上层不误报"未能生成有效方案"
+                            plan.Summary = errMsg;
                             break;
                         }
                     }
@@ -892,6 +886,145 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                     }
                     else
                     {
+                        // 检测 AI 是否在文字中表达了需要调用工具的意图却没有实际调用
+                        bool hasToolIntent = System.Text.RegularExpressions.Regex.IsMatch(
+                            responseText, @"(先(读取|查看|获取|分析)|让我.{0,6}(读取|查看|获取|分析)|需要.{0,6}(读取|查看|获取|分析)|我来.{0,6}(读取|查看|获取|分析)).{0,20}(流程|卡片)");
+
+                        if (hasToolIntent && getFlowDetail != null && onDelta != null)
+                        {
+                            AiFlowLogger.Info("[ToolUse] AI 纯文本回复但检测到工具调用意图，自动重试引导 AI 使用工具...");
+                            onDelta.Invoke("\n\n🔄 正在重新请求...\n\n");
+
+                            // 构建 follow-up 请求，提示 AI 直接使用工具
+                            var messagesJson = requestObj["messages"] as JArray ?? new JArray();
+                            messagesJson.Add(new JObject
+                            {
+                                ["role"] = "assistant",
+                                ["content"] = responseText
+                            });
+                            messagesJson.Add(new JObject
+                            {
+                                ["role"] = "user",
+                                ["content"] = "请直接调用 analyze_flow 工具来获取流程详情，不要用文字描述你的意图。"
+                            });
+
+                            var retryRequest = new JObject
+                            {
+                                ["model"] = modelConfig.ModelName,
+                                ["messages"] = messagesJson,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
+                            };
+
+                            try
+                            {
+                                string retryResp;
+                                int retryIn, retryOut;
+                                List<(string Id, string Name, string Arguments)>? retryTc;
+
+                                (retryResp, retryIn, retryOut, retryTc, _) =
+                                    await CallLlmStreamAsync(modelConfig, retryRequest, onDelta, cancellationToken, onThinking);
+
+                                AiFlowLogger.LogLlmResponse("阶段2-工具意图重试", retryResp, retryIn, retryOut);
+                                inputTokens += retryIn;
+                                outputTokens += retryOut;
+
+                                if (retryTc != null && retryTc.Count > 0)
+                                {
+                                    // 重试成功，AI 这次调用了工具 —— 递归回到 tool_calls 处理流程
+                                    // 为简化实现，此处只处理 analyze_flow + submit_plan 的单轮场景
+                                    var analyzeRetry = retryTc.FirstOrDefault(t => t.Name == "analyze_flow");
+                                    if (analyzeRetry.Name == "analyze_flow" && getFlowDetail != null)
+                                    {
+                                        var flowArg = JObject.Parse(analyzeRetry.Arguments);
+                                        var flowName = flowArg["flow_name"]?.ToString();
+                                        if (!string.IsNullOrEmpty(flowName))
+                                        {
+                                            var flowDetail = getFlowDetail(flowName, 0, 2000);
+                                            if (flowDetail != null)
+                                            {
+                                                AiFlowLogger.Info($"[ToolUse] 重试成功 → analyze_flow(\"{flowName}\")，发起下一轮对话...");
+                                                onStatus?.Invoke($"已获取流程详情，正在分析...");
+
+                                                // 构建 tool result 并再次请求
+                                                var assistantMsg2 = new JObject
+                                                {
+                                                    ["role"] = "assistant",
+                                                    ["content"] = retryResp ?? ""
+                                                };
+                                                assistantMsg2["tool_calls"] = new JArray(new JObject
+                                                {
+                                                    ["id"] = analyzeRetry.Id,
+                                                    ["type"] = "function",
+                                                    ["function"] = new JObject
+                                                    {
+                                                        ["name"] = "analyze_flow",
+                                                        ["arguments"] = analyzeRetry.Arguments
+                                                    }
+                                                });
+                                                messagesJson.Add(assistantMsg2);
+                                                messagesJson.Add(new JObject
+                                                {
+                                                    ["role"] = "tool",
+                                                    ["tool_call_id"] = analyzeRetry.Id,
+                                                    ["content"] = flowDetail
+                                                });
+
+                                                var finalRequest = new JObject
+                                                {
+                                                    ["model"] = modelConfig.ModelName,
+                                                    ["messages"] = messagesJson,
+                                                    ["temperature"] = 0.3,
+                                                    ["tools"] = tools
+                                                };
+
+                                                string finalResp;
+                                                int finalIn, finalOut;
+                                                List<(string Id, string Name, string Arguments)>? finalTc;
+
+                                                (finalResp, finalIn, finalOut, finalTc, _) =
+                                                    await CallLlmStreamAsync(modelConfig, finalRequest, onDelta, cancellationToken, onThinking);
+
+                                                AiFlowLogger.LogLlmResponse("阶段2-工具意图重试最终轮", finalResp, finalIn, finalOut);
+                                                inputTokens += finalIn;
+                                                outputTokens += finalOut;
+                                                responseText = finalResp;
+
+                                                // 处理最终轮的 submit_plan
+                                                if (finalTc != null)
+                                                {
+                                                    foreach (var (tcId2, tcName2, tcArgs2) in finalTc)
+                                                    {
+                                                        if (tcName2 == "submit_plan")
+                                                        {
+                                                            try
+                                                            {
+                                                                plan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(tcArgs2) ?? new();
+                                                                AiFlowLogger.Info($"[ToolUse] 重试最终轮 submit_plan 解析成功: {plan.Plan.Count} 个步骤");
+                                                            }
+                                                            catch (Exception ex2)
+                                                            {
+                                                                AiFlowLogger.Warn($"[ToolUse] 重试最终轮 submit_plan 解析失败: {ex2.Message}");
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (string.IsNullOrEmpty(plan.Summary) && !string.IsNullOrWhiteSpace(responseText))
+                                                    plan.Summary = responseText.Trim();
+
+                                                // 跳过后续的纯文本处理
+                                                goto ToolRetryDone;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception retryEx)
+                            {
+                                AiFlowLogger.Warn($"[ToolUse] 工具意图重试失败: {retryEx.Message}");
+                            }
+                        }
+
                         plan = new AiFlowPlanResponse { Summary = responseText.Trim() };
                         AiFlowLogger.Info("[ToolUse] AI 纯文本回复（无工具调用）");
                     }
@@ -903,7 +1036,8 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                 }
             }
 
-            return (plan, inputTokens, outputTokens);
+ToolRetryDone:
+            return (plan, inputTokens, outputTokens, isTruncated);
         }
 
         /// <summary>
@@ -1091,7 +1225,7 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
             if (isResponsesApi)
             {
                 // Responses API 使用 stream=true，返回 SSE 格式
-                (replyText, inputTokens, outputTokens) = ParseResponsesApiStream(responseString);
+                (replyText, inputTokens, outputTokens, toolCalls) = ParseResponsesApiStream(responseString);
             }
             else
             {
@@ -1169,8 +1303,51 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                     // Responses API 的 system prompt 使用 instructions 字段
                     instructions = content?.ToString() ?? "";
                 }
+                else if (role == "assistant")
+                {
+                    // assistant 消息：先处理 tool_calls（转为 function_call input item）
+                    var toolCalls = msg["tool_calls"] as JArray;
+                    if (toolCalls != null && toolCalls.Count > 0)
+                    {
+                        // 将每个 tool_call 转为 Responses API 的 function_call 格式
+                        foreach (var tc in toolCalls)
+                        {
+                            var callId = tc["id"]?.ToString() ?? "";
+                            var funcName = tc["function"]?["name"]?.ToString() ?? "";
+                            var funcArgs = tc["function"]?["arguments"]?.ToString() ?? "{}";
+                            inputMessages.Add(new
+                            {
+                                type = "function_call",
+                                id = callId,       // Responses API 需要 id 字段关联 function_call_output
+                                call_id = callId,
+                                name = funcName,
+                                arguments = funcArgs
+                            });
+                        }
+                    }
+
+                    // 如果有文本 content 也一并保留
+                    var textContent = content?.ToString();
+                    if (!string.IsNullOrWhiteSpace(textContent))
+                    {
+                        // 强制将字符串也包裹为 output_text 数组，防止上游代理转换出错误的 "text" type
+                        inputMessages.Add(new { role, content = new[] { new { type = "output_text", text = textContent } } });
+                    }
+                }
+                else if (role == "tool")
+                {
+                    // tool 角色消息：转为 Responses API 的 function_call_output 格式
+                    var toolCallId = msg["tool_call_id"]?.ToString() ?? "";
+                    inputMessages.Add(new
+                    {
+                        type = "function_call_output",
+                        call_id = toolCallId,
+                        output = content?.ToString() ?? ""
+                    });
+                }
                 else
                 {
+                    // user 等其他角色
                     // content 可能是字符串或数组（多模态）
                     if (content is JArray contentArray)
                     {
@@ -1193,7 +1370,8 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                     }
                     else
                     {
-                        inputMessages.Add(new { role, content = content?.ToString() ?? "" });
+                        // 强制将字符串也包裹为 input_text 数组，防止上游代理转换出错误的 "text" type
+                        inputMessages.Add(new { role, content = new[] { new { type = "input_text", text = content?.ToString() ?? "" } } });
                     }
                 }
             }
@@ -1211,16 +1389,40 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                 result["instructions"] = instructions;
             }
 
+            // 传递 tools 定义到 Responses API（关键：不传递则 API 不会产生 tool_calls）
+            var tools = json["tools"] as JArray;
+            if (tools != null && tools.Count > 0)
+            {
+                result["tools"] = tools;
+            }
+
+            // 传递 tool_choice（如果有）
+            var toolChoice = json["tool_choice"];
+            if (toolChoice != null)
+            {
+                result["tool_choice"] = toolChoice;
+            }
+
+            // 传递 temperature（如果有）
+            var temperature = json["temperature"];
+            if (temperature != null)
+            {
+                result["temperature"] = temperature;
+            }
+
             return result;
         }
 
         /// <summary>
         /// 解析 Responses API 的 SSE 流式响应，提取完整文本和 Token 用量
         /// </summary>
-        private static (string Text, int InputTokens, int OutputTokens) ParseResponsesApiStream(string sseResponse)
+        private static (string Text, int InputTokens, int OutputTokens, List<(string Id, string Name, string Arguments)>? ToolCalls) ParseResponsesApiStream(string sseResponse)
         {
             var contentBuilder = new StringBuilder();
             int inputTokens = 0, outputTokens = 0;
+            List<(string Id, string Name, string Arguments)>? toolCalls = null;
+            // 当前活跃输出项的 phase（commentary 是内心思考，不显示给用户）
+            string? currentOutputPhase = null;
 
             foreach (var rawLine in sseResponse.Split('\n'))
             {
@@ -1234,11 +1436,21 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                     var evt = JObject.Parse(jsonPart);
                     var evtType = evt["type"]?.ToString();
 
-                    if (evtType == "response.output_text.delta")
+                    if (evtType == "response.output_item.added")
                     {
-                        // 流式文本增量
+                        currentOutputPhase = evt["item"]?["phase"]?.ToString();
+                    }
+                    else if (evtType == "response.output_item.done")
+                    {
+                        currentOutputPhase = null;
+                    }
+                    else if (evtType == "response.output_text.delta")
+                    {
+                        // 只有 final_answer phase（或无 phase 字段）才累积文本
+                        bool isVisible = currentOutputPhase == null
+                            || currentOutputPhase == "final_answer";
                         var delta = evt["delta"]?.ToString();
-                        if (delta != null) contentBuilder.Append(delta);
+                        if (delta != null && isVisible) contentBuilder.Append(delta);
                     }
                     else if (evtType == "response.completed")
                     {
@@ -1254,13 +1466,27 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                                 outputTokens = (int?)usage["output_tokens"] ?? (int?)usage["completion_tokens"] ?? 0;
                             }
 
-                            // 如果增量没有拼出文本，从完成事件中提取完整文本
-                            if (contentBuilder.Length == 0)
+                            // 如果增量没有拼出文本，从完成事件中提取完整文本，并同时提取 tool_calls
+                            var output = respObj["output"] as JArray;
+                            if (output != null)
                             {
-                                var output = respObj["output"] as JArray;
-                                if (output != null)
+                                int tcIdx = 0;
+                                foreach (var item in output)
                                 {
-                                    foreach (var item in output)
+                                    var itemType = item["type"]?.ToString();
+                                    
+                                    if (itemType == "function_call")
+                                    {
+                                        if (toolCalls == null) toolCalls = new List<(string, string, string)>();
+                                        var callId = item["call_id"]?.ToString() ?? item["id"]?.ToString() ?? $"call_{tcIdx}";
+                                        var funcName = item["name"]?.ToString() ?? "";
+                                        var funcArgs = item["arguments"]?.ToString() ?? "{}";
+                                        toolCalls.Add((callId, funcName, funcArgs));
+                                        tcIdx++;
+                                    }
+                                    
+                                    // 提取文本
+                                    if (contentBuilder.Length == 0)
                                     {
                                         var contentArr = item["content"] as JArray;
                                         if (contentArr != null)
@@ -1282,14 +1508,14 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                 catch { /* 跳过无法解析的 SSE 行 */ }
             }
 
-            return (contentBuilder.ToString(), inputTokens, outputTokens);
+            return (contentBuilder.ToString(), inputTokens, outputTokens, toolCalls);
         }
 
         /// <summary>
         /// 流式调用 LLM API：逐增量通过 onDelta 回调推送文本到 UI
         /// 支持 Chat Completions（delta.content / delta.tool_calls）、Responses API 和 Gemini
         /// </summary>
-        private async Task<(string ResponseText, int InputTokens, int OutputTokens, List<(string Id, string Name, string Arguments)>? ToolCalls)> CallLlmStreamAsync(
+        private async Task<(string ResponseText, int InputTokens, int OutputTokens, List<(string Id, string Name, string Arguments)>? ToolCalls, bool IsTruncated)> CallLlmStreamAsync(
             LlmModelConfig modelConfig, object requestBody, Action<string> onDelta, CancellationToken cancellationToken,
             Action<string>? onThinking = null)
         {
@@ -1314,6 +1540,8 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
             {
                 actualUrl = modelConfig.ApiEndpoint;
                 actualBody = BuildResponsesApiBody(requestBody);
+                // 调试日志：打印转换后的 Responses API 请求体（base64 截断）
+                AiFlowLogger.Info($"[Responses API] 转换后请求体:\n{AiFlowLogger.TruncateBase64(JsonConvert.SerializeObject(actualBody, Formatting.Indented))}");
             }
             else
             {
@@ -1367,11 +1595,16 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
             int inputTokens = 0, outputTokens = 0;
             int sseLineCount = 0;
             int rawLineCount = 0;
+            bool isTruncated = false; // API 回复是否因 token 上限被截断
 
             // Tool Calls 累积器（支持多个并发工具调用）
             var toolCallIds = new Dictionary<int, string>();
             var toolCallNames = new Dictionary<int, string>();
             var toolCallArgs = new Dictionary<int, StringBuilder>();
+
+            // 当前活跃输出项的 phase（Responses API 支持 commentary/final_answer）
+            // commentary 是模型的内心思考，不应显示给用户；只显示 final_answer 的内容
+            string? currentOutputPhase = null;
 
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
             using var reader = new System.IO.StreamReader(stream);
@@ -1416,10 +1649,25 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                     {
                         // Responses API 流式事件
                         var evtType = evt["type"]?.ToString();
-                        if (evtType == "response.output_text.delta")
+
+                        if (evtType == "response.output_item.added")
+                        {
+                            // 记录当前输出项的 phase（commentary / final_answer）
+                            currentOutputPhase = evt["item"]?["phase"]?.ToString();
+                        }
+                        else if (evtType == "response.output_item.done")
+                        {
+                            // 输出项结束，重置 phase
+                            currentOutputPhase = null;
+                        }
+                        else if (evtType == "response.output_text.delta")
                         {
                             var delta = evt["delta"]?.ToString();
-                            if (delta != null)
+                            // 只有 final_answer phase（或无 phase 字段）才显示给用户
+                            // commentary phase 是模型的内心思考，不传递给 UI
+                            bool isVisible = currentOutputPhase == null
+                                || currentOutputPhase == "final_answer";
+                            if (delta != null && isVisible)
                             {
                                 contentBuilder.Append(delta);
                                 onDelta(delta);
@@ -1440,6 +1688,15 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                             var respObj = evt["response"];
                             if (respObj is JObject)
                             {
+                                // 检测回复是否被截断（status != "completed" 或 incomplete_details 存在）
+                                var respStatus = respObj["status"]?.ToString();
+                                if (respStatus == "incomplete")
+                                {
+                                    isTruncated = true;
+                                    var reason = respObj["incomplete_details"]?["reason"]?.ToString() ?? "unknown";
+                                    AiFlowLogger.Info($"[SSE] 回复被截断，原因: {reason}");
+                                }
+
                                 var usage = respObj["usage"];
                                 if (usage is JObject)
                                 {
@@ -1576,6 +1833,15 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
                                 }
                             }
                         }
+                        // 检测 Chat Completions 的 finish_reason
+                        var finishReason = choices != null && choices.Count > 0
+                            ? choices[0]?["finish_reason"]?.ToString() : null;
+                        if (finishReason == "length")
+                        {
+                            isTruncated = true;
+                            AiFlowLogger.Info("[SSE] 回复被截断（finish_reason=length）");
+                        }
+
                         // 部分提供商在最后一帧附带 usage
                         var usage = evt["usage"];
                         if (usage is JObject)
@@ -1617,10 +1883,10 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
             {
                 AiFlowLogger.Warn($"[SSE] 流式解析未获取内容（共 {rawLineCount} 行原始数据, {sseLineCount} 行 SSE 数据），回退使用非流式 API...");
                 var fallback = await CallLlmAsync(modelConfig, requestBody, cancellationToken);
-                return (fallback.ResponseText, fallback.InputTokens, fallback.OutputTokens, null);
+                return (fallback.ResponseText, fallback.InputTokens, fallback.OutputTokens, null, false);
             }
 
-            return (contentBuilder.ToString(), inputTokens, outputTokens, parsedToolCalls);
+            return (contentBuilder.ToString(), inputTokens, outputTokens, parsedToolCalls, isTruncated);
         }
 
         /// <summary>

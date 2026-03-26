@@ -133,9 +133,21 @@ namespace TaskFlow.ViewModels
         private bool _showRetryButton;
 
         /// <summary>
+        /// 是否显示“请继续”按钮（回复被截断时）
+        /// </summary>
+        [ObservableProperty]
+        private bool _showContinueButton;
+
+        /// <summary>
         /// 保存上次用户输入，用于重试
         /// </summary>
         private string? _lastUserInput;
+
+        /// <summary>
+        /// 当前显示的加载/思考提示文本，为空表示不显示
+        /// </summary>
+        [ObservableProperty]
+        private string? _loadingText;
 
         /// <summary>
         /// 选中的模型 ID
@@ -212,6 +224,13 @@ namespace TaskFlow.ViewModels
         /// </summary>
         public event EventHandler? ScrollToEndRequested;
 
+        // WebView2 流式事件：Panel 监听并转发给 JS
+        public event Action? StreamingStarted;
+        public event Action<string>? StreamingDelta;
+        public event Action<string>? StreamingThinking;
+        public event Action? StreamingEnded;
+        public event Action? MessagesUpdated;
+
         /// <summary>
         /// 请求关闭 Orchid 面板的事件
         /// </summary>
@@ -244,11 +263,13 @@ namespace TaskFlow.ViewModels
         [RelayCommand]
         private void NewChat()
         {
+            if (IsBusy) return;
             ArchiveCurrentSession();
             CurrentSession = new AiChatSession();
             Messages.Clear();
             PendingPlan = null;
             ReportItems.Clear();
+            ShowRetryButton = false;
             IsHistoryOpen = false;
         }
 
@@ -259,6 +280,7 @@ namespace TaskFlow.ViewModels
         private void SwitchSession(AiChatSession session)
         {
             if (session == null) return;
+            if (IsBusy) return;
             ArchiveCurrentSession();
 
             // 从历史中移除并设为当前
@@ -268,6 +290,7 @@ namespace TaskFlow.ViewModels
             foreach (var msg in session.Messages)
                 Messages.Add(msg);
 
+            ShowRetryButton = false;
             IsHistoryOpen = false;
             ScrollToEndRequested?.Invoke(this, EventArgs.Empty);
         }
@@ -347,6 +370,7 @@ namespace TaskFlow.ViewModels
 
             // 清除重试按钮
             ShowRetryButton = false;
+            ShowContinueButton = false;
 
             // 强制命令解析：运行#N / 执行#N / 单步运行#N（跳过 AI，直接执行）
             var cmdMatch = System.Text.RegularExpressions.Regex.Match(
@@ -380,6 +404,7 @@ namespace TaskFlow.ViewModels
                 catch (Exception ex)
                 {
                     AddMessage(AiChatRole.System, $"❌ 执行异常: {ex.Message}");
+                    ShowRetryButton = true;
                 }
                 return;
             }
@@ -403,11 +428,14 @@ namespace TaskFlow.ViewModels
             // 日志记录会话开始
             AiFlowLogger.LogSessionStart(userInput, SelectedModelId);
 
+            // 流式输出文本累积器（用于最终持久化到 Messages 集合）
+            var streamBuilder = new System.Text.StringBuilder();
+            var thinkingBuilder = new System.Text.StringBuilder();
+
             try
             {
                 // 阶段1：确定类别（可通过设置跳过）
-                AddMessage(AiChatRole.System, "✦ 正在思考中.");
-                StartThinkingAnimation("✦ 正在思考中");
+                LoadingText = "✦ 正在思考中...";
 
                 List<string> categories;
                 if (_mainViewModel.Settings.OrchidSingleStage)
@@ -426,9 +454,7 @@ namespace TaskFlow.ViewModels
                 }
 
                 // 阶段2：生成详细方案
-                UpdateLastSystemMessage("✦ 正在生成方案.");
-                _thinkingBaseText = "✦ 正在生成方案";
-                _thinkingDotCount = 0;
+                LoadingText = "✦ 正在生成方案...";
                 AiFlowLogger.Info("正在生成流程方案...");
 
                 // 序列化当前画布卡片作为上下文
@@ -466,122 +492,39 @@ namespace TaskFlow.ViewModels
                     }
                 }
 
-                // 卡片输出图像（收集所有有 OutputImage 的卡片）
-                int? lastImageWidth = null, lastImageHeight = null;
-                foreach (var card in _mainViewModel.TaskCards)
-                {
-                    if (card.OutputsImage && card.OutputImage != null && !card.OutputImage.Empty())
-                    {
-                        try
-                        {
-                            OpenCvSharp.Cv2.ImEncode(".png", card.OutputImage, out var pngBytes);
-                            imageBase64List.Add(Convert.ToBase64String(pngBytes));
-                            lastImageWidth = card.OutputImage.Width;
-                            lastImageHeight = card.OutputImage.Height;
-                            AiFlowLogger.Info($"已附加卡片输出图像: #{card.Order} {card.Name} ({pngBytes.Length / 1024}KB)");
-                        }
-                        catch (Exception ex)
-                        {
-                            AiFlowLogger.Warn($"编码卡片输出图像失败 ({card.Name}): {ex.Message}");
-                        }
-                    }
-                }
+                // 注意：卡片输出图像不再自动附加。
+                // 只有当 Orchid AI 通过工具调用（request_screenshot 等）明确请求图像时，
+                // 系统才会在工具结果中返回相应图像。
+                // 这样可以避免普通对话（如"你好"）时无谓地发送大量图像数据。
 
-                // 截屏已改为由 AI 通过 needsScreenshot 按需请求，初始消息不自动截屏
 
-                // 存在截图时，注入标定校正信息
-                if (imageBase64List.Count > 0 && lastImageWidth.HasValue && lastImageHeight.HasValue
-                    && !string.IsNullOrEmpty(SelectedModelId))
-                {
-                    var cal = CalibrationService.GetCalibration(SelectedModelId, lastImageWidth.Value, lastImageHeight.Value);
-                    if (cal == null)
-                    {
-                        // 无标定数据，自动执行标定
-                        AiFlowLogger.Info("[标定] 检测到截图但无标定数据，自动执行标定...");
-                        try
-                        {
-                            var calibService = new CalibrationService(msg => AiFlowLogger.Info(msg));
-                            cal = await calibService.CalibrateAsync(
-                                SelectedModelId, lastImageWidth.Value, lastImageHeight.Value,
-                                _cts.Token);
-                        }
-                        catch (Exception ex)
-                        {
-                            AiFlowLogger.Warn($"[标定] 自动标定失败: {ex.Message}");
-                        }
-                    }
-                    if (cal != null)
-                    {
-                        // 将校正公式注入到流程上下文中（而非用户消息），避免污染用户输入
-                        currentFlowContext += $"\n\n[坐标校正] 当前模型在分辨率({cal.Width}x{cal.Height})下的坐标估算存在系统偏差，" +
-                                             $"当需要设置坐标时请应用校正公式：" +
-                                             $"correctedX = {cal.ScaleX:F4} * rawX + {cal.OffsetX:F1}，" +
-                                             $"correctedY = {cal.ScaleY:F4} * rawY + {cal.OffsetY:F1}。";
-                        AiFlowLogger.Info($"[标定] 已注入校正公式到流程上下文");
-                    }
-                }
 
-                // 准备流式输出：移除思考提示，创建助手消息占位
-                RemoveLastSystemMessage();
-                AiChatMessage? streamingMsg = null;
-                var streamBuilder = new System.Text.StringBuilder();
+            // 准备流式输出，WebView2 内置加载与流式显示
+                LoadingText = "⏳ 正在分析需求...";
 
-                // 流式文本增量回调：实时追加内容到助手消息
-                // 使用 BeginInvoke（异步投递到 UI 线程），避免每个 SSE delta 事件都同步阻塞等待 UI 渲染，
-                // 从而实现真正的逐字流式显示效果。Invoke（同步）在高频 delta（~20ms/token）下
-                // 会导致网络读取被 UI 线程阻塞，最终文本堆积后一次性批量显示。
+                // 触发流式开始事件（WebView2 创建占位消息）
+                StreamingStarted?.Invoke();
+
+                // 流式回调：累积文本（用于持久化）+ 触发事件（用于 WebView2 增量渲染）
                 Action<string> onDelta = delta =>
                 {
+                    if (LoadingText != null) LoadingText = null;
                     streamBuilder.Append(delta);
-                    var currentText = streamBuilder.ToString();
-                    Application.Current.Dispatcher.BeginInvoke(() =>
-                    {
-                        if (streamingMsg == null)
-                        {
-                            // 首次收到 delta，创建助手消息
-                            streamingMsg = new AiChatMessage
-                            {
-                                Role = AiChatRole.Assistant,
-                                Content = currentText
-                            };
-                            Messages.Add(streamingMsg);
-                        }
-                        else
-                        {
-                            streamingMsg.Content = currentText;
-                        }
-                        ScrollToEndRequested?.Invoke(this, EventArgs.Empty);
-                    });
+                    StreamingDelta?.Invoke(delta);
                 };
 
-                // 思考/推理过程回调
                 Action<string> onThinking = thinking =>
                 {
-                    Application.Current.Dispatcher.BeginInvoke(() =>
-                    {
-                        if (streamingMsg == null)
-                        {
-                            // 思考先于正文到达，创建助手消息
-                            streamingMsg = new AiChatMessage
-                            {
-                                Role = AiChatRole.Assistant,
-                                Content = "",
-                                ThinkingContent = thinking
-                            };
-                            Messages.Add(streamingMsg);
-                        }
-                        else
-                        {
-                            streamingMsg.ThinkingContent = (streamingMsg.ThinkingContent ?? "") + thinking;
-                        }
-                        ScrollToEndRequested?.Invoke(this, EventArgs.Empty);
-                    });
+                    if (LoadingText != null) LoadingText = null;
+                    thinkingBuilder.Append(thinking);
+                    StreamingThinking?.Invoke(thinking);
                 };
 
-                var (plan, tokens2In, tokens2Out) = await _service.GeneratePlanAsync(
+                var (plan, tokens2In, tokens2Out, isTruncated) = await _service.GeneratePlanAsync(
                     userInput, categories, SelectedModelId, _cts.Token, currentFlowContext, history, CurrentMode,
                     imageBase64List.Count > 0 ? imageBase64List : null,
                     onDelta, onThinking,
+                    onStatus: status => { LoadingText = status; },
                     getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                     captureScreenshot: async target => await CaptureScreenForAiAsync(
                         string.IsNullOrWhiteSpace(target) ? "windows" : target));
@@ -606,20 +549,18 @@ namespace TaskFlow.ViewModels
                     if (!string.IsNullOrEmpty(plan.Summary))
                     {
                         AiFlowLogger.Info($"分析完成（Token: {tokens2In}+{tokens2Out}）");
-                        // 流式已创建消息则更新最终内容，否则新增
-                        if (streamingMsg != null)
-                        {
-                            Application.Current.Dispatcher.Invoke(() =>
-                                streamingMsg.Content = plan.Summary);
-                        }
-                        else
-                        {
-                            AddMessage(AiChatRole.Assistant, plan.Summary);
-                        }
+                        // 流式内容已由 WebView2 渲染，finally 中会持久化
                     }
                     else
                     {
                         AddMessage(AiChatRole.System, "❌ AI 未能生成有效方案，请尝试更详细的需求描述。");
+                        ShowRetryButton = true;
+                    }
+                    // 截断检测：如果 API 回复被截断，显示“请继续”按钮
+                    if (isTruncated)
+                    {
+                        ShowContinueButton = true;
+                        AiFlowLogger.Info("回复被截断，显示“请继续”按钮");
                     }
                     return;
                 }
@@ -633,35 +574,16 @@ namespace TaskFlow.ViewModels
 
                 if (isShellOnly && CurrentMode == AiAssistantMode.Autonomous)
                 {
-                    if (!string.IsNullOrEmpty(plan.Summary))
-                    {
-                        if (streamingMsg != null)
-                            Application.Current.Dispatcher.Invoke(() =>
-                                streamingMsg.Content = plan.Summary);
-                        else
-                            AddMessage(AiChatRole.Assistant, plan.Summary);
-                    }
-
+                    // 流式内容已由 WebView2 渲染
                     AiFlowLogger.Info("纯 PowerShell 命令方案，直接执行...");
                     await ExecuteAutonomousLoopAsync(plan);
                     return;
                 }
 
-                // 显示方案（含确认/拒绝按钮）：移除流式消息，用带 Plan 的正式消息替换
+                // 显示方案（含确认/拒绝按钮）
                 PendingPlan = plan;
                 var planMsg = _serializer.FormatPlanAsText(plan);
-                if (streamingMsg != null)
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        streamingMsg.Content = planMsg;
-                        streamingMsg.Plan = plan;
-                    });
-                }
-                else
-                {
-                    AddMessage(AiChatRole.Assistant, planMsg, plan);
-                }
+                AddMessage(AiChatRole.Assistant, planMsg, plan);
             }
             catch (OperationCanceledException)
             {
@@ -676,7 +598,27 @@ namespace TaskFlow.ViewModels
             }
             finally
             {
-                StopThinkingAnimation();
+                // 触发流式结束事件，让 WebView2 做最终 Markdown 渲染
+                StreamingEnded?.Invoke();
+
+                // 将流式内容存入 Messages 集合（用于会话持久化）
+                if (streamBuilder.Length > 0)
+                {
+                    var finalMsg = new AiChatMessage
+                    {
+                        Role = AiChatRole.Assistant,
+                        Content = streamBuilder.ToString(),
+                        ThinkingContent = thinkingBuilder.Length > 0 ? thinkingBuilder.ToString() : null,
+                        // 标记该消息已通过 StreamingDelta 流式渲染，CollectionChanged 时跳过 addMessage 避免重复显示
+                        IsStreamedToWebView = true
+                    };
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Messages.Add(finalMsg);
+                    });
+                }
+
+                LoadingText = null;
                 IsGenerating = false;
                 _cts?.Dispose();
                 _cts = null;
@@ -756,7 +698,7 @@ namespace TaskFlow.ViewModels
                                 var lineStart = confirmIdx;
                                 while (lineStart > 0 && oldContent[lineStart - 1] != '\n' && oldContent[lineStart - 1] != '\r')
                                     lineStart--;
-                                planMsg.Content = oldContent.Substring(0, lineStart).TrimEnd() + "\n✅ 已确认";
+                                planMsg.Content = oldContent.Substring(0, lineStart).TrimEnd() + "\n✅ 已经确认";
                             }
 
                             // 直接更新属性（已继承 ObservableObject）
@@ -765,6 +707,7 @@ namespace TaskFlow.ViewModels
                     }
                 });
                 _mainViewModel.RecalculateIndentLevels();
+                MessagesUpdated?.Invoke();
 
                 // 如果方案包含 runCards，进入自主执行循环
                 if (hasRunCards)
@@ -797,6 +740,7 @@ namespace TaskFlow.ViewModels
             {
                 AiFlowLogger.Error("创建失败", ex);
                 AddMessage(AiChatRole.System, $"❌ 创建失败: {ex.Message}");
+                ShowRetryButton = true;
             }
         }
 
@@ -826,6 +770,27 @@ namespace TaskFlow.ViewModels
             ShowRetryButton = false;
             InputText = _lastUserInput;
             await SendMessageAsync();
+        }
+
+        /// <summary>
+        /// 继续被截断的生成（自动发送"请继续"）
+        /// </summary>
+        [RelayCommand]
+        private async Task ContinueGenerationAsync()
+        {
+            if (IsGenerating) return;
+            ShowContinueButton = false;
+            InputText = "请继续";
+            await SendMessageAsync();
+        }
+
+        /// <summary>
+        /// 取消显示"请继续"按钮
+        /// </summary>
+        [RelayCommand]
+        private void DismissContinue()
+        {
+            ShowContinueButton = false;
         }
 
         /// <summary>
@@ -907,20 +872,6 @@ namespace TaskFlow.ViewModels
                         Timestamp = DateTime.Now
                     };
                 }
-            });
-        }
-
-        /// <summary>
-        /// 移除最后一条系统消息（用于清除思考中提示）
-        /// </summary>
-        private void RemoveLastSystemMessage()
-        {
-            StopThinkingAnimation();
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                var last = Messages.LastOrDefault(m => m.Role == AiChatRole.System);
-                if (last != null)
-                    Messages.Remove(last);
             });
         }
 

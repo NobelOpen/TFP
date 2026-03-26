@@ -40,14 +40,68 @@ namespace TaskFlow.Helpers
         }
 
         /// <summary>
+        /// 将文本中所有 base64 图像数据替换为截断占位符，防止日志文件被图像数据污染。
+        /// 例如：data:image/png;base64,iVBORw0KGgo... → data:image/png;base64,[省略 xxxxx 字节]
+        /// </summary>
+        internal static string TruncateBase64(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+
+            // 匹配 ;base64, 后跟连续 base64 字符的模式
+            const string marker = ";base64,";
+            int searchPos = 0;
+            var sb = new System.Text.StringBuilder();
+
+            while (true)
+            {
+                int markerIdx = text.IndexOf(marker, searchPos, StringComparison.Ordinal);
+                if (markerIdx < 0) break;
+
+                int dataStart = markerIdx + marker.Length;
+                // 收集连续的 base64 字符（A-Z a-z 0-9 + / =）
+                int dataEnd = dataStart;
+                while (dataEnd < text.Length)
+                {
+                    char c = text[dataEnd];
+                    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+                        (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '=')
+                        dataEnd++;
+                    else
+                        break;
+                }
+
+                int b64Length = dataEnd - dataStart;
+                // 只有长度超过 64 字节才截断（避免误处理短字符串）
+                if (b64Length > 64)
+                {
+                    sb.Append(text, searchPos, dataStart - searchPos); // 保留 ;base64, 前缀
+                    sb.Append($"[省略 {b64Length} 字节的图像数据]");
+                    searchPos = dataEnd;
+                }
+                else
+                {
+                    // 短 base64 保留原文
+                    sb.Append(text, searchPos, dataEnd - searchPos);
+                    searchPos = dataEnd;
+                }
+            }
+
+            if (searchPos == 0) return text; // 没有发现 base64，直接返回原文
+            sb.Append(text, searchPos, text.Length - searchPos);
+            return sb.ToString();
+        }
+
+        /// <summary>
         /// 写入一条日志
         /// </summary>
         public static void Log(string level, string message)
         {
             try
             {
+                // 在写入前截断 base64 图像数据，防止日志文件膨胀
+                var safeMessage = TruncateBase64(message);
                 var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-                var logLine = $"[{timestamp}] [{level}] {message}\n";
+                var logLine = $"[{timestamp}] [{level}] {safeMessage}\n";
 
                 lock (_lock)
                 {
@@ -98,7 +152,7 @@ namespace TaskFlow.Helpers
             sb.AppendLine($"模型ID: {modelId}");
             sb.AppendLine($"端点: {endpoint}");
             sb.AppendLine($"请求体:");
-            sb.AppendLine(requestJson);
+            sb.AppendLine(TruncateBase64(requestJson)); // Truncate base64 data
             sb.AppendLine("=============================");
             Info(sb.ToString());
         }
@@ -112,7 +166,7 @@ namespace TaskFlow.Helpers
             sb.AppendLine($"===== LLM 响应 [{stage}] =====");
             sb.AppendLine($"Token 消耗: 输入={inputTokens}, 输出={outputTokens}");
             sb.AppendLine($"响应体:");
-            sb.AppendLine(responseJson);
+            sb.AppendLine(TruncateBase64(responseJson)); // Truncate base64 data
             sb.AppendLine("=============================");
             Info(sb.ToString());
         }
