@@ -121,7 +121,7 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 将各类别下所有卡片的描述聚合后，提交给语义路由器预计算向量
+        /// 将各卡片的描述提交给语义路由器预计算向量
         /// </summary>
         private static void TryPrecomputeSemanticVectors(List<CardDescriptionDef> cards)
         {
@@ -130,20 +130,19 @@ namespace TaskFlow.Services
                 var router = SemanticRouter.GetInstance();
                 if (!router.IsReady) return;
 
-                // 每个类别聚合所有卡片的 Description 和 Usage，形成更丰富的语义文本
-                var categoryDefs = cards
-                    .GroupBy(c => c.Category)
-                    .Select(g => (
-                        Category: g.Key,
-                        Description: string.Join(" ", g.Select(c => c.Description)),
-                        Usage: string.Join(" ", g.Select(c => c.Usage))
-                    ));
+                // 直接传入卡片级别的数据，避免类别合并后文字过长被 ONNX (512 tokens) 截断，同时也避免语义被同类的其他卡片稀释
+                var cardDefs = cards.Select(c => (
+                    Category: c.Category,
+                    TaskType: c.TaskType,
+                    Description: c.Description,
+                    Usage: c.Usage
+                ));
 
-                router.PrecomputeCategoryVectors(categoryDefs);
+                router.PrecomputeCardVectors(cardDefs);
             }
             catch (Exception ex)
             {
-                AiFlowLogger.Warn($"类别向量预计算失败: {ex.Message}");
+                AiFlowLogger.Warn($"卡片向量预计算失败: {ex.Message}");
             }
         }
 

@@ -37,10 +37,10 @@ namespace TaskFlow.Services
         private BertTokenizer? _tokenizer;
         private bool _isReady;
 
-        // ====================[ 类别向量缓存 ]====================
-        // key: 类别名称，value: 384 维归一化向量
-        private readonly Dictionary<string, float[]> _categoryVectors = new();
-        private static readonly object _categoryLock = new();
+        // ====================[ 卡片向量缓存 ]====================
+        // 存储每张卡片的对应分类、卡片类型名称，以及 384 维归一化向量
+        private readonly List<(string Category, string TaskType, float[] Vector)> _cardVectors = new();
+        private static readonly object _cardLock = new();
 
         // ====================[ 初始化 ]====================
 
@@ -96,35 +96,35 @@ namespace TaskFlow.Services
         /// </summary>
         public bool IsReady => _isReady;
 
-        // ====================[ 类别向量预计算 ]====================
+        // ====================[ 卡片向量预计算 ]====================
 
         /// <summary>
-        /// 为所有类别预先计算 Embedding 向量并缓存。
+        /// 为所有卡片预先计算 Embedding 向量并缓存。
         /// 每次 AiFlowDescriptions.json 发生变化时调用一次即可。
         /// </summary>
-        public void PrecomputeCategoryVectors(IEnumerable<(string Category, string Description, string Usage)> categoryDefs)
+        public void PrecomputeCardVectors(IEnumerable<(string Category, string TaskType, string Description, string Usage)> cards)
         {
             if (!_isReady) return;
 
-            lock (_categoryLock)
+            lock (_cardLock)
             {
-                _categoryVectors.Clear();
-                foreach (var (category, desc, usage) in categoryDefs)
+                _cardVectors.Clear();
+                foreach (var (category, taskType, desc, usage) in cards)
                 {
-                    // 将类别名 + 描述 + 使用场景拼接为语义文本，提升向量精度
-                    var text = $"{category} {desc} {usage}";
+                    // 将卡片属性拼接为语义文本，以单张卡片为粒度更能保持语义纯度
+                    var text = $"{taskType} {desc} {usage}";
                     var vec = GetEmbedding(text);
                     if (vec != null)
-                        _categoryVectors[category] = Normalize(vec);
+                        _cardVectors.Add((category, taskType, Normalize(vec)));
                 }
-                AiFlowLogger.Info($"语义路由：已预计算 {_categoryVectors.Count} 个类别向量。");
+                AiFlowLogger.Info($"语义路由：已预计算 {_cardVectors.Count} 个卡片向量。");
             }
         }
 
         // ====================[ 路由核心逻辑 ]====================
 
         /// <summary>
-        /// 根据用户输入语义匹配最相关的卡片类别。
+        /// 根据用户输入语义匹配最相关的卡片，提取对应的卡片类别。
         /// </summary>
         /// <param name="userPrompt">用户输入</param>
         /// <param name="threshold">相似度阈值（≥此值才认为相关，默认 0.30）</param>
@@ -132,7 +132,7 @@ namespace TaskFlow.Services
         /// <returns>匹配的类别名称列表</returns>
         public List<string> Route(string userPrompt, float threshold = 0.30f, int minCategories = 1)
         {
-            if (!_isReady || _categoryVectors.Count == 0)
+            if (!_isReady || _cardVectors.Count == 0)
                 return new List<string>();
 
             try
@@ -142,30 +142,41 @@ namespace TaskFlow.Services
                 if (userVec == null) return new List<string>();
                 var normalizedUser = Normalize(userVec);
 
-                // 计算所有类别的余弦相似度（已预归一化，直接点积即可）
-                var scores = new List<(string Category, float Score)>();
-                lock (_categoryLock)
+                // 计算所有卡片的余弦相似度（已预归一化，直接点积即可）
+                var scores = new List<(string Category, string TaskType, float Score)>();
+                lock (_cardLock)
                 {
-                    foreach (var (category, catVec) in _categoryVectors)
+                    foreach (var card in _cardVectors)
                     {
-                        float sim = CosineSimilarityNormalized(normalizedUser, catVec);
-                        scores.Add((category, sim));
+                        float sim = CosineSimilarityNormalized(normalizedUser, card.Vector);
+                        scores.Add((card.Category, card.TaskType, sim));
                     }
                 }
 
                 scores.Sort((a, b) => b.Score.CompareTo(a.Score));
 
-                // 记录详细得分方便调试
-                var scoreLog = string.Join(", ", scores.Select(s => $"{s.Category}={s.Score:F3}"));
-                AiFlowLogger.Info($"语义路由得分: [{scoreLog}]");
+                // 记录排名前几位的详细得分方便调试
+                var topCards = scores.Take(8).ToList();
+                var scoreLog = string.Join(", ", topCards.Select(s => $"{s.TaskType}={s.Score:F3}"));
+                AiFlowLogger.Info($"语义路由卡片得分 Top8: [{scoreLog}]");
 
-                // 选取高于阈值的类别，至少保留 minCategories 个
-                var result = scores.Where(s => s.Score >= threshold).Select(s => s.Category).ToList();
-                if (result.Count < minCategories)
-                    result = scores.Take(minCategories).Select(s => s.Category).ToList();
+                // 筛选出大于阈值的卡片，再提取这些卡片所属的 Category（去重）
+                var resultCategories = scores.Where(s => s.Score >= threshold)
+                                             .Select(s => s.Category)
+                                             .Distinct()
+                                             .ToList();
 
-                AiFlowLogger.Info($"语义路由结果（阈值 {threshold}）: [{string.Join(", ", result)}]");
-                return result;
+                // 如果高分分类过少，按得分从高到低强制补全到 minCategories 个
+                if (resultCategories.Count < minCategories)
+                {
+                    resultCategories = scores.Select(s => s.Category)
+                                             .Distinct()
+                                             .Take(minCategories)
+                                             .ToList();
+                }
+
+                AiFlowLogger.Info($"语义路由最终大类结果（阈值 {threshold}）: [{string.Join(", ", resultCategories)}]");
+                return resultCategories;
             }
             catch (Exception ex)
             {
