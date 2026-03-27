@@ -857,6 +857,15 @@ namespace TaskFlow.Models.TaskCards
             Name = "自定义脚本";
         }
 
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            if (step.Properties.TryGetValue("scriptCode", out var code) && !string.IsNullOrWhiteSpace(code))
+                ScriptCode = code;
+            return missing;
+        }
+
         public override void Reset()
         {
             base.Reset();
