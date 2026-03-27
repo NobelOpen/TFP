@@ -47,6 +47,7 @@ namespace TaskFlow.Models.AiFlow
             TaskType.FileRead => TaskRiskLevel.Low,
             TaskType.GetTimestamp => TaskRiskLevel.Low,
             TaskType.PauseTask => TaskRiskLevel.Low,
+            TaskType.CustomScript => TaskRiskLevel.Low,
             TaskType.AdbScreenshot => TaskRiskLevel.Low,
 
             // === 🟡 中风险：启动/关闭/交互操作 ===

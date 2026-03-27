@@ -580,7 +580,74 @@ namespace TaskFlow.ViewModels
                     return;
                 }
 
-                // 显示方案（含确认/拒绝按钮）
+                // ===== 自主模式：低风险方案自动确认（免交互） =====
+                if (CurrentMode == AiAssistantMode.Autonomous)
+                {
+                    // 评估方案中所有新建卡片的最高风险级别
+                    var maxRisk = TaskRiskLevel.Low;
+                    foreach (var step in plan.Plan)
+                    {
+                        if (Enum.TryParse<TaskType>(step.TaskType, out var tt))
+                        {
+                            var risk = TaskRiskClassifier.GetRiskLevel(tt);
+                            if (risk > maxRisk) maxRisk = risk;
+                        }
+                    }
+                    // 运行已有卡片的风险也考虑在内
+                    if (plan.RunCards != null)
+                    {
+                        foreach (var order in plan.RunCards)
+                        {
+                            var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
+                            if (card != null)
+                            {
+                                var risk = TaskRiskClassifier.GetRiskLevel(card.TaskType);
+                                if (risk > maxRisk) maxRisk = risk;
+                            }
+                        }
+                    }
+
+                    if (maxRisk == TaskRiskLevel.Low)
+                    {
+                        // 全部低风险：显示方案文本（无确认按钮）后直接创建+执行
+                        var autoMsg = _serializer.FormatPlanAsText(plan);
+                        AddMessage(AiChatRole.Assistant, autoMsg + "\n✅ 低风险操作，已自动确认");
+
+                        AiFlowLogger.Info("自主模式：方案全部为低风险，自动确认并执行...");
+
+                        // 直接走创建逻辑
+                        var (createdCount, _) = _planExecutor.CreateTaskCardsFromPlan(plan, CurrentMode, SelectedModelId);
+                        _mainViewModel.RecalculateIndentLevels();
+                        MessagesUpdated?.Invoke();
+
+                        // 自动运行
+                        bool hasRunNow = plan.RunCards != null && plan.RunCards.Count > 0;
+                        if (hasRunNow)
+                        {
+                            await ExecuteAutonomousLoopAsync(plan);
+                        }
+                        else if (hasSteps && createdCount > 0)
+                        {
+                            // 创建了新卡片但 AI 没指定 runCards，自动把新卡片加入运行
+                            var newOrders = _mainViewModel.TaskCards
+                                .OrderByDescending(c => c.Order)
+                                .Take(createdCount)
+                                .Select(c => c.Order)
+                                .OrderBy(o => o)
+                                .ToList();
+                            plan.RunCards = newOrders;
+                            AiFlowLogger.Info($"自主模式：自动运行新创建的 {createdCount} 张卡片...");
+                            await ExecuteAutonomousLoopAsync(plan);
+                        }
+                        return;
+                    }
+                    else
+                    {
+                        AiFlowLogger.Info($"自主模式：方案含 {maxRisk} 风险操作，需用户确认...");
+                    }
+                }
+
+                // 显示方案（含确认/拒绝按钮）— 设计模式或中/高风险的自主模式
                 PendingPlan = plan;
                 var planMsg = _serializer.FormatPlanAsText(plan);
                 AddMessage(AiChatRole.Assistant, planMsg, plan);
