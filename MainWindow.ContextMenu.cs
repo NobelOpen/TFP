@@ -236,6 +236,18 @@ namespace TaskFlow
 
                 try
                 {
+                    // 自定义脚本卡片使用独立的编辑器窗口
+                    if (task is CustomScriptTaskCard scriptCard)
+                    {
+                        var editor = new CustomScriptEditorWindow(
+                            scriptCard,
+                            ViewModel.ExecutionService,
+                            ViewModel.TaskCards.ToList());
+                        editor.Owner = this;
+                        editor.ShowDialog();
+                        return;
+                    }
+
                     var dialog = new TaskPropertyDialog(task, ViewModel);
                     dialog.Owner = this;
                     if (dialog.ShowDialog() == true)

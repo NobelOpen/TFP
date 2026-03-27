@@ -129,6 +129,7 @@
                     HorizontalAlignment="Left" 
                     Margin="0,12,0,0">
             <Button x:Name="BtnAdd" Content="添加流程" Click="AddFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
+            <Button x:Name="BtnAddSubFlow" Content="添加子流程" Click="AddSubFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
             <Button x:Name="BtnRename" Content="重命名" Click="RenameFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
             <Button x:Name="BtnDelete" Content="删除流程" Click="DeleteFlow_Click" Style="{StaticResource FlowButton}" Margin="0,0,8,0"/>
         </StackPanel>

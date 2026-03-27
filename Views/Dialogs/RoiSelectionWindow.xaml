@@ -109,7 +109,7 @@
                     <TextBlock x:Name="BrushSizeText" Text="20" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"
                                FontSize="12" Margin="6,0,0,0" MinWidth="25"/>
                     <Separator Margin="8,0" Background="{DynamicResource BorderLightBrush}"/>
-                    <Button Content="遮蔽全部" Background="{DynamicResource RunReadyButtonBgBrush}" Style="{StaticResource ActionButton}"
+                    <Button Content="遮蔽全部" Style="{StaticResource ActionButton}"
                             Click="MaskAll_Click" Margin="0,0,6,0"/>
                     <Button Content="清除掩膜" Style="{StaticResource ActionButton}"
                             Click="ClearMask_Click" Margin="0"/>

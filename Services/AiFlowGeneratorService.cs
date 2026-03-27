@@ -114,7 +114,37 @@ namespace TaskFlow.Services
                 _cardDescriptions = new();
             }
 
+            // 加载完成后，为语义路由预计算类别向量（按类别聚合描述）
+            TryPrecomputeSemanticVectors(_cardDescriptions);
+
             return _cardDescriptions;
+        }
+
+        /// <summary>
+        /// 将各类别下所有卡片的描述聚合后，提交给语义路由器预计算向量
+        /// </summary>
+        private static void TryPrecomputeSemanticVectors(List<CardDescriptionDef> cards)
+        {
+            try
+            {
+                var router = SemanticRouter.GetInstance();
+                if (!router.IsReady) return;
+
+                // 每个类别聚合所有卡片的 Description 和 Usage，形成更丰富的语义文本
+                var categoryDefs = cards
+                    .GroupBy(c => c.Category)
+                    .Select(g => (
+                        Category: g.Key,
+                        Description: string.Join(" ", g.Select(c => c.Description)),
+                        Usage: string.Join(" ", g.Select(c => c.Usage))
+                    ));
+
+                router.PrecomputeCategoryVectors(categoryDefs);
+            }
+            catch (Exception ex)
+            {
+                AiFlowLogger.Warn($"类别向量预计算失败: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -171,19 +201,37 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 阶段1：确定需要的卡片类别
+        /// 阶段1：确定需要的卡片类别。
+        /// 优先使用本地语义路由（零 Token 消耗），若模型不可用则回退到 LLM 分类。
         /// </summary>
         public async Task<(List<string> Categories, int InputTokens, int OutputTokens)> DetermineCategoriesAsync(
             string userPrompt, string modelId, CancellationToken cancellationToken)
         {
+            var allCategories = GetAllCategories();
+
+            // ===== 优先路径：本地语义路由（零 Token 消耗）=====
+            var router = SemanticRouter.GetInstance();
+            if (router.IsReady)
+            {
+                var categories = router.Route(userPrompt, threshold: 0.30f, minCategories: 2);
+
+                // 验证结果：确保返回的类别都是已知的
+                categories = categories.Where(c => allCategories.Contains(c)).ToList();
+                if (categories.Count == 0)
+                    categories = allCategories;
+
+                AiFlowLogger.Info($"[语义路由] 类别匹配结果: [{string.Join(", ", categories)}]（0 Token 消耗）");
+                return (categories, 0, 0);
+            }
+
+            // ===== 兜底路径：LLM 分类（模型文件不存在时使用）=====
+            AiFlowLogger.Info("语义路由不可用，回退到 LLM 分类模式...");
+
             var modelConfig = LlmModelManager.GetModelById(modelId);
             if (modelConfig == null)
                 throw new InvalidOperationException("未找到指定的模型配置");
 
-            var allCategories = GetAllCategories();
             var categoryList = string.Join("、", allCategories);
-
-            // 从模板文件加载阶段1 Prompt
             var categoryTemplate = LoadPromptTemplate("CategoryJudge.md");
             var systemPrompt = RenderTemplate(categoryTemplate, new Dictionary<string, string>
             {
@@ -202,36 +250,28 @@ namespace TaskFlow.Services
             };
 
             var requestJson = JsonConvert.SerializeObject(requestBody, Formatting.Indented);
-            AiFlowLogger.LogLlmRequest("阶段1-类别判断", modelId, modelConfig.ApiEndpoint, requestJson);
+            AiFlowLogger.LogLlmRequest("阶段1-LLM类别判断", modelId, modelConfig.ApiEndpoint, requestJson);
 
             var (responseText, inputTokens, outputTokens, _) = await CallLlmAsync(modelConfig, requestBody, cancellationToken);
+            AiFlowLogger.LogLlmResponse("阶段1-LLM类别判断", responseText, inputTokens, outputTokens);
 
-            AiFlowLogger.LogLlmResponse("阶段1-类别判断", responseText, inputTokens, outputTokens);
-
-            // 解析返回的类别列表
-            var categories = new List<string>();
+            var llmCategories = new List<string>();
             try
             {
-                // 提取 JSON 数组部分
                 var jsonMatch = System.Text.RegularExpressions.Regex.Match(responseText, @"\[.*\]", System.Text.RegularExpressions.RegexOptions.Singleline);
                 if (jsonMatch.Success)
-                {
-                    categories = JsonConvert.DeserializeObject<List<string>>(jsonMatch.Value) ?? new();
-                }
+                    llmCategories = JsonConvert.DeserializeObject<List<string>>(jsonMatch.Value) ?? new();
             }
             catch (Exception ex)
             {
-                // 解析失败时，使用所有类别
-                AiFlowLogger.Warn($"阶段1类别解析失败，回退到全部类别: {ex.Message}");
-                categories = allCategories;
+                AiFlowLogger.Warn($"LLM类别解析失败，回退到全部类别: {ex.Message}");
+                llmCategories = allCategories;
             }
 
-            // 确保至少有一个类别
-            if (categories.Count == 0)
-                categories = allCategories;
+            if (llmCategories.Count == 0) llmCategories = allCategories;
 
-            AiFlowLogger.Info($"阶段1结果: 确定类别 [{string.Join(", ", categories)}]");
-            return (categories, inputTokens, outputTokens);
+            AiFlowLogger.Info($"[LLM路由] 类别判断结果: [{string.Join(", ", llmCategories)}]");
+            return (llmCategories, inputTokens, outputTokens);
         }
 
         /// <summary>

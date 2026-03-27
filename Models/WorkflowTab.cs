@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
@@ -6,10 +7,27 @@ using TaskFlow.Models.TaskCards;
 namespace TaskFlow.Models
 {
     /// <summary>
+    /// 工作流类型枚举
+    /// </summary>
+    public enum FlowType
+    {
+        /// <summary>主流程，可被自动调度执行</summary>
+        Normal,
+        /// <summary>子流程，作为函数调用目标，受限于特殊执行上下文</summary>
+        SubFlow
+    }
+
+    /// <summary>
     /// 工作流分页，每个分页包含独立的任务卡片集合、变量和文件路径
     /// </summary>
     public partial class WorkflowTab : ObservableObject
     {
+        [ObservableProperty]
+        private Guid _id = Guid.NewGuid();
+
+        [ObservableProperty]
+        private FlowType _type = FlowType.Normal;
+
         [ObservableProperty]
         private string _name = "流程1";
 

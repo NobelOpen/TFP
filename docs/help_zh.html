@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -468,6 +468,7 @@
         <li><a href="#IfElse">If-Else分支</a></li>
         <li><a href="#ForLoop">For循环</a></li>
         <li><a href="#BreakLoop">中止循环</a></li>
+        <li><a href="#CustomScript">自定义脚本</a></li>
       </ul>
     </div>
 
@@ -1498,6 +1499,67 @@
       <div class="output-section">
         <div class="output-title"> 输出</div>
         <div class="output-item">无输出（仅控制循环跳出）</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="CustomScript">
+      <h3>自定义脚本 <span class="badge badge-flow">控制流</span></h3>
+      <p>允许用户通过编写原生 C# 代码来实现最高自由度的逻辑定制。这适合用来执行复杂的运算引擎、循环、文件处理，或者处理其他任务卡片无法直接完成的数据操作。引擎使用 Roslyn 动态编译执行并具有 MD5 缓存优化，提供近乎原生的执行性能。</p>
+      <dl class="props">
+        <dt>代码编辑器</dt>
+        <dd>四层代码编辑窗口，内建带 C# 语法高亮的编辑器和独立日志控制台界面。您可以在脚本中使用纯 C# 进行原生编程。</dd>
+        <dt>系统引用</dt>
+        <dd>脚本沙箱默认已经导入 <code>System</code>、<code>System.Linq</code>、<code>System.Collections.Generic</code>、<code>System.Text</code>、<code>OpevCvSharp</code> 等常用命名空间，并能自动使用 <code>TaskFlowPro</code> 上下文对象。</dd>
+        <dt>官方接口：TaskFlowPro 交互对象</dt>
+        <dd>脚本中最核心的内容就是利用内置全局对象 <code>TaskFlowPro</code> 与整个任务流相互通信。下面是支持的方法：</dd>
+      </dl>
+      <div class="example-section" style="margin-top: 10px;">
+        <div class="example-title"> TaskFlowPro API 使用说明</div>
+        
+        <div class="example-item">
+          <strong>1. 读写卡片输出 / 属性</strong><br/>
+          • <code>TaskFlowPro.GetTool("#N 任务名.属性名")</code>：获取卡片的值，如：<br/>
+          <code>var text = TaskFlowPro.GetTool("#1 图像裁剪.输出文本")?.ToString();</code><br/>
+          <code>var x = Convert.ToInt32(TaskFlowPro.GetTool("#2 获取坐标.X"));</code><br/><br/>
+          • <code>TaskFlowPro.SetTool("#N 任务名.属性名", value)</code>：设定卡片的可写属性值（动态修改后续任务的配置）。
+        </div>
+
+        <div class="example-item">
+          <strong>2. 读写全局/局部变量</strong><br/>
+          • <code>TaskFlowPro.GetVar("@变量名")</code>：读取变量管理器中的对应变量，如：<br/>
+          <code>int count = Convert.ToInt32(TaskFlowPro.GetVar("@计数器"));</code><br/><br/>
+          • <code>TaskFlowPro.SetVar("@变量名", value)</code>：覆盖变量管理器中的对应变量，如：<br/>
+          <code>TaskFlowPro.SetVar("@计数器", count + 1);</code>
+        </div>
+
+        <div class="example-item">
+          <strong>3. 读取 / 产出 图像数据 (OpenCV)</strong><br/>
+          • <code>TaskFlowPro.GetImage("#N 任务名")</code>：获取某卡片输出的拷贝图像（OpenCvSharp.Mat 对象），如：<br/>
+          <code>using var img = TaskFlowPro.GetImage("#3 屏幕截图");</code><br/>
+          <em>注意：使用后需自行释放对象 (<code>using</code> 或者 <code>img.Dispose()</code>) 以避免内存泄漏。</em><br/><br/>
+          • <code>TaskFlowPro.SetOutputImage(img)</code>：把处理好的图像赋值给当前自定义脚本任务的输出图像，使其能够被后续视觉模块使用。
+        </div>
+
+        <div class="example-item">
+          <strong>4. 自定义此卡片的普通输出</strong><br/>
+          你可以使用下面的方法设置该脚本专属的各种类型数据输出：<br/>
+          • <code>TaskFlowPro.SetOutputText(string)</code>：设置产出文本。<br/>
+          • <code>TaskFlowPro.SetOutputXY(int x, int y)</code>：设置产出坐标 X、Y。<br/>
+          • <code>TaskFlowPro.SetOutputResult(bool)</code>：设置布尔型执行结果（例如脚本内判定失败可以用其后续引导 IfElse）。
+        </div>
+
+        <div class="example-item">
+          <strong>5. 日志与控制台</strong><br/>
+          • <code>Console.WriteLine("...")</code> 或 <code>TaskFlowPro.Log("...")</code>：向脚本运行界面的输出面板（同时也输出到任务卡片的日志区）打印调试日志信息。
+        </div>
+      </div>
+
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.text</code> — 用户使用 SetOutputText 指定的内容</div>
+        <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — 用户使用 SetOutputXY 指定的坐标内容</div>
+        <div class="output-item"><code>#N.result</code> — 用户指定的布尔结果</div>
+        <div class="output-item"><code>#N.image</code> — 用户设置的高级图像数据流</div>
       </div>
     </div>
 

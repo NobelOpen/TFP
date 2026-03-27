@@ -742,4 +742,125 @@ namespace TaskFlow.Models.TaskCards
             OutputMatchValue = null;
         }
     }
+
+    /// <summary>
+    /// 调用子流程任务卡片 - 在主流程中调用一个子流程
+    /// </summary>
+    public partial class CallSubFlowTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.CallSubFlow;
+
+        /// <summary>
+        /// 目标子流程ID
+        /// </summary>
+        [ObservableProperty]
+        private Guid? _targetSubFlowId;
+
+        // 传入子流程的参数源
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForImage;
+
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForText;
+
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForX;
+
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForY;
+
+        public CallSubFlowTaskCard()
+        {
+            Name = "调用子流程";
+        }
+
+        public override bool OutputsImage => true;
+        public override bool OutputsText => true;
+        public override bool OutputsCoordinates => true;
+        public override bool OutputsBoolResult => true;
+    }
+
+    /// <summary>
+    /// 子流程输入卡片 - 在子流程的开头固定存在，接收主流程传入的数据
+    /// </summary>
+    public partial class SubFlowInputTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.SubFlowInput;
+
+        public SubFlowInputTaskCard()
+        {
+            Name = "子流程输入";
+        }
+
+        public override bool OutputsImage => true;
+        public override bool OutputsText => true;
+        public override bool OutputsCoordinates => true;
+        public override bool OutputsBoolResult => true;
+    }
+
+    /// <summary>
+    /// 子流程输出(返回)卡片 - 将数据返回给调用者，并中断子流程执行
+    /// </summary>
+    public partial class SubFlowOutputTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.SubFlowOutput;
+
+        // 子流程内部的引用的源
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForImage;
+
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForText;
+
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForX;
+
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForY;
+
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForResult;
+
+        public SubFlowOutputTaskCard()
+        {
+            Name = "子流程返回";
+        }
+
+        public override bool CanBeReferenced => false;
+    }
+
+    /// <summary>
+    /// 自定义脚本卡片 - 用户可以在流程中嵌入任意 C# 代码片段
+    /// 通过 TaskFlowPro 桥接对象与主流程双向通信
+    /// </summary>
+    public partial class CustomScriptTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.CustomScript;
+
+        /// <summary>用户编写的 C# 脚本源代码</summary>
+        [ObservableProperty]
+        private string _scriptCode = "// 在此编写 C# 代码\n// TaskFlowPro.GetTool(\"#1 任务名.输出文本\")\n// TaskFlowPro.SetVar(\"@变量名\", 100)\n";
+
+        /// <summary>脚本执行输出日志（运行时，不序列化）</summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string _outputLog = "";
+
+        // 输出声明全开，因为脚本可以通过 TaskFlowPro 设定任意输出
+        public override bool OutputsImage => true;
+        public override bool OutputsText => true;
+        public override bool OutputsCoordinates => true;
+        public override bool OutputsBoolResult => true;
+
+        public CustomScriptTaskCard()
+        {
+            Name = "自定义脚本";
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputLog = "";
+        }
+    }
 }

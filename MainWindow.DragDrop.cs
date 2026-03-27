@@ -186,6 +186,9 @@ namespace TaskFlow
         {
             if (sender is Border border && border.DataContext is TaskCardBase task)
             {
+                // 子流程输入卡片禁止任何鼠标交互（不允许被选中）
+                if (task.TaskType == TaskType.SubFlowInput) return;
+
                 // 检查是否双击（用于折叠/展开，运行中也允许）
                 if (e.ClickCount == 2)
                 {
@@ -287,6 +290,10 @@ namespace TaskFlow
 
         private bool CanDrag(TaskCardBase task)
         {
+            // 禁止拖拽子流程输入卡片
+            if (task.TaskType == TaskType.SubFlowInput)
+                return false;
+
             // 非分支卡片始终可拖拽
             if (task.BranchRole == BranchRole.None)
                 return true;
@@ -702,6 +709,9 @@ namespace TaskFlow
 
             if (sender is Border border && border.DataContext is TaskCardBase task)
             {
+                // 子流程输入卡片被视为起始定位锚，禁止任何交互和修改
+                if (task.TaskType == TaskType.SubFlowInput) return;
+
                 // 懒初始化共享 ContextMenu
                 if (_sharedTaskCardContextMenu == null)
                 {
@@ -773,6 +783,7 @@ namespace TaskFlow
                 }
 
                 // 设置 PlacementTarget 并弹出菜单
+                UpdateSubFlowMenuItemsVisibility(_sharedTaskCardContextMenu);
                 _sharedTaskCardContextMenu.PlacementTarget = border;
                 _sharedTaskCardContextMenu.IsOpen = true;
                 e.Handled = true;
@@ -873,7 +884,7 @@ namespace TaskFlow
                 (TaskType.ExpressionEval, "ExpressionEval"), (TaskType.StringSubstring, "StringSubstring"),
                 (TaskType.TypeConvert, "TypeConvert"), (TaskType.ArrayParse, "ArrayParse"),
                 (TaskType.ArrayBuilder, "ArrayBuilder"), (TaskType.FileRead, "FileRead"),
-                (TaskType.ArraySearch, "ArraySearch") })
+                (TaskType.ArraySearch, "ArraySearch"), (TaskType.CustomScript, "CustomScript") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;
@@ -945,6 +956,43 @@ namespace TaskFlow
             if (ViewModel.IsBusy)
             {
                 e.Handled = true;
+                return;
+            }
+
+            if (sender is FrameworkElement fe && fe.ContextMenu != null)
+            {
+                UpdateSubFlowMenuItemsVisibility(fe.ContextMenu);
+            }
+        }
+
+        private void UpdateSubFlowMenuItemsVisibility(ContextMenu menu)
+        {
+            var isSubFlow = ViewModel.SelectedTab?.Type == FlowType.SubFlow;
+            
+            // 根据逻辑寻找菜单项而不是FindName
+            foreach (var item in menu.Items)
+            {
+                if (item is MenuItem mainMenuItem && mainMenuItem.Header is string header && 
+                   (header == TaskFlow.Resources.Strings.Menu_AddTaskBelow || header == TaskFlow.Resources.Strings.Main_AddTask))
+                {
+                    foreach (var subItem in mainMenuItem.Items)
+                    {
+                        if (subItem is MenuItem controlFlow && controlFlow.Header is string ch && ch == TaskFlow.Resources.Strings.Menu_ControlFlow)
+                        {
+                            foreach (var controlFlowItem in controlFlow.Items)
+                            {
+                                if (controlFlowItem is MenuItem ci)
+                                {
+                                    string? tag = ci.Tag as string ?? ci.Name;
+                                    if (tag == "CallSubFlow" || tag == "MenuCallSubFlow")
+                                        ci.Visibility = isSubFlow ? Visibility.Collapsed : Visibility.Visible;
+                                    if (tag == "SubFlowOutput" || tag == "MenuSubFlowOutput")
+                                        ci.Visibility = isSubFlow ? Visibility.Visible : Visibility.Collapsed;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 

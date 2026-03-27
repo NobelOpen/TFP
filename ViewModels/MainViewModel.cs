@@ -45,6 +45,8 @@ namespace TaskFlow.ViewModels
 
         #endregion
         private readonly ITaskExecutionService _executionService;
+        /// <summary>执行服务（供脚本编辑器窗口调用单步执行）</summary>
+        public ITaskExecutionService ExecutionService => _executionService;
 
         [ObservableProperty]
         private ObservableCollection<TaskCardBase> _taskCards = new();
@@ -225,6 +227,13 @@ namespace TaskFlow.ViewModels
             _executionService.TaskCompleted += OnTaskCompleted;
             _executionService.AllTasksCompleted += OnAllTasksCompleted;
             _executionService.LogMessage += OnLogMessage;
+            
+            // 注入子流程解析器：从当前的所有的 Tabs 查找
+            _executionService.SubFlowResolver = (guid) => 
+            {
+                var tab = Tabs.FirstOrDefault(t => t.Id == guid);
+                return tab?.TaskCards;
+            };
 
             // 初始化日志节流定时器，200ms 最多刷新一次 UI
             _logThrottleTimer = new DispatcherTimer(DispatcherPriority.Background)
@@ -361,6 +370,9 @@ namespace TaskFlow.ViewModels
         private void DeleteTask(TaskCardBase task)
         {
             if (task == null) return;
+            
+            // 彻底禁止删除子流程专用的输入定界锚卡片
+            if (task.TaskType == TaskType.SubFlowInput) return;
 
             // ElifStart: 只删除自身及其名下的卡片（到下一个ElifStart/ElseStart之前）
             if (task.BranchRole == BranchRole.ElifStart && task.BranchGroupId.HasValue)
@@ -500,6 +512,32 @@ namespace TaskFlow.ViewModels
                 if (tasks.Count == 0) return;
 
                 var newTask = tasks[0];
+                var isSubFlow = SelectedTab?.Type == FlowType.SubFlow;
+
+                // 进行子流程相关的安全检查
+                if (isSubFlow)
+                {
+                    if (newTask.TaskType == TaskType.CallSubFlow)
+                    {
+                        AddLog(string.Format(Strings.VM_PasteFailed, "不可在子流程中粘贴并调用另一个子流程"));
+                        return;
+                    }
+                }
+                else
+                {
+                    if (newTask.TaskType == TaskType.SubFlowOutput)
+                    {
+                        AddLog(string.Format(Strings.VM_PasteFailed, "该特殊卡片只能在子流程中使用"));
+                        return;
+                    }
+                }
+
+                if (newTask.TaskType == TaskType.SubFlowInput)
+                {
+                    AddLog(string.Format(Strings.VM_PasteFailed, "定界锚卡片不可复制与转移"));
+                    return;
+                }
+
                 // 生成新的 Id 和 Order
                 newTask.Id = Guid.NewGuid();
                 newTask.Order = NextTaskNumber++;
@@ -987,6 +1025,10 @@ namespace TaskFlow.ViewModels
                 TaskType.ArraySearch => new ArraySearchTaskCard(),
                 TaskType.WinTextInput => new WinTextInputTaskCard(),
                 TaskType.InputCombo => new InputComboTaskCard(),
+                TaskType.CallSubFlow => new CallSubFlowTaskCard(),
+                TaskType.SubFlowInput => new SubFlowInputTaskCard(),
+                TaskType.SubFlowOutput => new SubFlowOutputTaskCard(),
+                TaskType.CustomScript => new CustomScriptTaskCard(),
                 _ => throw new ArgumentException($"Unsupported task type: {taskType}")
             };
         }

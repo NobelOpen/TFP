@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1343,6 +1343,67 @@
   <div class="output-section">
     <div class="output-title"> Output</div>
     <div class="output-item">No output (controls loop exit only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="CustomScript">
+  <h3>Custom Script <span class="badge badge-flow">Control Flow</span></h3>
+  <p>Allows users to write native C# code for the highest degree of customized logic. This is ideal for executing complex math operations, custom loops, file operations, or data manipulation that other cards cannot achieve directly. The engine utilizes Roslyn for dynamic compilation with MD5 caching optimization, providing near-native execution performance.</p>
+  <dl class="props">
+    <dt>Code Editor</dt>
+    <dd>A built-in editor featuring C# syntax highlighting and an independent log console. You can write your logic directly in C#.</dd>
+    <dt>System Using</dt>
+    <dd>The script sandbox has standard namespaces imported by default, such as <code>System</code>, <code>System.Linq</code>, <code>System.Collections.Generic</code>, <code>System.Text</code>, and <code>OpevCvSharp</code>. It also implicitly makes the <code>TaskFlowPro</code> context object available.</dd>
+    <dt>Official Interface: TaskFlowPro Context</dt>
+    <dd>The core of custom scripting is using the <code>TaskFlowPro</code> global object to communicate with the rest of the flow. Supported methods are listed below:</dd>
+  </dl>
+  <div class="example-section" style="margin-top: 10px;">
+    <div class="example-title"> TaskFlowPro API Guide</div>
+    
+    <div class="example-item">
+      <strong>1. Reading/Writing Task Outputs and Properties</strong><br/>
+      • <code>TaskFlowPro.GetTool("#N TaskName.Property")</code>: Gets a task card's value. Examples:<br/>
+      <code>var text = TaskFlowPro.GetTool("#1 Image Crop.text")?.ToString();</code><br/>
+      <code>var x = Convert.ToInt32(TaskFlowPro.GetTool("#2 Get Coord.X"));</code><br/><br/>
+      • <code>TaskFlowPro.SetTool("#N TaskName.Property", value)</code>: Dynamically sets a writable property of a subsequent task.
+    </div>
+
+    <div class="example-item">
+      <strong>2. Reading/Writing Global and Local Variables</strong><br/>
+      • <code>TaskFlowPro.GetVar("@VarName")</code>: Reads a variable. Example:<br/>
+      <code>int count = Convert.ToInt32(TaskFlowPro.GetVar("@Counter"));</code><br/><br/>
+      • <code>TaskFlowPro.SetVar("@VarName", value)</code>: Writes back to a variable. Example:<br/>
+      <code>TaskFlowPro.SetVar("@Counter", count + 1);</code>
+    </div>
+
+    <div class="example-item">
+      <strong>3. OpenCV Image Processing</strong><br/>
+      • <code>TaskFlowPro.GetImage("#N TaskName")</code>: Gets a cloned <code>OpenCvSharp.Mat</code> object from a task's output. Example:<br/>
+      <code>using var img = TaskFlowPro.GetImage("#3 Screenshot");</code><br/>
+      <em>Note: You must manually dispose the object (via <code>using</code> or <code>img.Dispose()</code>) to prevent memory leaks.</em><br/><br/>
+      • <code>TaskFlowPro.SetOutputImage(img)</code>: Sets the output image of the current custom script card so that subsequent vision modules can use it.
+    </div>
+
+    <div class="example-item">
+      <strong>4. Customizing Standard Outputs for this Card</strong><br/>
+      You can define standard outputs for the script card using these methods:<br/>
+      • <code>TaskFlowPro.SetOutputText(string)</code>: Set text output.<br/>
+      • <code>TaskFlowPro.SetOutputXY(int x, int y)</code>: Set X and Y coordinate output.<br/>
+      • <code>TaskFlowPro.SetOutputResult(bool)</code>: Set the boolean execution result (e.g. returning false can trigger an Else branch downstream).
+    </div>
+
+    <div class="example-item">
+      <strong>5. Logging to Console</strong><br/>
+      • <code>Console.WriteLine("...")</code> or <code>TaskFlowPro.Log("...")</code>: Prints debugging information to the script editor's output console panel and the flow execution logs.
+    </div>
+  </div>
+
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item"><code>#N.text</code> — Driven by your SetOutputText action</div>
+    <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Driven by your SetOutputXY action</div>
+    <div class="output-item"><code>#N.result</code> — Driven by your SetOutputResult action</div>
+    <div class="output-item"><code>#N.image</code> — Driven by your SetOutputImage action</div>
   </div>
 </div>
 

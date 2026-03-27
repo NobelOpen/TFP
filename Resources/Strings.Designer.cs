@@ -969,9 +969,19 @@ namespace TaskFlow.Resources {
         public static string AiPanel_DeleteTooltip => ResourceManager.GetString("AiPanel_DeleteTooltip", resourceCulture) ?? "Delete";
         public static string AiPanel_ErrorTerminated => ResourceManager.GetString("AiPanel_ErrorTerminated", resourceCulture) ?? "Agent terminated due to error";
         public static string AiPanel_ErrorTerminatedDesc => ResourceManager.GetString("AiPanel_ErrorTerminatedDesc", resourceCulture) ?? "You can prompt the model to try again or start a new conversation if the error persists.\n\nSee our troubleshooting guide for more help.";
+        public static string TaskType_CallSubFlow => ResourceManager.GetString("TaskType_CallSubFlow", resourceCulture) ?? "Call Sub-Flow";
+        public static string TaskType_SubFlowInput => ResourceManager.GetString("TaskType_SubFlowInput", resourceCulture) ?? "Sub-Flow Input";
+        public static string TaskType_SubFlowOutput => ResourceManager.GetString("TaskType_SubFlowOutput", resourceCulture) ?? "Sub-Flow Return";
+        public static string Prop_TargetSubFlow => ResourceManager.GetString("Prop_TargetSubFlow", resourceCulture) ?? "Target Sub-Flow";
+        public static string Prop_SubFlowInputImage => ResourceManager.GetString("Prop_SubFlowInputImage", resourceCulture) ?? "Input Image";
+        public static string Prop_SubFlowInputText => ResourceManager.GetString("Prop_SubFlowInputText", resourceCulture) ?? "Input Text";
+        public static string Prop_SubFlowInputX => ResourceManager.GetString("Prop_SubFlowInputX", resourceCulture) ?? "Input X";
+        public static string Prop_SubFlowInputY => ResourceManager.GetString("Prop_SubFlowInputY", resourceCulture) ?? "Input Y";
+        public static string Prop_SubFlowOutputResult => ResourceManager.GetString("Prop_SubFlowOutputResult", resourceCulture) ?? "Return Result";
         public static string AiPanel_CopyDebug => ResourceManager.GetString("AiPanel_CopyDebug", resourceCulture) ?? "Copy debug info";
         public static string Main_OrchidDisclaimer => ResourceManager.GetString("Main_OrchidDisclaimer", resourceCulture) ?? "Orchid can make mistakes. Please double-check responses.";
         public static string Main_NoImageHint => ResourceManager.GetString("Main_NoImageHint", resourceCulture) ?? "Awaiting visual signal...";
         public static string Main_NoLogsHint => ResourceManager.GetString("Main_NoLogsHint", resourceCulture) ?? "System ready, awaiting execution traces...";
+        public static string TaskType_CustomScript => ResourceManager.GetString("TaskType_CustomScript", resourceCulture) ?? "Custom Script";
     }
 }

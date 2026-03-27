@@ -685,6 +685,7 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ArrayBuilder}" Click="AddTask_Click" Tag="ArrayBuilder"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_FileRead}" Click="AddTask_Click" Tag="FileRead"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ArraySearch}" Click="AddTask_Click" Tag="ArraySearch"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_CustomScript}" Click="AddTask_Click" Tag="CustomScript"/>
                                         </MenuItem>
                                         <!-- AI -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_AiOps}">
@@ -697,6 +698,9 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_BreakLoop}" Click="AddTask_Click" Tag="BreakLoop"/>
                                             <MenuItem Header="{x:Static res:Strings.Menu_IfElseBranch}" Click="AddBranch_Click" Tag="IfElse"/>
                                             <MenuItem Header="{x:Static res:Strings.Menu_ForLoop}" Click="AddBranch_Click" Tag="ForLoop"/>
+                                            <Separator/>
+                                            <MenuItem x:Name="MenuCallSubFlow" Header="{x:Static res:Strings.TaskType_CallSubFlow}" Click="AddTask_Click" Tag="CallSubFlow"/>
+                                            <MenuItem x:Name="MenuSubFlowOutput" Header="{x:Static res:Strings.TaskType_SubFlowOutput}" Click="AddTask_Click" Tag="SubFlowOutput"/>
                                         </MenuItem>
                                     </MenuItem>
                                 </ContextMenu>

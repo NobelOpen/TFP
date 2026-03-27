@@ -37,6 +37,9 @@ namespace TaskFlow.Models.TaskCards
         PauseTask,
         BreakLoop,
         RestartFlow,
+        CallSubFlow,
+        SubFlowInput,
+        SubFlowOutput,
 
         // Windows操作
         WinLaunchApp,
@@ -100,7 +103,10 @@ namespace TaskFlow.Models.TaskCards
 
         // 输入组合
         WinTextInput,
-        InputCombo
+        InputCombo,
+
+        // 自定义脚本
+        CustomScript
     }
 
     /// <summary>
@@ -295,61 +301,62 @@ namespace TaskFlow.Models.TaskCards
         /// <summary>
         /// 获取任务类型的显示名称
         /// </summary>
-        public static string GetTaskTypeName(TaskType type)
+        public static string GetTaskTypeName(TaskType type) => type switch
         {
-            return type switch
-            {
-                TaskType.IfStart => Resources.Strings.TaskType_IfStart,
-                TaskType.IfEnd => Resources.Strings.TaskType_IfEnd,
-                TaskType.ElifStart => Resources.Strings.TaskType_ElifStart,
-                TaskType.ElseStart => Resources.Strings.TaskType_ElseStart,
-                TaskType.ElseEnd => Resources.Strings.TaskType_ElseEnd,
-                TaskType.ForLoopStart => Resources.Strings.TaskType_ForLoopStart,
-                TaskType.ForLoopEnd => Resources.Strings.TaskType_ForLoopEnd,
-                TaskType.EndTask => Resources.Strings.TaskType_EndTask,
-                TaskType.EndAllFlows => Resources.Strings.TaskType_EndAllFlows,
-                TaskType.PauseTask => Resources.Strings.TaskType_PauseTask,
-                TaskType.WinLaunchApp => Resources.Strings.TaskType_WinLaunchApp,
-                TaskType.WinScreenshot => Resources.Strings.TaskType_WinScreenshot,
-                TaskType.WinClick => Resources.Strings.TaskType_WinClick,
-                TaskType.WinCloseApp => Resources.Strings.TaskType_WinCloseApp,
-                TaskType.WinUiAutomation => Resources.Strings.TaskType_WinUiAutomation,
-                TaskType.WinSimulateInput => Resources.Strings.TaskType_WinSimulateInput,
-                TaskType.WinSubtitle => Resources.Strings.TaskType_WinSubtitle,
-                TaskType.WinFindFile => Resources.Strings.TaskType_WinFindFile,
-                TaskType.AdbConnect => Resources.Strings.TaskType_AdbConnect,
-                TaskType.AdbLaunchApp => Resources.Strings.TaskType_AdbLaunchApp,
-                TaskType.AdbScreenshot => Resources.Strings.TaskType_AdbScreenshot,
-                TaskType.AdbClick => Resources.Strings.TaskType_AdbClick,
-                TaskType.AdbCloseApp => Resources.Strings.TaskType_AdbCloseApp,
-                TaskType.AdbDisconnect => Resources.Strings.TaskType_AdbDisconnect,
-                TaskType.ImgCrop => Resources.Strings.TaskType_ImgCrop,
-                TaskType.ImgTemplateMatch => Resources.Strings.TaskType_ImgTemplateMatch,
-                TaskType.ImgOcr => Resources.Strings.TaskType_ImgOcr,
-                TaskType.ImgColorDetect => Resources.Strings.TaskType_ImgColorDetect,
-                TaskType.ImgColorSegment => Resources.Strings.TaskType_ImgColorSegment,
-                TaskType.ImgPreprocess => Resources.Strings.TaskType_ImgPreprocess,
-                TaskType.ImgBlobAnalysis => Resources.Strings.TaskType_ImgBlobAnalysis,
-                TaskType.ImgResize => Resources.Strings.TaskType_ImgResize,
-                TaskType.ExpressionEval => Resources.Strings.TaskType_ExpressionEval,
-                TaskType.BreakLoop => Resources.Strings.TaskType_BreakLoop,
-                TaskType.StringSubstring => Resources.Strings.TaskType_StringSubstring,
-                TaskType.TypeConvert => Resources.Strings.TaskType_TypeConvert,
-                TaskType.ArrayParse => Resources.Strings.TaskType_ArrayParse,
-                TaskType.ArrayBuilder => Resources.Strings.TaskType_ArrayBuilder,
-                TaskType.GetTimestamp => Resources.Strings.TaskType_GetTimestamp,
-                TaskType.LlmTranslate => Resources.Strings.TaskType_LlmTranslate,
-                TaskType.LlmVision => Resources.Strings.TaskType_LlmVision,
-                TaskType.LlmFileTranslate => Resources.Strings.TaskType_LlmFileTranslate,
-                TaskType.FileRead => Resources.Strings.TaskType_FileRead,
-                TaskType.EventListener => Resources.Strings.TaskType_EventListener,
-                TaskType.ArraySearch => Resources.Strings.TaskType_ArraySearch,
-                TaskType.WinTextInput => Resources.Strings.TaskType_WinTextInput,
-                TaskType.InputCombo => Resources.Strings.TaskType_InputCombo,
-                TaskType.RestartFlow => Resources.Strings.TaskType_RestartFlow,
-                _ => type.ToString()
-            };
-        }
+            TaskType.IfStart => TaskFlow.Resources.Strings.TaskType_IfStart,
+            TaskType.IfEnd => TaskFlow.Resources.Strings.TaskType_IfEnd,
+            TaskType.ElifStart => TaskFlow.Resources.Strings.TaskType_ElifStart,
+            TaskType.ElseStart => TaskFlow.Resources.Strings.TaskType_ElseStart,
+            TaskType.ElseEnd => TaskFlow.Resources.Strings.TaskType_ElseEnd,
+            TaskType.ForLoopStart => TaskFlow.Resources.Strings.TaskType_ForLoopStart,
+            TaskType.ForLoopEnd => TaskFlow.Resources.Strings.TaskType_ForLoopEnd,
+            TaskType.BreakLoop => TaskFlow.Resources.Strings.TaskType_BreakLoop,
+            TaskType.EndTask => TaskFlow.Resources.Strings.TaskType_EndTask,
+            TaskType.EndAllFlows => TaskFlow.Resources.Strings.TaskType_EndAllFlows,
+            TaskType.PauseTask => TaskFlow.Resources.Strings.TaskType_PauseTask,
+            TaskType.RestartFlow => TaskFlow.Resources.Strings.TaskType_RestartFlow,
+            TaskType.CallSubFlow => TaskFlow.Resources.Strings.TaskType_CallSubFlow,
+            TaskType.SubFlowInput => TaskFlow.Resources.Strings.TaskType_SubFlowInput,
+            TaskType.SubFlowOutput => TaskFlow.Resources.Strings.TaskType_SubFlowOutput,
+            TaskType.WinLaunchApp => TaskFlow.Resources.Strings.TaskType_WinLaunchApp,
+            TaskType.WinScreenshot => TaskFlow.Resources.Strings.TaskType_WinScreenshot,
+            TaskType.WinClick => TaskFlow.Resources.Strings.TaskType_WinClick,
+            TaskType.WinCloseApp => TaskFlow.Resources.Strings.TaskType_WinCloseApp,
+            TaskType.WinUiAutomation => TaskFlow.Resources.Strings.TaskType_WinUiAutomation,
+            TaskType.WinSimulateInput => TaskFlow.Resources.Strings.TaskType_WinSimulateInput,
+            TaskType.WinSubtitle => TaskFlow.Resources.Strings.TaskType_WinSubtitle,
+            TaskType.WinFindFile => TaskFlow.Resources.Strings.TaskType_WinFindFile,
+            TaskType.AdbConnect => TaskFlow.Resources.Strings.TaskType_AdbConnect,
+            TaskType.AdbLaunchApp => TaskFlow.Resources.Strings.TaskType_AdbLaunchApp,
+            TaskType.AdbScreenshot => TaskFlow.Resources.Strings.TaskType_AdbScreenshot,
+            TaskType.AdbClick => TaskFlow.Resources.Strings.TaskType_AdbClick,
+            TaskType.AdbCloseApp => TaskFlow.Resources.Strings.TaskType_AdbCloseApp,
+            TaskType.AdbDisconnect => TaskFlow.Resources.Strings.TaskType_AdbDisconnect,
+            TaskType.ImgCrop => TaskFlow.Resources.Strings.TaskType_ImgCrop,
+            TaskType.ImgTemplateMatch => TaskFlow.Resources.Strings.TaskType_ImgTemplateMatch,
+            TaskType.ImgOcr => TaskFlow.Resources.Strings.TaskType_ImgOcr,
+            TaskType.ImgColorDetect => TaskFlow.Resources.Strings.TaskType_ImgColorDetect,
+            TaskType.ImgColorSegment => TaskFlow.Resources.Strings.TaskType_ImgColorSegment,
+            TaskType.ImgPreprocess => TaskFlow.Resources.Strings.TaskType_ImgPreprocess,
+            TaskType.ImgBlobAnalysis => TaskFlow.Resources.Strings.TaskType_ImgBlobAnalysis,
+            TaskType.ImgResize => TaskFlow.Resources.Strings.TaskType_ImgResize,
+            TaskType.ExpressionEval => TaskFlow.Resources.Strings.TaskType_ExpressionEval,
+            TaskType.StringSubstring => TaskFlow.Resources.Strings.TaskType_StringSubstring,
+            TaskType.TypeConvert => TaskFlow.Resources.Strings.TaskType_TypeConvert,
+            TaskType.ArrayParse => TaskFlow.Resources.Strings.TaskType_ArrayParse,
+            TaskType.ArrayBuilder => TaskFlow.Resources.Strings.TaskType_ArrayBuilder,
+            TaskType.GetTimestamp => TaskFlow.Resources.Strings.TaskType_GetTimestamp,
+            TaskType.LlmTranslate => TaskFlow.Resources.Strings.TaskType_LlmTranslate,
+            TaskType.LlmVision => TaskFlow.Resources.Strings.TaskType_LlmVision,
+            TaskType.LlmFileTranslate => TaskFlow.Resources.Strings.TaskType_LlmFileTranslate,
+            TaskType.FileRead => TaskFlow.Resources.Strings.TaskType_FileRead,
+            TaskType.EventListener => TaskFlow.Resources.Strings.TaskType_EventListener,
+            TaskType.ArraySearch => TaskFlow.Resources.Strings.TaskType_ArraySearch,
+            TaskType.WinTextInput => TaskFlow.Resources.Strings.TaskType_WinTextInput,
+            TaskType.InputCombo => TaskFlow.Resources.Strings.TaskType_InputCombo,
+            TaskType.CustomScript => TaskFlow.Resources.Strings.TaskType_CustomScript,
+            _ => type.ToString()
+        };
 
         /// <summary>
         /// 重置任务状态

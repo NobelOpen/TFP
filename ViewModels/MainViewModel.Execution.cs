@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.Input;
 using TaskFlow.Models.TaskCards;
+using TaskFlow.Models;
 using TaskFlow.Resources;
 
 namespace TaskFlow.ViewModels
@@ -43,6 +44,10 @@ namespace TaskFlow.ViewModels
                         if (_cts.Token.IsCancellationRequested) break;
 
                         var tab = Tabs[i];
+                        
+                        // 子流程不能被主执行流程自动遍历运行，只能通过 CallSubFlow 调用
+                        if (tab.Type == FlowType.SubFlow) continue;
+
                         AddLog($"--- 开始执行分页: {tab.Name} ({i + 1}/{Tabs.Count}) ---");
 
                         // 切换到该分页

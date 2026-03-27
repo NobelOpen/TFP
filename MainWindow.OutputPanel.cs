@@ -152,7 +152,8 @@ namespace TaskFlow
                 nameof(ImgResizeTaskCard.OutputHeightScale) or
                 nameof(WinScreenshotTaskCard.OutputResolution) or
                 nameof(WinScreenshotTaskCard.OutputWidth) or
-                nameof(WinScreenshotTaskCard.OutputHeight))
+                nameof(WinScreenshotTaskCard.OutputHeight) or
+                nameof(CustomScriptTaskCard.OutputLog))
             {
                 Dispatcher.BeginInvoke(() => ScheduleOutputPanelUpdate());
             }
@@ -401,6 +402,13 @@ namespace TaskFlow
                 AddOutputRow(TaskFlow.Resources.Strings.AC_FilePath, findFileCard.OutputFilePath ?? "");
             }
 
+            // CustomScript specific: 脚本输出日志
+            if (task is CustomScriptTaskCard scriptCard)
+            {
+                if (!string.IsNullOrEmpty(scriptCard.OutputLog))
+                    AddOutputRow(TaskFlow.Resources.Strings.TaskType_CustomScript, scriptCard.OutputLog);
+            }
+
             // ErrorMessage
             if (!string.IsNullOrEmpty(task.ErrorMessage))
             {
@@ -416,7 +424,8 @@ namespace TaskFlow
                             task.OutputLoopIndex.HasValue ||
                             task is ArrayBuilderTaskCard || task is LlmFileTranslateTaskCard ||
                             task is FileReadTaskCard || task is ArraySearchTaskCard ||
-                            task is WinScreenshotTaskCard || task is ImgResizeTaskCard;
+                            task is WinScreenshotTaskCard || task is ImgResizeTaskCard ||
+                            task is CustomScriptTaskCard;
 
             if (!hasOutput)
             {

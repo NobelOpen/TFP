@@ -49,3 +49,6 @@ add-task-card.md
 
 *.binlog
 *_wpftmp.csproj
+
+Resources/Models/*.onnx
+Resources/Models/vocab.txt

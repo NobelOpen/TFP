@@ -161,6 +161,14 @@ namespace TaskFlow.Views.Dialogs
                     AddIntProperty("MaxMatchCount", TaskFlow.Resources.Strings.Prop_MaxMatchCount, matchCard.MaxMatchCount);
                     break;
 
+                case CallSubFlowTaskCard callSubFlowCard:
+                    AddCallSubFlowProperties(callSubFlowCard);
+                    break;
+
+                case SubFlowOutputTaskCard subFlowOutputCard:
+                    AddSubFlowOutputProperties(subFlowOutputCard);
+                    break;
+
                 case ImgOcrTaskCard ocrCard:
                     AddImageSourcePropertyOcr(ocrCard);
                     // 间隔分割线
@@ -2270,6 +2278,14 @@ namespace TaskFlow.Views.Dialogs
                         SaveBreakLoopProperties(breakCard);
                         break;
 
+                    case CallSubFlowTaskCard callSubFlowCard:
+                        SaveCallSubFlowProperties(callSubFlowCard);
+                        break;
+
+                    case SubFlowOutputTaskCard subFlowOutputCard:
+                        SaveSubFlowOutputProperties(subFlowOutputCard);
+                        break;
+
                     case StringSubstringTaskCard substringCard:
                         SaveStringSubstringProperties(substringCard);
                         break;
@@ -2892,6 +2908,95 @@ namespace TaskFlow.Views.Dialogs
                     card.TargetLoopId = null;
                 }
             }
+        }
+
+        private void AddCallSubFlowProperties(CallSubFlowTaskCard card)
+        {
+            // 目标子流程
+            var subFlowLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Prop_TargetSubFlow, Style = FindResource("PropertyLabel") as Style };
+            var subFlowCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            subFlowCombo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+            
+            // _viewModel 存在 .Tabs 集合，筛选出子流程类型的标签
+            if (_viewModel is TaskFlow.ViewModels.MainViewModel mainVm)
+            {
+                foreach (var tab in mainVm.Tabs.Where(t => t.Type == TaskFlow.Models.FlowType.SubFlow))
+                    subFlowCombo.Items.Add(new ComboBoxItem { Content = tab.Name, Tag = tab.Id });
+            }
+            subFlowCombo.SelectedIndex = 0;
+            if (card.TargetSubFlowId.HasValue)
+                for (int i = 1; i < subFlowCombo.Items.Count; i++)
+                    if (((ComboBoxItem)subFlowCombo.Items[i]).Tag is Guid id && id == card.TargetSubFlowId.Value) { subFlowCombo.SelectedIndex = i; break; }
+
+            _propertyControls["TargetSubFlowId"] = subFlowCombo;
+            PropertyPanel.Children.Add(subFlowLabel);
+            PropertyPanel.Children.Add(subFlowCombo);
+
+            // 分割线
+            PropertyPanel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(Color.FromRgb(232, 230, 220)) });
+
+            AddComboPropertyWithTasks("SourceTaskIdForImage", TaskFlow.Resources.Strings.Prop_SubFlowInputImage, card.SourceTaskIdForImage, _viewModel.GetImageOutputTasks());
+            AddComboPropertyWithTasks("SourceTaskIdForText", TaskFlow.Resources.Strings.Prop_SubFlowInputText, card.SourceTaskIdForText, _viewModel.GetTextOutputTasks());
+            AddComboPropertyWithTasks("SourceTaskIdForX", TaskFlow.Resources.Strings.Prop_SubFlowInputX, card.SourceTaskIdForX, _viewModel.GetCoordinateOutputTasks());
+            AddComboPropertyWithTasks("SourceTaskIdForY", TaskFlow.Resources.Strings.Prop_SubFlowInputY, card.SourceTaskIdForY, _viewModel.GetCoordinateOutputTasks());
+        }
+
+        private void SaveCallSubFlowProperties(CallSubFlowTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("TargetSubFlowId", out var ctrl) && ctrl is ComboBox combo && combo.SelectedItem is ComboBoxItem item && item.Tag is Guid id)
+                card.TargetSubFlowId = id;
+            else
+                card.TargetSubFlowId = null;
+
+            card.SourceTaskIdForImage = GetTaskIdFromCombo("SourceTaskIdForImage");
+            card.SourceTaskIdForText = GetTaskIdFromCombo("SourceTaskIdForText");
+            card.SourceTaskIdForX = GetTaskIdFromCombo("SourceTaskIdForX");
+            card.SourceTaskIdForY = GetTaskIdFromCombo("SourceTaskIdForY");
+        }
+
+        private void AddSubFlowOutputProperties(SubFlowOutputTaskCard card)
+        {
+            AddComboPropertyWithTasks("SourceTaskIdForImage", TaskFlow.Resources.Strings.Prop_SubFlowInputImage, card.SourceTaskIdForImage, _viewModel.GetImageOutputTasks());
+            AddComboPropertyWithTasks("SourceTaskIdForText", TaskFlow.Resources.Strings.Prop_SubFlowInputText, card.SourceTaskIdForText, _viewModel.GetTextOutputTasks());
+            AddComboPropertyWithTasks("SourceTaskIdForX", TaskFlow.Resources.Strings.Prop_SubFlowInputX, card.SourceTaskIdForX, _viewModel.GetCoordinateOutputTasks());
+            AddComboPropertyWithTasks("SourceTaskIdForY", TaskFlow.Resources.Strings.Prop_SubFlowInputY, card.SourceTaskIdForY, _viewModel.GetCoordinateOutputTasks());
+            AddComboPropertyWithTasks("SourceTaskIdForResult", TaskFlow.Resources.Strings.Prop_SubFlowOutputResult, card.SourceTaskIdForResult, _viewModel.TaskCards.Where(t => t.OutputsBoolResult));
+        }
+
+        private void SaveSubFlowOutputProperties(SubFlowOutputTaskCard card)
+        {
+            card.SourceTaskIdForImage = GetTaskIdFromCombo("SourceTaskIdForImage");
+            card.SourceTaskIdForText = GetTaskIdFromCombo("SourceTaskIdForText");
+            card.SourceTaskIdForX = GetTaskIdFromCombo("SourceTaskIdForX");
+            card.SourceTaskIdForY = GetTaskIdFromCombo("SourceTaskIdForY");
+            card.SourceTaskIdForResult = GetTaskIdFromCombo("SourceTaskIdForResult");
+        }
+
+        private void AddComboPropertyWithTasks(string key, string labelText, Guid? currentValue, IEnumerable<TaskCardBase> tasks)
+        {
+            var label = new TextBlock { Text = labelText, Style = FindResource("PropertyLabel") as Style };
+            var combo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            combo.Items.Add(new ComboBoxItem { Content = TaskFlow.Resources.Strings.Prop_SelectTask, Tag = null });
+            
+            var validTasks = tasks.Where(t => t.Id != _task.Id).ToList();
+            foreach (var task in validTasks)
+                combo.Items.Add(new ComboBoxItem { Content = $"#{task.Order} {task.Name}", Tag = task.Id });
+                
+            combo.SelectedIndex = 0;
+            if (currentValue.HasValue)
+                for (int i = 1; i < combo.Items.Count; i++)
+                    if (((ComboBoxItem)combo.Items[i]).Tag is Guid id && id == currentValue.Value) { combo.SelectedIndex = i; break; }
+
+            _propertyControls[key] = combo;
+            PropertyPanel.Children.Add(label);
+            PropertyPanel.Children.Add(combo);
+        }
+
+        private Guid? GetTaskIdFromCombo(string key)
+        {
+            if (_propertyControls.TryGetValue(key, out var ctrl) && ctrl is ComboBox combo && combo.SelectedItem is ComboBoxItem item && item.Tag is Guid id)
+                return id;
+            return null;
         }
 
         private void AddStringSubstringProperties(StringSubstringTaskCard card)

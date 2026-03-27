@@ -49,6 +49,22 @@ namespace TaskFlow.Views.Dialogs
             FlowListBox.SelectedIndex = FlowListBox.Items.Count - 1;
         }
 
+        private void AddSubFlow_Click(object sender, RoutedEventArgs e)
+        {
+            var newTab = new WorkflowTab { 
+                Name = "SUB_" + string.Format(Strings.Dlg_FlowPrefix, _nextTabIndex++),
+                Type = FlowType.SubFlow
+            };
+            
+            // 为子流程强制新增输入卡片
+            newTab.TaskCards.Add(new TaskFlow.Models.TaskCards.SubFlowInputTaskCard { Order = 1 });
+
+            _tabs.Add(newTab);
+            _selectTabAction(newTab);
+            RefreshList();
+            FlowListBox.SelectedIndex = FlowListBox.Items.Count - 1;
+        }
+
         private void RenameFlow_Click(object sender, RoutedEventArgs e)
         {
             if (FlowListBox.SelectedIndex < 0) return;
@@ -58,7 +74,15 @@ namespace TaskFlow.Views.Dialogs
             dialog.Owner = this;
             if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.NewName))
             {
-                tab.Name = dialog.NewName.Trim();
+                var newName = dialog.NewName.Trim();
+                
+                // 子流程强制添加 SUB_ 前缀
+                if (tab.Type == FlowType.SubFlow && !newName.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase))
+                {
+                    newName = "SUB_" + newName;
+                }
+                
+                tab.Name = newName;
                 RefreshList();
             }
         }

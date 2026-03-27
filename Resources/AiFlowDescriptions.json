@@ -286,5 +286,37 @@
     "Usage": "当需要循环执行整个流程、或在某个条件下重新开始时使用",
     "KeyProperties": [],
     "Outputs": []
+  },
+  {
+    "TaskType": "CallSubFlow",
+    "Category": "控制流",
+    "Description": "调用其他子流程并等待其执行完成，相当于编程中的函数调用。可向子流程传递图像、文本、坐标等参数，并接收子流程的返回值。",
+    "Usage": "当需要复用已定义好的通用功能模块时使用。例如将'截图→OCR→判断'封装为子流程后，主流程中可多次调用。子流程执行完毕后，主流程会继续执行后续卡片。子流程中需要配合 SubFlowInput（接收参数）和 SubFlowOutput（返回结果）使用。",
+    "KeyProperties": ["targetSubFlowId: 要调用的目标子流程的ID（从已有流程中选择）", "inputImage: 传递给子流程的图像（引用前序卡片的图像输出，可选）", "inputText: 传递给子流程的文本内容（支持变量引用和表达式，可选）", "inputX/inputY: 传递给子流程的坐标值（可选）"],
+    "Outputs": ["outputText: 子流程通过 SubFlowOutput 返回的文本", "outputImage: 子流程返回的图像", "outputX/outputY: 子流程返回的坐标", "outputResult: 子流程返回的布尔结果"]
+  },
+  {
+    "TaskType": "SubFlowInput",
+    "Category": "控制流",
+    "Description": "子流程入口卡片，用于接收主流程通过 CallSubFlow 传入的数据。通常放在子流程的第一个位置。",
+    "Usage": "在子流程中使用。当子流程需要接收外部传入的图像、文本或坐标参数时，在子流程开头放置此卡片。后续卡片可通过 #N.image、#N.text、#N.x、#N.y 引用接收到的数据。",
+    "KeyProperties": [],
+    "Outputs": ["outputImage: 主流程传入的图像数据", "outputText: 主流程传入的文本数据", "outputX/outputY: 主流程传入的坐标"]
+  },
+  {
+    "TaskType": "SubFlowOutput",
+    "Category": "控制流",
+    "Description": "子流程出口卡片，将处理结果返回给调用方的主流程，并终止当前子流程执行。相当于编程中的 return 语句。",
+    "Usage": "仅在子流程中使用。当子流程完成功能处理后，需要将结果（图像、文本、坐标、布尔值）带回给调用它的 CallSubFlow 卡片时使用。放在子流程的末尾位置。",
+    "KeyProperties": ["returnImage: 返回给主流程的图像数据（引用子流程中某卡片的图像输出）", "returnText: 返回的文本数据（支持变量和表达式）", "returnX/returnY: 返回的坐标值", "returnResult: 返回的布尔判断结果"],
+    "Outputs": []
+  },
+  {
+    "TaskType": "CustomScript",
+    "Category": "数据处理",
+    "Description": "使用原生 C# 代码编写自定义逻辑。通过内置全局对象 TaskFlowPro 与主流程双向通信，支持读写卡片输出、变量、图像处理等操作。引擎使用 Roslyn 动态编译，支持最新 C# 语法（using var、模式匹配、switch 表达式等），首次编译后自动缓存，脚本执行结束后自动释放所有通过 API 获取的可释放对象。",
+    "Usage": "当现有任务卡片无法满足复杂逻辑需求时使用。适合执行复杂数学运算、字符串处理、条件循环、文件操作或自定义图像处理。脚本中已预导入 System、System.Linq、System.Collections.Generic、System.Text、OpenCvSharp 等命名空间。核心 API：TaskFlowPro.GetTool('#N 任务名.属性名') 读取卡片输出、TaskFlowPro.SetVar('@变量名', value) 读写变量、TaskFlowPro.GetImage('#N 任务名') 获取图像(Mat)、TaskFlowPro.SetOutputText/SetOutputXY/SetOutputResult/SetOutputImage 设置脚本输出、Console.WriteLine 或 TaskFlowPro.Log 打印日志。",
+    "KeyProperties": ["scriptCode: C# 脚本代码"],
+    "Outputs": ["outputText: 通过 SetOutputText 设置的文本", "outputImage: 通过 SetOutputImage 设置的图像", "outputX/outputY: 通过 SetOutputXY 设置的坐标", "outputResult: 通过 SetOutputResult 设置的布尔结果"]
   }
 ]

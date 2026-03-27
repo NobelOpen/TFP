@@ -834,6 +834,7 @@
   <data name="UI_OK" xml:space="preserve"><value>确定</value></data>
   <data name="UI_Close" xml:space="preserve"><value>关闭</value></data>
   <data name="UI_Add" xml:space="preserve"><value>添加</value></data>
+  <data name="UI_AddSubFlow" xml:space="preserve"><value>添加子流程</value></data>
   <data name="UI_Rename" xml:space="preserve"><value>重命名</value></data>
   <data name="UI_Delete" xml:space="preserve"><value>删除</value></data>
   <data name="UI_Search" xml:space="preserve"><value>查找</value></data>
@@ -942,4 +943,14 @@
   <data name="AiPanel_CopyDebug" xml:space="preserve">
     <value>复制诊断信息</value>
   </data>
+  <data name="TaskType_CallSubFlow" xml:space="preserve"><value>调用子流程</value></data>
+  <data name="TaskType_SubFlowInput" xml:space="preserve"><value>子流程输入</value></data>
+  <data name="TaskType_SubFlowOutput" xml:space="preserve"><value>子流程返回</value></data>
+  <data name="Prop_TargetSubFlow" xml:space="preserve"><value>目标子流程</value></data>
+  <data name="Prop_SubFlowInputImage" xml:space="preserve"><value>传入图像</value></data>
+  <data name="Prop_SubFlowInputText" xml:space="preserve"><value>传入文本</value></data>
+  <data name="Prop_SubFlowInputX" xml:space="preserve"><value>传入X坐标</value></data>
+  <data name="Prop_SubFlowInputY" xml:space="preserve"><value>传入Y坐标</value></data>
+  <data name="Prop_SubFlowOutputResult" xml:space="preserve"><value>返回结果</value></data>
+  <data name="TaskType_CustomScript" xml:space="preserve"><value>自定义脚本</value></data>
 </root>

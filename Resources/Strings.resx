@@ -2350,6 +2350,9 @@ Example: @A = 1; @B = @A + 1</value>
   <data name="UI_Add" xml:space="preserve">
     <value>Add</value>
   </data>
+  <data name="UI_AddSubFlow" xml:space="preserve">
+    <value>Add Sub-Flow</value>
+  </data>
   <data name="UI_Rename" xml:space="preserve">
     <value>Rename</value>
   </data>
@@ -2642,5 +2645,35 @@ See our troubleshooting guide for more help.</value>
   </data>
   <data name="AiPanel_CopyDebug" xml:space="preserve">
     <value>Copy debug info</value>
+  </data>
+  <data name="TaskType_CallSubFlow" xml:space="preserve">
+    <value>Call Sub-Flow</value>
+  </data>
+  <data name="TaskType_SubFlowInput" xml:space="preserve">
+    <value>Sub-Flow Input</value>
+  </data>
+  <data name="TaskType_SubFlowOutput" xml:space="preserve">
+    <value>Sub-Flow Return</value>
+  </data>
+  <data name="Prop_TargetSubFlow" xml:space="preserve">
+    <value>Target Sub-Flow</value>
+  </data>
+  <data name="Prop_SubFlowInputImage" xml:space="preserve">
+    <value>Input Image</value>
+  </data>
+  <data name="Prop_SubFlowInputText" xml:space="preserve">
+    <value>Input Text</value>
+  </data>
+  <data name="Prop_SubFlowInputX" xml:space="preserve">
+    <value>Input X</value>
+  </data>
+  <data name="Prop_SubFlowInputY" xml:space="preserve">
+    <value>Input Y</value>
+  </data>
+  <data name="Prop_SubFlowOutputResult" xml:space="preserve">
+    <value>Return Result</value>
+  </data>
+  <data name="TaskType_CustomScript" xml:space="preserve">
+    <value>Custom Script</value>
   </data>
 </root>

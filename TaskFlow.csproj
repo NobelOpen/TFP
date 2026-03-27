@@ -25,6 +25,8 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.12" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="0.22.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3856.49" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="OpenCvSharp4" Version="4.11.0.20250507" />
@@ -38,6 +40,8 @@
     <PackageReference Include="Sdcb.PaddleOCR.Models.LocalV5" Version="3.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.11" />
     <PackageReference Include="System.Net.Http.WinHttpHandler" Version="10.0.5" />
+    <PackageReference Include="AvalonEdit" Version="6.3.0.90" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.12.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -58,16 +62,24 @@
     </Content>
   </ItemGroup>
 
-  <!-- AI 卡片能力描述资源 -->
+  <!-- AI 卡片能力描述资源与高亮配置 -->
   <ItemGroup>
     <Content Include="Resources\AiFlowDescriptions.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="Resources\AvalonEdit_CSharpDark.xshd" />
   </ItemGroup>
 
   <!-- AI Prompt 模板文件 -->
   <ItemGroup>
     <Content Include="Resources\Prompts\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- 语义路由 ONNX 模型文件 -->
+  <ItemGroup>
+    <Content Include="Resources\Models\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

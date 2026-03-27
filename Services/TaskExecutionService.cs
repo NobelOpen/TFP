@@ -29,6 +29,9 @@ namespace TaskFlow.Services
         Task ExecuteTaskAsync(TaskCardBase task, IList<TaskCardBase> allTasks, CancellationToken cancellationToken);
         Task ExecuteAllTasksAsync(IList<TaskCardBase> tasks, CancellationToken cancellationToken, IList<TaskCardBase>? allTasksForLookup = null);
         void Stop();
+
+        /// <summary>获取子流程任务列表的回调委托</summary>
+        Func<Guid, IList<TaskCardBase>?>? SubFlowResolver { get; set; }
     }
 
     public partial class TaskExecutionService : ITaskExecutionService
@@ -67,6 +70,9 @@ namespace TaskFlow.Services
         public event EventHandler? AllTasksCompleted;
         public event EventHandler<string>? LogMessage;
 
+        /// <summary>获取子流程任务列表的回调委托</summary>
+        public Func<Guid, IList<TaskCardBase>?>? SubFlowResolver { get; set; }
+
         public TaskExecutionService(
             IAdbService adbService,
             IScreenshotService screenshotService,
@@ -102,14 +108,30 @@ namespace TaskFlow.Services
 
             try
             {
-                // 重置所有任务状态
-                foreach (var task in tasks)
+                await ExecuteTaskCollectionAsync(tasks, cancellationToken, allTasksForLookup);
+            }
+            finally
+            {
+                _isRunning = false;
+                AllTasksCompleted?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        internal async Task ExecuteTaskCollectionAsync(IList<TaskCardBase> tasks, CancellationToken cancellationToken, IList<TaskCardBase>? allTasksForLookup = null, bool skipReset = false)
+        {
+            try
+            {
+                if (!skipReset)
                 {
-                    task.Reset();
+                    // 重置所有任务状态
+                    foreach (var task in tasks)
+                    {
+                        task.Reset();
+                    }
+                    // 清空运行时数据
+                    _arrayBuilderData.Clear();
+                    _fileReadData.Clear();
                 }
-                // 清空运行时数据
-                _arrayBuilderData.Clear();
-                _fileReadData.Clear();
 
                 int skipToIndex = 0;
                 var loopStack = new Stack<(int StartIndex, ForLoopTaskCard Card, int CurrentIteration)>();
@@ -118,7 +140,8 @@ namespace TaskFlow.Services
 
                 for (int i = 0; i < tasks.Count; i++)
                 {
-                    if (_cts.Token.IsCancellationRequested) break;
+                    var currentToken = _cts?.Token ?? cancellationToken;
+                    if (currentToken.IsCancellationRequested) break;
 
                     // 跳过到指定索引
                     if (i < skipToIndex) continue;
@@ -128,13 +151,14 @@ namespace TaskFlow.Services
                     // 重新计算当前的面包屑
                     task.BreadcrumbText = BuildBreadcrumbString(tasks, task, loopStack, branchConditions);
 
-                    await ExecuteTaskAsync(task, allTasksForLookup ?? tasks, _cts.Token);
+                    await ExecuteTaskAsync(task, allTasksForLookup ?? tasks, currentToken);
 
                     // 处理控制流
                     switch (task.TaskType)
                     {
                         case TaskType.EndTask:
-                            i = tasks.Count; // 结束当前流程
+                        case TaskType.SubFlowOutput:
+                            i = tasks.Count; // 结束当前流程/子流程
                             break;
 
                         case TaskType.EndAllFlows:
@@ -368,8 +392,7 @@ namespace TaskFlow.Services
             }
             finally
             {
-                _isRunning = false;
-                AllTasksCompleted?.Invoke(this, EventArgs.Empty);
+                // 子流程退出时不修改主流程的状态，仅做扫尾（如果有的话）
             }
         }
 
@@ -419,8 +442,12 @@ namespace TaskFlow.Services
         public async Task ExecuteTaskAsync(TaskCardBase task, IList<TaskCardBase> allTasks, CancellationToken cancellationToken)
         {
             // 释放旧的输出图像，避免循环体内多次迭代累积内存
-            task.OutputImage?.Dispose();
-            task.OutputImage = null;
+            // 但 SubFlowInput 的输出是由调用方预先注入的参数，不能被清除
+            if (task.TaskType != TaskType.SubFlowInput)
+            {
+                task.OutputImage?.Dispose();
+                task.OutputImage = null;
+            }
 
             task.Status = TaskStatus.Running;
             task.StartTime = DateTime.Now;
@@ -440,6 +467,11 @@ namespace TaskFlow.Services
                     TaskType.EndTask or TaskType.EndAllFlows or TaskType.BreakLoop or TaskType.RestartFlow => true,
                     TaskType.PauseTask => await ExecutePauseAsync((PauseTaskCard)task, allTasks, cancellationToken),
                     TaskType.GetTimestamp => ExecuteGetTimestamp((GetTimestampTaskCard)task),
+
+                    // 子流程支持
+                    TaskType.CallSubFlow => await ExecuteCallSubFlowAsync((CallSubFlowTaskCard)task, allTasks, cancellationToken),
+                    TaskType.SubFlowInput => true, // 参数已前置注入
+                    TaskType.SubFlowOutput => ExecuteSubFlowOutput((SubFlowOutputTaskCard)task, allTasks),
 
                     // Windows操作
                     TaskType.WinLaunchApp => await ExecuteWinLaunchAppAsync((WinLaunchAppTaskCard)task, allTasks),
@@ -506,6 +538,9 @@ namespace TaskFlow.Services
                     // 输入组合（非阻塞）
                     TaskType.WinTextInput => await ExecuteWinTextInputAsync((WinTextInputTaskCard)task, allTasks, cancellationToken),
                     TaskType.InputCombo => StartInputComboFireAndForget((InputComboTaskCard)task, allTasks, cancellationToken),
+
+                    // 自定义脚本
+                    TaskType.CustomScript => await ExecuteCustomScriptAsync((CustomScriptTaskCard)task, allTasks, cancellationToken),
 
                     _ => false
                 };

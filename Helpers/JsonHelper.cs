@@ -103,6 +103,8 @@ namespace TaskFlow.Helpers
             {
                 var tabObj = new JObject
                 {
+                    ["id"] = tab.Id.ToString(),
+                    ["type"] = tab.Type.ToString(),
                     ["name"] = tab.Name,
                     ["tasks"] = JArray.Parse(Serialize(tab.TaskCards))
                 };
@@ -157,6 +159,11 @@ namespace TaskFlow.Helpers
                         TaskCards = new ObservableCollection<TaskCardBase>(
                             Deserialize(tabToken["tasks"]?.ToString() ?? "[]"))
                     };
+                    // 恢复 Tab 的唯一标识和流程类型
+                    if (tabToken["id"] != null && Guid.TryParse(tabToken["id"]!.ToString(), out var tabId))
+                        tab.Id = tabId;
+                    if (tabToken["type"] != null && Enum.TryParse<FlowType>(tabToken["type"]!.ToString(), out var flowType))
+                        tab.Type = flowType;
                     tab.NextTaskNumber = tab.TaskCards.Count > 0
                         ? tab.TaskCards.Max(t => t.Order) + 1
                         : 1;
@@ -282,6 +289,10 @@ namespace TaskFlow.Helpers
                 TaskType.LlmFileTranslate => new LlmFileTranslateTaskCard(),
                 TaskType.WinTextInput => new WinTextInputTaskCard(),
                 TaskType.InputCombo => new InputComboTaskCard(),
+                TaskType.CallSubFlow => new CallSubFlowTaskCard(),
+                TaskType.SubFlowInput => new SubFlowInputTaskCard(),
+                TaskType.SubFlowOutput => new SubFlowOutputTaskCard(),
+                TaskType.CustomScript => new CustomScriptTaskCard(),
                 _ => throw new NotSupportedException($"Unknown task type: {taskType}")
             };
 
