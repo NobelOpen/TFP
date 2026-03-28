@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace TaskFlow.Models.AiFlow
 {
@@ -139,7 +141,14 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>需要删除的流程名列表（可选）</summary>
         public List<string>? DeleteFlows { get; set; }
 
-        /// <summary>创建完成后切换到的目标流程名（可选）</summary>
+        /// <summary>
+        /// plan 步骤的目标流程名（可选）。
+        /// 指定后，plan 中的卡片将被直接创建在该流程中，无需先 switchFlow。
+        /// 留空表示创建在当前活动流程。
+        /// </summary>
+        public string? TargetFlow { get; set; }
+
+        /// <summary>切换 UI 显示到的目标流程名（可选，纯 UI 操作，不影响卡片创建目标）</summary>
         public string? SwitchFlow { get; set; }
 
         // ===== PowerShell 后台能力（自主模式） =====
@@ -181,10 +190,49 @@ namespace TaskFlow.Models.AiFlow
     /// <summary>
     /// 新建流程的描述
     /// </summary>
+    /// <summary>
+    /// 兼容 AI 模型返回字符串或对象两种格式：
+    /// 字符串格式: ["流程名"] → 自动转为 [{"Name":"流程名"}]
+    /// 对象格式:   [{"name":"流程名"}] → 正常解析
+    /// </summary>
+    [JsonConverter(typeof(AiFlowNewTabConverter))]
     public class AiFlowNewTab
     {
         /// <summary>流程名称</summary>
         public string Name { get; set; } = "";
+    }
+
+    /// <summary>
+    /// 自定义反序列化器：支持字符串和对象两种 createFlows 格式
+    /// </summary>
+    internal class AiFlowNewTabConverter : JsonConverter<AiFlowNewTab>
+    {
+        public override AiFlowNewTab ReadJson(JsonReader reader, Type objectType, AiFlowNewTab? existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            var token = JToken.Load(reader);
+            if (token.Type == JTokenType.String)
+            {
+                // AI 直接返回字符串，如 "自动登录"
+                return new AiFlowNewTab { Name = token.Value<string>() ?? "" };
+            }
+            else if (token.Type == JTokenType.Object)
+            {
+                // 正常对象格式 {"name": "自动登录"}
+                var name = token["name"]?.Value<string>()
+                        ?? token["Name"]?.Value<string>()
+                        ?? "";
+                return new AiFlowNewTab { Name = name };
+            }
+            return new AiFlowNewTab();
+        }
+
+        public override void WriteJson(JsonWriter writer, AiFlowNewTab? value, JsonSerializer serializer)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("name");
+            writer.WriteValue(value?.Name ?? "");
+            writer.WriteEndObject();
+        }
     }
 
     /// <summary>

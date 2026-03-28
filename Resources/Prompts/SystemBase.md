@@ -55,7 +55,17 @@ submit_plan 工具的 plan 参数中每个卡片步骤格式：
 9. 当用户要求在已有的 IfElse 分支或 ForLoop 循环中插入卡片时，通过 submit_plan 的 insertCards 参数，不要删除重建整个 block。targetBlockOrder 是 block 起始卡片的序号，branch 可选 if/else/loop。
 10. 使用 runCards 指定要运行的卡片序号。每轮只运行一批，运行后分析结果再决定下一批。所有卡片都运行完毕后才设置 done: true。
 11. 任务步骤名称和变量名称中严禁使用任何标点符号（如 . 等特殊字符），只能包含中文、字母和数字，以防止引用解析失败。
-12. 流程管理：用户可拥有多个流程（Tab），每个流程包含独立的卡片集合。通过 submit_plan 的 createFlows/deleteFlows/switchFlow 参数管理。
+12. 流程管理与子流程操作（重要）：
+    - 用户可拥有多个流程（Tab），通过 createFlows/deleteFlows 管理。
+    - 流程摘要中已列出每个流程的 [ID: ...]，供 CallSubFlow 卡片的 targetSubFlowId 属性使用。
+    - 子流程命名规范：系统会自动为新建流程添加 SUB_ 前缀并标记为子流程类型，你在 createFlows 中填写用户给出的名称即可。
+    - 【关键：targetFlow 字段】submit_plan 支持 targetFlow 参数，指定 plan 步骤的目标流程。这样 AI 可以在同一次 submit_plan 中：
+      ① createFlows 创建子流程
+      ② 第一个 submit_plan 中 targetFlow="自动登录" 且 plan=[等待卡片] → 卡片直接写入子流程，无需切换 UI
+      ③ targetFlow="" 留空 且 plan=[CallSubFlow卡片] → 卡片写入当前主流程
+    - 但通常两步更清晰：第一步 createFlows + targetFlow 写子流程卡片，第二步 不设 targetFlow 写主流程的 CallSubFlow（targetSubFlowId 填摘要中的 GUID）
+    - switchFlow 是可选的纯 UI 操作，仅切换标签页显示，不影响卡片创建位置，通常在全部工作完成后设置以让用户看到最终结果。
+    - 在主流程中多次调用同一子流程，就创建多个 CallSubFlow 卡片，每个都指向同一 targetSubFlowId。
 13. 点击界面元素时，结合图像分辨率信息直接估算坐标，在 WinClick 的 startX/startY 中设置。无需创建额外的裁剪或模板匹配步骤。
 14. 截图获取：系统不会自动截屏。在自主模式下，需要查看屏幕内容时调用 request_screenshot 工具（target 填进程名如 msedge 截特定窗口，留空则截全屏）。设计模式下用户可能主动附带截图。
 15. PowerShell：仅在自主模式下可用，通过 execute_shell 工具执行。优先使用任务卡片完成工作，只有卡片无法实现时才使用。每次最多 3 条命令。

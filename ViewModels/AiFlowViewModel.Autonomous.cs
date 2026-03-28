@@ -129,6 +129,10 @@ namespace TaskFlow.ViewModels
                         (currentPlan.ModifyVariables?.Count > 0) ||
                         (currentPlan.ModifyCards?.Count > 0) ||
                         (currentPlan.DeleteCards?.Count > 0) ||
+                        (currentPlan.InsertCards?.Count > 0) ||
+                        (currentPlan.CreateFlows?.Count > 0) ||     // ← 创建子流程
+                        (currentPlan.DeleteFlows?.Count > 0) ||     // ← 删除子流程
+                        !string.IsNullOrWhiteSpace(currentPlan.SwitchFlow) || // ← 切换流程
                         hasShellCommands ||
                         currentPlan.NeedsScreenshot;  // 请求截图也算有效动作
 
@@ -292,6 +296,8 @@ namespace TaskFlow.ViewModels
                     autonomousPrompt.AppendLine("请根据以上信息决定下一步：");
                     autonomousPrompt.AppendLine("- 如果还有状态为 Idle 的卡片需要运行，请在 runCards 中指定它们的 order");
                     autonomousPrompt.AppendLine("- 如果需要先修改某个卡片的属性再运行，请同时使用 modifyCards 和 runCards");
+                    autonomousPrompt.AppendLine("- 【子流程多步操作】如果用户要求'在主流程调用子流程'，完成子流程的卡片创建后，" +
+                        "必须继续执行：switchFlow 切换回主流程 + plan 在主流程创建 CallSubFlow 卡片，此时绝对不能设置 done: true！");
                     autonomousPrompt.AppendLine("- 当用户请求的操作已完成（所有相关卡片执行成功），必须立即设置 done: true，不要画蛇添足");
                     autonomousPrompt.AppendLine("- 严禁自行添加验证/确认/二次检查步骤（如截图验证、LlmVision 分析结果等），除非用户明确要求验证");
                     autonomousPrompt.AppendLine("- 你自己就是多模态 Vision 模型，不需要创建 LlmVision 卡片来分析图像，你已经能直接看到卡片输出的图像");
@@ -460,7 +466,12 @@ namespace TaskFlow.ViewModels
                         (nextPlan.DeleteVariables?.Count > 0) ||
                         (nextPlan.ModifyVariables?.Count > 0) ||
                         (nextPlan.ModifyCards?.Count > 0) ||
-                        (nextPlan.DeleteCards?.Count > 0);
+                        (nextPlan.DeleteCards?.Count > 0) ||
+                        (nextPlan.InsertCards?.Count > 0) ||
+                        (nextPlan.CreateFlows?.Count > 0) ||   // ← 修复遗漏
+                        (nextPlan.DeleteFlows?.Count > 0) ||   // ← 修复遗漏
+                        !string.IsNullOrWhiteSpace(nextPlan.SwitchFlow) || // ← 修复遗漏
+                        !string.IsNullOrWhiteSpace(nextPlan.TargetFlow);   // ← 修复遗漏
 
                     if (hasNewActions)
                     {

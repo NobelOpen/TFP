@@ -154,7 +154,6 @@ body {
 .content pre:hover .code-copy-btn { opacity: 1; }
 .code-copy-btn:hover { background: #332e26; color: #f0ebe3; }
 
-/* ===== 表格 ===== */
 .content table {
   border-collapse: collapse; margin: 8px 0; width: 100%;
 }
@@ -163,6 +162,18 @@ body {
 }
 .content th { background: var(--bg-secondary); color: var(--code-color); font-weight: 600; }
 .content tr:nth-child(even) { background: var(--bg-tertiary); }
+
+/* 方案预览中的卡片类型徽章 */
+.content table td code {
+  background: color-mix(in srgb, var(--accent-color) 18%, transparent);
+  color: var(--accent-color);
+  font-family: inherit;
+  font-size: 0.82em;
+  padding: 1px 7px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 35%, transparent);
+  white-space: nowrap;
+}
 
 /* ===== 流式光标 ===== */
 .streaming-cursor::after {

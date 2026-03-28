@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
+using TaskFlow.Models;
 using TaskFlow.Models.AiFlow;
 using TaskFlow.Models.TaskCards;
 
@@ -21,153 +22,252 @@ namespace TaskFlow.Services
             _mainViewModel = mainViewModel;
         }
 
+        // ===== TaskType → 中文显示名映射 =====
+        private static readonly Dictionary<string, string> _typeNames = new()
+        {
+            ["WinLaunchApp"]     = "启动应用",
+            ["WinScreenshot"]    = "截屏",
+            ["WinClick"]         = "点击",
+            ["WinCloseApp"]      = "关闭应用",
+            ["WinUiAutomation"]  = "UI自动化",
+            ["WinSimulateInput"] = "模拟按键",
+            ["WinSubtitle"]      = "字幕显示",
+            ["WinFindFile"]      = "查找文件",
+            ["WinTextInput"]     = "文本输入",
+            ["EventListener"]    = "事件监听",
+            ["InputCombo"]       = "按键组合",
+            ["AdbConnect"]       = "ADB连接",
+            ["AdbLaunchApp"]     = "ADB启动",
+            ["AdbScreenshot"]    = "ADB截屏",
+            ["AdbClick"]         = "ADB点击",
+            ["AdbCloseApp"]      = "ADB关闭",
+            ["AdbDisconnect"]    = "ADB断开",
+            ["ImgOcr"]           = "OCR识别",
+            ["ImgTemplateMatch"] = "模板匹配",
+            ["ImgCrop"]          = "图像裁剪",
+            ["ImgColorDetect"]   = "颜色检测",
+            ["ImgColorSegment"]  = "颜色分割",
+            ["ImgPreprocess"]    = "图像预处理",
+            ["ImgBlobAnalysis"]  = "图像分析",
+            ["ImgResize"]        = "图像缩放",
+            ["ExpressionEval"]   = "表达式",
+            ["StringSubstring"]  = "截取文本",
+            ["FileRead"]         = "读取文件",
+            ["ArrayParse"]       = "数组取值",
+            ["ArrayBuilder"]     = "数组构建",
+            ["ArraySearch"]      = "数组搜索",
+            ["TypeConvert"]      = "类型转换",
+            ["CustomScript"]     = "自定义脚本",
+            ["LlmTranslate"]     = "AI翻译",
+            ["LlmVision"]        = "AI视觉",
+            ["LlmFileTranslate"] = "AI文件翻译",
+            ["PauseTask"]        = "等待",
+            ["EndTask"]          = "结束流程",
+            ["EndAllFlows"]      = "结束所有流程",
+            ["GetTimestamp"]     = "获取时间",
+            ["RestartFlow"]      = "重启流程",
+            ["BreakLoop"]        = "跳出循环",
+            ["IfElseBlock"]      = "条件分支",
+            ["ForLoopBlock"]     = "循环",
+            ["IfStart"]          = "条件开始",
+            ["ElseStart"]        = "Else开始",
+            ["ForLoopStart"]     = "循环开始",
+            ["CallSubFlow"]      = "调用子流程",
+            ["SubFlowInput"]     = "子流程入口",
+            ["SubFlowOutput"]    = "子流程返回",
+        };
+
+        /// <summary>获取 TaskType 的中文显示名称</summary>
+        private static string GetDisplayName(string taskType) =>
+            _typeNames.TryGetValue(taskType, out var n) ? n : taskType;
+
+        /// <summary>转义 Markdown 表格单元格中的特殊字符并截断</summary>
+        private static string EscapeMd(string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            var r = text.Replace("|", "\\|").Replace("\r\n", " ").Replace("\n", " ").Replace("\r", "");
+            return r.Length > 55 ? r[..52] + "…" : r;
+        }
+
         /// <summary>
-        /// 将 AI 方案格式化为可读文本（支持嵌套缩进）
+        /// 将步骤列表渲染为 Markdown 表格，支持嵌套控制流
+        /// </summary>
+        private void AppendStepsTable(StringBuilder sb, List<AiFlowPlanStep> steps)
+        {
+            sb.AppendLine("| # | 类型 | 名称 | 说明 | 关键属性 |");
+            sb.AppendLine("|:--|:-----|:-----|:-----|:---------|");
+            foreach (var step in steps)
+                AppendStepRows(sb, step, step.Step.ToString());
+        }
+
+        /// <summary>递归追加单个步骤行（含嵌套 If/Else/Loop）</summary>
+        private void AppendStepRows(StringBuilder sb, AiFlowPlanStep step, string stepNum)
+        {
+            var typeName = GetDisplayName(step.TaskType);
+            var name     = EscapeMd(step.Name);
+            var desc     = EscapeMd(step.Description);
+            var propStr  = "";
+            if (step.Properties.Count > 0)
+            {
+                propStr = string.Join(" ", step.Properties
+                    .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+                    .Take(3)
+                    .Select(kv => $"`{kv.Key}`={EscapeMd(kv.Value)}"));
+            }
+            sb.AppendLine($"| {stepNum} | {typeName} | {name} | {desc} | {propStr} |");
+            // 嵌套分支
+            foreach (var s in step.IfBody   ?? new()) AppendStepRows(sb, s, "↳If");
+            foreach (var s in step.ElseBody ?? new()) AppendStepRows(sb, s, "↳Else");
+            foreach (var s in step.LoopBody ?? new()) AppendStepRows(sb, s, "↻");
+        }
+
+        /// <summary>
+        /// 将 AI 方案格式化为 Markdown，按目标流程分组展示卡片
         /// </summary>
         public string FormatPlanAsText(AiFlowPlanResponse plan)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"📋 {plan.Summary}\n");
 
-            // 显示流程操作
-            if (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
-            {
-                sb.AppendLine("📁 将创建的流程：");
+            // 方案摘要
+            if (!string.IsNullOrWhiteSpace(plan.Summary))
+                sb.AppendLine($"{plan.Summary}\n");
+
+            // 计算本轮新建的子流程名集合
+            var newFlowSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (plan.CreateFlows != null)
                 foreach (var f in plan.CreateFlows)
-                    sb.AppendLine($"  • {f.Name}");
-                sb.AppendLine();
-            }
-            if (plan.DeleteFlows != null && plan.DeleteFlows.Count > 0)
-            {
-                sb.AppendLine("🗑️ 将删除的流程：");
-                foreach (var f in plan.DeleteFlows)
-                    sb.AppendLine($"  • {f}");
-                sb.AppendLine();
-            }
-            if (!string.IsNullOrWhiteSpace(plan.SwitchFlow))
-            {
-                sb.AppendLine($"🔀 将切换到流程：{plan.SwitchFlow}\n");
-            }
+                    if (!string.IsNullOrWhiteSpace(f.Name))
+                        newFlowSet.Add(f.Name.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase)
+                            ? f.Name : "SUB_" + f.Name);
 
-            // 显示要删除的变量
-            if (plan.DeleteVariables != null && plan.DeleteVariables.Count > 0)
+            // ===== 删除流程 =====
+            if (plan.DeleteFlows?.Count > 0)
             {
-                sb.AppendLine("🗑️ 将删除的变量：");
-                foreach (var name in plan.DeleteVariables)
-                    sb.AppendLine($"  • @{name}");
+                sb.AppendLine("### 🗑️ 将删除的流程");
+                foreach (var f in plan.DeleteFlows) sb.AppendLine($"- {f}");
                 sb.AppendLine();
             }
 
-            // 显示要创建的变量
-            if (plan.Variables != null && plan.Variables.Count > 0)
+            // ===== 子流程卡片（targetFlow 分组）=====
+            if (!string.IsNullOrWhiteSpace(plan.TargetFlow) && plan.Plan.Count > 0)
             {
-                sb.AppendLine("📦 需要创建的变量：");
+                var rawTarget = plan.TargetFlow!;
+                var targetName = rawTarget.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase)
+                    ? rawTarget : "SUB_" + rawTarget;
+                var badge = newFlowSet.Contains(targetName) ? "*(新建子流程)*" : "*(已有子流程)*";
+                sb.AppendLine($"### 📁 {targetName} {badge}");
+                sb.AppendLine();
+                AppendStepsTable(sb, plan.Plan);
+                sb.AppendLine();
+                // 其他新建但无卡片的子流程
+                foreach (var fn in newFlowSet)
+                    if (!fn.Equals(targetName, StringComparison.OrdinalIgnoreCase))
+                        sb.AppendLine($"### 📁 {fn} *(新建空子流程)*\n");
+            }
+            else
+            {
+                // 无 targetFlow：新建的空子流程（仅列出名称）
+                foreach (var fn in newFlowSet)
+                {
+                    sb.AppendLine($"### 📁 {fn} *(新建子流程)*");
+                    sb.AppendLine("*（空流程）*\n");
+                }
+                // 当前流程的卡片
+                if (plan.Plan.Count > 0)
+                {
+                    var currentTab = _mainViewModel.SelectedTab;
+                    var tabName = currentTab?.Name ?? "当前流程";
+                    var tabIcon = (currentTab?.Type == FlowType.SubFlow) ? "📁" : "🔷";
+                    sb.AppendLine($"### {tabIcon} {tabName}");
+                    sb.AppendLine();
+                    AppendStepsTable(sb, plan.Plan);
+                    sb.AppendLine();
+                }
+            }
+
+            // ===== 其他操作（变量、修改卡片、删除卡片等）=====
+            var otherSb = new StringBuilder();
+            if (plan.Variables?.Count > 0)
+            {
+                otherSb.AppendLine("**新建变量：**");
                 foreach (var v in plan.Variables)
-                    sb.AppendLine($"  • @{v.Name} ({v.Type}) = {v.Value}  — {v.Description}");
-                sb.AppendLine();
+                    otherSb.AppendLine($"- `@{v.Name}` ({v.Type}) = `{v.Value}` — {v.Description}");
+                otherSb.AppendLine();
             }
-
-            // 显示要修改的变量
-            if (plan.ModifyVariables != null && plan.ModifyVariables.Count > 0)
+            if (plan.DeleteVariables?.Count > 0)
             {
-                sb.AppendLine("✏️ 将修改的变量：");
+                otherSb.AppendLine("**删除变量：** " + string.Join("、", plan.DeleteVariables.Select(v => $"`@{v}`")));
+                otherSb.AppendLine();
+            }
+            if (plan.ModifyVariables?.Count > 0)
+            {
+                otherSb.AppendLine("**修改变量：**");
                 foreach (var v in plan.ModifyVariables)
-                    sb.AppendLine($"  • @{v.Name} → {v.Value}");
-                sb.AppendLine();
+                    otherSb.AppendLine($"- `@{v.Name}` → `{v.Value}`");
+                otherSb.AppendLine();
             }
-
-            // 显示要修改的卡片
-            if (plan.ModifyCards != null && plan.ModifyCards.Count > 0)
+            if (plan.ModifyCards?.Count > 0)
             {
-                sb.AppendLine("🔧 将修改的卡片属性：");
+                otherSb.AppendLine("**修改卡片属性：**");
                 foreach (var mod in plan.ModifyCards)
                 {
                     var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == mod.Order);
-                    var cardName = card?.Name ?? $"卡片#{mod.Order}";
+                    var cName = card?.Name ?? $"卡片#{mod.Order}";
                     foreach (var kv in mod.Properties)
-                        sb.AppendLine($"  • #{mod.Order} {cardName}: {kv.Key} → {kv.Value}");
+                        otherSb.AppendLine($"- `#{mod.Order} {cName}` → {kv.Key} = `{kv.Value}`");
                 }
-                sb.AppendLine();
+                otherSb.AppendLine();
             }
-
-            // 显示要删除的卡片
-            if (plan.DeleteCards != null && plan.DeleteCards.Count > 0)
+            if (plan.DeleteCards?.Count > 0)
             {
-                sb.AppendLine("🗑️ 将删除的卡片：");
-                foreach (var order in plan.DeleteCards)
+                otherSb.AppendLine("**删除卡片：** " + string.Join("、", plan.DeleteCards.Select(o =>
                 {
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
-                    var cardName = card?.Name ?? $"未知卡片";
-                    sb.AppendLine($"  • #{order} {cardName}");
-                }
-                sb.AppendLine();
+                    var c = _mainViewModel.TaskCards.FirstOrDefault(x => x.Order == o);
+                    return $"`#{o} {c?.Name ?? "未知"}`";
+                })));
+                otherSb.AppendLine();
             }
-
-            // 显示要插入到分支中的卡片
-            if (plan.InsertCards != null && plan.InsertCards.Count > 0)
+            if (plan.InsertCards?.Count > 0)
             {
-                sb.AppendLine("📥 将插入到已有分支的卡片：");
+                otherSb.AppendLine("**插入到现有分支：**");
                 foreach (var ins in plan.InsertCards)
                 {
-                    var branchLabel = ins.Branch?.ToLower() switch
-                    {
-                        "else" => "ELSE 分支",
-                        "loop" => "循环体",
-                        _ => "IF 分支"
-                    };
-                    var targetCard = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == ins.TargetBlockOrder);
-                    var targetName = targetCard?.Name ?? $"Block#{ins.TargetBlockOrder}";
-                    sb.AppendLine($"  → #{ins.TargetBlockOrder} {targetName} 的 {branchLabel}：");
-                    foreach (var card in ins.Cards)
-                        sb.AppendLine($"    • [{card.TaskType}] {card.Name}");
+                    var bl = ins.Branch?.ToLower() switch { "else" => "Else分支", "loop" => "循环体", _ => "If分支" };
+                    var tgt = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == ins.TargetBlockOrder);
+                    var tgtN = tgt?.Name ?? $"Block#{ins.TargetBlockOrder}";
+                    otherSb.AppendLine($"- `#{ins.TargetBlockOrder} {tgtN}` 的 {bl}：" +
+                        string.Join("、", ins.Cards.Select(c => $"`{GetDisplayName(c.TaskType)} {c.Name}`")));
                 }
-                sb.AppendLine();
+                otherSb.AppendLine();
             }
-
-            // 显示要运行的卡片
-            if (plan.RunCards != null && plan.RunCards.Count > 0)
+            if (otherSb.Length > 0)
             {
-                sb.AppendLine("▶️ 将运行的卡片：");
-                foreach (var order in plan.RunCards)
-                {
-                    // 先从画布已有卡片查找，找不到则从方案步骤中按 step 编号查找
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
-                    var cardName = card?.Name;
-                    if (string.IsNullOrEmpty(cardName))
-                    {
-                        var planStep = plan.Plan.FirstOrDefault(s => s.Step == order);
-                        cardName = planStep?.Name ?? $"卡片#{order}";
-                    }
-                    sb.AppendLine($"  • #{order} {cardName}");
-                }
+                sb.AppendLine("### 🔧 其他操作");
                 sb.AppendLine();
+                sb.Append(otherSb);
             }
 
-            // 显示步骤
-            if (plan.Plan.Count > 0)
-            {
-                sb.AppendLine("方案步骤：");
-                FormatSteps(sb, plan.Plan, "  ");
-            }
-
+            // ===== 确认按钮提示 =====
             bool isAutoMode = plan.RunCards != null && plan.RunCards.Count > 0;
-            bool isFlowOp = (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
-                || (plan.DeleteFlows != null && plan.DeleteFlows.Count > 0)
-                || !string.IsNullOrWhiteSpace(plan.SwitchFlow);
-            bool isExecMode = isAutoMode || (isFlowOp && plan.Plan.Count == 0);
+            bool isFlowOp   = (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
+                           || (plan.DeleteFlows  != null && plan.DeleteFlows.Count  > 0)
+                           || !string.IsNullOrWhiteSpace(plan.SwitchFlow);
+            bool isExecMode = isAutoMode || isFlowOp || plan.Plan.Count > 0;
             var confirmText = isExecMode ? "确认执行」" : "确认创建」";
-            sb.AppendLine($"\n✅ 确认无误后点击「{confirmText}，或点击「重新生成」。");
+            sb.AppendLine($"\n---\n✅ 确认无误后点击「{confirmText}，或点击「重新生成」。");
+
             return sb.ToString();
         }
 
+
         /// <summary>
-        /// 递归格式化步骤列表（带缩进）
+        /// 递归格式化步骤列表（保留兼容，使用中文类型名）
         /// </summary>
         public void FormatSteps(StringBuilder sb, List<AiFlowPlanStep> steps, string indent)
         {
             foreach (var step in steps)
             {
-                sb.AppendLine($"{indent}{step.Step}. [{step.TaskType}] {step.Name}");
+                sb.AppendLine($"{indent}{step.Step}. [{GetDisplayName(step.TaskType)}] {step.Name}");
                 sb.AppendLine($"{indent}   {step.Description}");
 
                 if (step.SourceStep.HasValue)
@@ -312,16 +412,18 @@ namespace TaskFlow.Services
 
             var sb = new StringBuilder();
 
-            // 序列化流程列表（只有名称和卡片数）
+            // 序列化流程列表（名称、类型、卡片数、ID）
             var tabs = _mainViewModel.Tabs;
             sb.AppendLine($"当前共有 {tabs.Count} 个流程：");
             foreach (var tab in tabs)
             {
                 var marker = tab == _mainViewModel.SelectedTab ? " ⬅ 当前" : "";
+                var typeTag = tab.Type == FlowType.SubFlow ? "🔶子流程" : "🔷主流程";
                 var cardCount = tab == _mainViewModel.SelectedTab
                     ? (_mainViewModel.TaskCards?.Count ?? 0)
                     : tab.TaskCards.Count;
-                sb.AppendLine($"  • {tab.Name}{marker} - {cardCount} 个卡片");
+                // 附加流程 ID，供 CallSubFlow 卡片的 targetSubFlowId 属性使用
+                sb.AppendLine($"  • [{typeTag}] {tab.Name}{marker} - {cardCount} 个卡片 [ID: {tab.Id}]");
             }
             sb.AppendLine();
 
@@ -413,9 +515,20 @@ namespace TaskFlow.Services
                             var val = prop.GetValue(card) as string;
                             if (!string.IsNullOrEmpty(val))
                             {
-                                // 截断过长的值（如路径），防止单行过长
-                                if (val.Length > 80) val = val[..77] + "...";
-                                props.Add($"{prop.Name}:{val}");
+                                // ScriptCode 特殊处理：只显示行数摘要，避免撑大多轮对话的请求体
+                                if (prop.Name.Equals("ScriptCode", StringComparison.OrdinalIgnoreCase) ||
+                                    prop.Name.Equals("scriptCode", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var lineCount = val.Split('\n').Length;
+                                    var preview = val.Length > 60 ? val[..60].Replace("\n", " ").Replace("\r", "") + "…" : val.Replace("\n", " ").Replace("\r", "");
+                                    props.Add($"{prop.Name}:[{lineCount}行] {preview}");
+                                }
+                                else
+                                {
+                                    // 普通属性：截断过长的值（如路径），防止单行过长
+                                    if (val.Length > 120) val = val[..117] + "...";
+                                    props.Add($"{prop.Name}:{val}");
+                                }
                             }
                         }
                         catch { /* 忽略反射异常 */ }

@@ -82,6 +82,10 @@ namespace TaskFlow.Models.AiFlow
             TaskType.EndAllFlows => TaskRiskLevel.Low,
             TaskType.RestartFlow => TaskRiskLevel.Low,
             TaskType.BreakLoop => TaskRiskLevel.Low,
+            // 子流程控制卡片：结构性操作，低风险
+            TaskType.SubFlowInput => TaskRiskLevel.Low,
+            TaskType.SubFlowOutput => TaskRiskLevel.Low,
+            TaskType.CallSubFlow => TaskRiskLevel.Low,
 
             // 默认中风险
             _ => TaskRiskLevel.Medium

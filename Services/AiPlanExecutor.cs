@@ -32,39 +32,37 @@ namespace TaskFlow.Services
             var reports = new List<AiFlowReportItem>();
             int createdCount = 0;
 
-            // 画布为空时重置编号计数器，让新卡片从 #1 开始
-            if (_mainViewModel.TaskCards.Count == 0)
-            {
-                _mainViewModel.NextTaskNumber = 1;
-                AiFlowLogger.Info("画布为空，重置卡片编号计数器为 1");
-            }
+            // ===== 流程（Tab）级操作 —— 必须先于 targetFlow 解析执行 =====
+            // 原因：AI 可能在同一批次中同时提交 createFlows + targetFlow，
+            // 若先解析 targetFlow 再建流程，查找时目标尚不存在，会回退到主流程导致卡片写错位置。
 
-            // 预填充已有卡片映射：方案中新步骤的 sourceStep 可能引用已有卡片的序号
-            foreach (var existingCard in _mainViewModel.TaskCards)
-            {
-                if (!stepToCard.ContainsKey(existingCard.Order))
-                    stepToCard[existingCard.Order] = existingCard;
-            }
-
-            // ===== 流程（Tab）级操作 =====
-
-            // 创建新流程
+            // 创建新流程（自动加 SUB_ 前缀并标记为子流程类型）
             if (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
             {
                 foreach (var newFlow in plan.CreateFlows)
                 {
                     if (string.IsNullOrWhiteSpace(newFlow.Name)) continue;
-                    if (_mainViewModel.Tabs.Any(t => t.Name == newFlow.Name))
+
+                    // 强制添加 SUB_ 前缀（AI 可能忽略此规范）
+                    var flowName = newFlow.Name.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase)
+                        ? newFlow.Name
+                        : "SUB_" + newFlow.Name;
+
+                    if (_mainViewModel.Tabs.Any(t => t.Name == flowName))
                     {
-                        AiFlowLogger.Warn($"流程 \"{newFlow.Name}\" 已存在，跳过创建");
+                        AiFlowLogger.Warn($"流程 \"{flowName}\" 已存在，跳过创建");
                         continue;
                     }
-                    var tab = new WorkflowTab { Name = newFlow.Name };
+                    var tab = new WorkflowTab
+                    {
+                        Name = flowName,
+                        Type = FlowType.SubFlow  // 标记为子流程
+                    };
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         _mainViewModel.Tabs.Add(tab);
                     });
-                    AiFlowLogger.Info($"已创建流程: {newFlow.Name}");
+                    AiFlowLogger.Info($"已创建子流程: {flowName}");
                 }
             }
 
@@ -100,21 +98,61 @@ namespace TaskFlow.Services
                 }
             }
 
-            // 切换到目标流程
-            if (!string.IsNullOrWhiteSpace(plan.SwitchFlow))
+            // ===== 确定卡片创建的目标 Tab（支持 targetFlow 直接指向任意流程）=====
+            // AI 通过 targetFlow 指定目标流程名，后端直接操作该 Tab，无需切换 UI
+            // 注意：此处必须在 createFlows 执行之后，以便能找到本轮新建的流程
+            WorkflowTab targetTab = _mainViewModel.SelectedTab!;
+            if (!string.IsNullOrWhiteSpace(plan.TargetFlow))
             {
-                var targetTab = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == plan.SwitchFlow);
-                if (targetTab != null)
+                // 先精确匹配，再尝试 SUB_ 前缀匹配
+                var found = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == plan.TargetFlow)
+                         ?? _mainViewModel.Tabs.FirstOrDefault(t => t.Name == "SUB_" + plan.TargetFlow);
+                if (found != null)
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _mainViewModel.SelectedTab = targetTab;
-                    });
-                    AiFlowLogger.Info($"已切换到流程: {plan.SwitchFlow}");
+                    targetTab = found;
+                    AiFlowLogger.Info($"[TargetFlow] 卡片将直接创建到流程: {targetTab.Name}（不切换 UI）");
                 }
                 else
                 {
-                    AiFlowLogger.Warn($"目标流程 \"{plan.SwitchFlow}\" 不存在，保持当前流程");
+                    AiFlowLogger.Warn($"[TargetFlow] 目标流程 \"{plan.TargetFlow}\" 不存在，回退到当前流程");
+                }
+            }
+
+            // 确定目标 Tab 的卡片集合和计数器
+            bool isTargetCurrentTab = (targetTab == _mainViewModel.SelectedTab);
+            var targetCards = isTargetCurrentTab ? _mainViewModel.TaskCards : targetTab.TaskCards;
+
+            // 画布为空时重置编号计数器，让新卡片从 #1 开始
+            if (targetCards.Count == 0 && targetTab.NextTaskNumber > 1)
+            {
+                targetTab.NextTaskNumber = 1;
+                AiFlowLogger.Info($"目标流程 {targetTab.Name} 为空，重置卡片编号计数器为 1");
+            }
+
+            // 预填充已有卡片映射：方案中新步骤的 sourceStep 可能引用已有卡片的序号
+            foreach (var existingCard in targetCards)
+            {
+                if (!stepToCard.ContainsKey(existingCard.Order))
+                    stepToCard[existingCard.Order] = existingCard;
+            }
+
+            // 切换 UI 到目标流程（支持 SUB_ 前缀，纯 UI 操作，不影响卡片创建目标）
+            if (!string.IsNullOrWhiteSpace(plan.SwitchFlow))
+            {
+                // 先精确匹配，再尝试 SUB_ 前缀匹配
+                var switchTarget = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == plan.SwitchFlow)
+                             ?? _mainViewModel.Tabs.FirstOrDefault(t => t.Name == "SUB_" + plan.SwitchFlow);
+                if (switchTarget != null)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _mainViewModel.SelectedTab = switchTarget;
+                    });
+                    AiFlowLogger.Info($"已切换 UI 到流程: {switchTarget.Name}");
+                }
+                else
+                {
+                    AiFlowLogger.Warn($"SwitchFlow 目标流程 \"{plan.SwitchFlow}\" 不存在，保持当前流程");
                 }
             }
 
@@ -327,24 +365,26 @@ namespace TaskFlow.Services
                 }
             }
 
-            // 批量创建
+            // 批量创建（向目标 Tab 直接写入）
             var savedSelectedTask = _mainViewModel.SelectedTask;
             _mainViewModel.SelectedTask = null;
 
-            ProcessSteps(plan.Plan, stepToCard, reports, ref createdCount, mode, modelId);
+            ProcessSteps(plan.Plan, stepToCard, reports, ref createdCount, mode, modelId, targetTab);
 
             // 引用重映射：将属性中的 #step引用 替换为 #actualOrder引用
             RemapStepReferences(stepToCard);
 
-            if (_mainViewModel.TaskCards.Count > 0)
+            if (isTargetCurrentTab && _mainViewModel.TaskCards.Count > 0)
                 _mainViewModel.SelectedTask = _mainViewModel.TaskCards[^1];
+            else if (!isTargetCurrentTab)
+                _mainViewModel.RecalculateIndentLevels(); // 确保目标 Tab 的缩进计算正确
 
-            _mainViewModel.AddLog($"[AI] 已创建 {createdCount} 个任务卡片");
+            _mainViewModel.AddLog($"[AI] 已在 {targetTab.Name} 创建 {createdCount} 个任务卡片");
             return (createdCount, reports);
         }
 
         /// <summary>
-        /// 递归处理步骤列表
+        /// 递归处理步骤列表（targetTab 为卡片创建目标，可与当前选中 Tab 不同）
         /// </summary>
         private void ProcessSteps(
             List<AiFlowPlanStep> steps,
@@ -352,21 +392,22 @@ namespace TaskFlow.Services
             List<AiFlowReportItem> reports,
             ref int createdCount,
             AiAssistantMode mode,
-            string modelId)
+            string modelId,
+            WorkflowTab? targetTab = null)
         {
             foreach (var step in steps)
             {
                 if (step.TaskType == "IfElseBlock")
                 {
-                    ProcessIfElseBlock(step, stepToCard, reports, ref createdCount, mode, modelId);
+                    ProcessIfElseBlock(step, stepToCard, reports, ref createdCount, mode, modelId, targetTab);
                 }
                 else if (step.TaskType == "ForLoopBlock")
                 {
-                    ProcessForLoopBlock(step, stepToCard, reports, ref createdCount, mode, modelId);
+                    ProcessForLoopBlock(step, stepToCard, reports, ref createdCount, mode, modelId, targetTab);
                 }
                 else
                 {
-                    ProcessNormalStep(step, stepToCard, reports, ref createdCount, mode, modelId);
+                    ProcessNormalStep(step, stepToCard, reports, ref createdCount, mode, modelId, targetTab);
                 }
             }
         }
@@ -380,14 +421,16 @@ namespace TaskFlow.Services
             List<AiFlowReportItem> reports,
             ref int createdCount,
             AiAssistantMode mode,
-            string modelId)
+            string modelId,
+            WorkflowTab? targetTab = null)
         {
+            var cards = GetTargetCards(targetTab);
             var branchGroupId = Guid.NewGuid();
 
             var ifStart = new IfElseBranchTaskCard(BranchRole.IfStart)
             {
                 BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
+                Order = GetAndIncrementOrder(targetTab)
             };
 
             if (step.Properties.TryGetValue("conditionExpression", out var condExpr) && !string.IsNullOrEmpty(condExpr))
@@ -396,7 +439,7 @@ namespace TaskFlow.Services
             if (!string.IsNullOrEmpty(step.Name))
                 ifStart.Name = step.Name;
 
-            _mainViewModel.TaskCards.Add(ifStart);
+            cards.Add(ifStart);
             _mainViewModel.SelectedTask = null;
             stepToCard[step.Step] = ifStart;
             createdCount++;
@@ -404,12 +447,12 @@ namespace TaskFlow.Services
                 $"BranchGroupId={branchGroupId}, Condition={ifStart.ConditionExpression}");
 
             if (step.IfBody != null && step.IfBody.Count > 0)
-                ProcessSteps(step.IfBody, stepToCard, reports, ref createdCount, mode, modelId);
+                ProcessSteps(step.IfBody, stepToCard, reports, ref createdCount, mode, modelId, targetTab);
 
             var elseStart = new IfElseBranchTaskCard(BranchRole.ElseStart)
             {
                 BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
+                Order = GetAndIncrementOrder(targetTab)
             };
 
             bool hasElseBody = step.ElseBody != null && step.ElseBody.Count > 0;
@@ -424,23 +467,23 @@ namespace TaskFlow.Services
                 ifStart.IsElseHidden = false;
             }
 
-            _mainViewModel.TaskCards.Add(elseStart);
+            cards.Add(elseStart);
             _mainViewModel.SelectedTask = null;
             createdCount++;
 
             if (hasElseBody)
-                ProcessSteps(step.ElseBody!, stepToCard, reports, ref createdCount, mode, modelId);
+                ProcessSteps(step.ElseBody!, stepToCard, reports, ref createdCount, mode, modelId, targetTab);
 
             var elseEnd = new IfElseBranchTaskCard(BranchRole.ElseEnd)
             {
                 BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
+                Order = GetAndIncrementOrder(targetTab)
             };
 
             if (!hasElseBody)
                 elseEnd.IsHiddenByCollapse = true;
 
-            _mainViewModel.TaskCards.Add(elseEnd);
+            cards.Add(elseEnd);
             _mainViewModel.SelectedTask = null;
             createdCount++;
         }
@@ -454,14 +497,16 @@ namespace TaskFlow.Services
             List<AiFlowReportItem> reports,
             ref int createdCount,
             AiAssistantMode mode,
-            string modelId)
+            string modelId,
+            WorkflowTab? targetTab = null)
         {
+            var cards = GetTargetCards(targetTab);
             var branchGroupId = Guid.NewGuid();
 
             var loopStart = new ForLoopTaskCard(BranchRole.ForLoopStart)
             {
                 BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
+                Order = GetAndIncrementOrder(targetTab)
             };
 
             if (step.Properties.TryGetValue("loopCount", out var loopCountStr) && int.TryParse(loopCountStr, out var loopCount))
@@ -478,7 +523,7 @@ namespace TaskFlow.Services
             if (!string.IsNullOrEmpty(step.Name))
                 loopStart.Name = step.Name;
 
-            _mainViewModel.TaskCards.Add(loopStart);
+            cards.Add(loopStart);
             _mainViewModel.SelectedTask = null;
             stepToCard[step.Step] = loopStart;
             createdCount++;
@@ -486,15 +531,15 @@ namespace TaskFlow.Services
                 $"BranchGroupId={branchGroupId}, LoopCount={loopStart.LoopCount}");
 
             if (step.LoopBody != null && step.LoopBody.Count > 0)
-                ProcessSteps(step.LoopBody, stepToCard, reports, ref createdCount, mode, modelId);
+                ProcessSteps(step.LoopBody, stepToCard, reports, ref createdCount, mode, modelId, targetTab);
 
             var loopEnd = new ForLoopTaskCard(BranchRole.ForLoopEnd)
             {
                 BranchGroupId = branchGroupId,
-                Order = _mainViewModel.NextTaskNumber++
+                Order = GetAndIncrementOrder(targetTab)
             };
 
-            _mainViewModel.TaskCards.Add(loopEnd);
+            cards.Add(loopEnd);
             _mainViewModel.SelectedTask = null;
             createdCount++;
         }
@@ -508,7 +553,8 @@ namespace TaskFlow.Services
             List<AiFlowReportItem> reports,
             ref int createdCount,
             AiAssistantMode mode,
-            string modelId)
+            string modelId,
+            WorkflowTab? targetTab = null)
         {
             if (!Enum.TryParse<Models.TaskCards.TaskType>(step.TaskType, out var taskType))
             {
@@ -516,9 +562,12 @@ namespace TaskFlow.Services
                 return;
             }
 
-            _mainViewModel.AddTaskCommand.Execute(taskType);
-            var newCard = _mainViewModel.SelectedTask;
+            // 直接创建卡片对象（不依赖 AddTaskCommand）
+            var newCard = _mainViewModel.CreateTaskCard(taskType);
             if (newCard == null) return;
+            newCard.Order = GetAndIncrementOrder(targetTab);
+            var cards = GetTargetCards(targetTab);
+            cards.Add(newCard);
 
             if (!string.IsNullOrEmpty(step.Name))
                 newCard.Name = step.Name;
@@ -545,6 +594,26 @@ namespace TaskFlow.Services
                     Hint = missing.Hint
                 });
             }
+        }
+
+        /// <summary>
+        /// 获取目标 Tab 的卡片集合（targetTab 为 null 时使用当前流程）
+        /// </summary>
+        private System.Collections.ObjectModel.ObservableCollection<TaskCardBase> GetTargetCards(WorkflowTab? targetTab)
+        {
+            if (targetTab == null || targetTab == _mainViewModel.SelectedTab)
+                return _mainViewModel.TaskCards;
+            return targetTab.TaskCards;
+        }
+
+        /// <summary>
+        /// 获取目标 Tab 的下一个序号，并自动递增
+        /// </summary>
+        private int GetAndIncrementOrder(WorkflowTab? targetTab)
+        {
+            if (targetTab == null || targetTab == _mainViewModel.SelectedTab)
+                return _mainViewModel.NextTaskNumber++;
+            return targetTab.NextTaskNumber++;
         }
 
         /// <summary>

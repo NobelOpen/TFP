@@ -87,6 +87,14 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
+        /// 预热：提前加载卡片描述 + 语义向量（供后台线程在 Orchid 面板打开时调用）
+        /// </summary>
+        public void WarmupCardDescriptions()
+        {
+            LoadCardDescriptions(); // 内部有缓存，只首次执行实际加载
+        }
+
+        /// <summary>
         /// 加载卡片能力描述资源
         /// </summary>
         private List<CardDescriptionDef> LoadCardDescriptions()
@@ -324,9 +332,10 @@ namespace TaskFlow.Services
                 ["modifyCards"] = new JObject { ["type"] = "array", ["description"] = "修改已有卡片属性: [{order, properties:{key:val}}]", ["items"] = new JObject { ["type"] = "object" } },
                 ["deleteCards"] = new JObject { ["type"] = "array", ["description"] = "要删除的卡片序号列表", ["items"] = new JObject { ["type"] = "integer" } },
                 ["insertCards"] = new JObject { ["type"] = "array", ["description"] = "向已有分支/循环插入卡片: [{targetBlockOrder, branch(if/else/loop), cards:[...]}]", ["items"] = new JObject { ["type"] = "object" } },
-                ["createFlows"] = new JObject { ["type"] = "array", ["description"] = "创建新流程: [{name}]", ["items"] = new JObject { ["type"] = "object" } },
+                ["createFlows"] = new JObject { ["type"] = "array", ["description"] = "创建新流程: [{name}]，系统会自动添加 SUB_ 前缀并标记为子流程类型", ["items"] = new JObject { ["type"] = "object" } },
                 ["deleteFlows"] = new JObject { ["type"] = "array", ["description"] = "删除的流程名列表", ["items"] = new JObject { ["type"] = "string" } },
-                ["switchFlow"] = new JObject { ["type"] = "string", ["description"] = "切换到的目标流程名" }
+                ["targetFlow"] = new JObject { ["type"] = "string", ["description"] = "plan 步骤的目标流程名。指定后，plan 中的卡片将直接创建在该流程中，无需切换 UI 标签页。留空则创建在当前流程。" },
+                ["switchFlow"] = new JObject { ["type"] = "string", ["description"] = "[可选] 切换 UI 显示到的目标流程名，纯 UI 操作，不影响卡片创建位置。通常在工作完成后设置以让用户看到结果。" }
             };
 
             // 自主模式额外参数（submit_plan 内）
@@ -630,20 +639,26 @@ namespace TaskFlow.Services
                                     ["arguments"] = afArgs
                                 }
                             });
-                            messagesJson.Add(assistantMsg);
 
-                            messagesJson.Add(new JObject
+
+                            // 构建精简的多轮请求：只保留 system + 原始 user + 本轮 assistant/tool
+                            // 避免多轮历史累积导致请求体以 15KB 的倍数增长，触发 502 Bad Gateway
+                            var sysMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "system");
+                            var originalUserMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "user");
+                            var trimmedMessages = new JArray();
+                            if (sysMsg != null) trimmedMessages.Add(sysMsg);
+                            if (originalUserMsg != null) trimmedMessages.Add(originalUserMsg);
+                            trimmedMessages.Add(assistantMsg);
+                            trimmedMessages.Add(new JObject
                             {
                                 ["role"] = "tool",
                                 ["tool_call_id"] = afId,
                                 ["content"] = flowDetail
                             });
-
-                            // 发起下一轮请求
                             var requestN = new JObject
                             {
                                 ["model"] = modelConfig.ModelName,
-                                ["messages"] = messagesJson,
+                                ["messages"] = trimmedMessages,
                                 ["temperature"] = 0.3,
                                 ["tools"] = tools
                             };
@@ -679,6 +694,15 @@ namespace TaskFlow.Services
                         catch (Exception ex)
                         {
                             AiFlowLogger.Warn($"[ToolUse] analyze_flow 第 {analyzeRound} 轮处理失败: {ex.Message}");
+                            // 根据异常类型设置友好提示，避免上层误报"未能生成有效方案"
+                            var isNetworkError = ex.Message.Contains("BadGateway") || ex.Message.Contains("502")
+                                || ex.Message.Contains("503") || ex.Message.Contains("429")
+                                || ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+                                || ex is HttpRequestException;
+                            plan.Summary = isNetworkError
+                                ? $"❌ API 请求失败（{(ex.Message.Contains("502") || ex.Message.Contains("BadGateway") ? "502 Bad Gateway，服务器暂时不可用" : ex.Message)}），请稍后重试。"
+                                : $"❌ 流程分析失败: {ex.Message}";
+                            onDelta?.Invoke($"\n\n{plan.Summary}\n");
                             break;
                         }
                     } // end analyze_flow
@@ -805,6 +829,9 @@ namespace TaskFlow.Services
                         catch (Exception ex)
                         {
                             AiFlowLogger.Warn($"[ToolUse] submit_plan 解析失败: {ex.Message}");
+                            // 设置 Summary 防止上层误报"未能生成有效方案"
+                            plan.Summary = $"❌ 方案解析失败: {ex.Message}";
+                            onDelta?.Invoke($"\n\n{plan.Summary}\n");
                         }
                     }
                     else if (tcName == "execute_shell")

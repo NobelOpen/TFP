@@ -255,6 +255,26 @@ namespace TaskFlow.ViewModels
             var saved = AiChatSessionStore.Load();
             foreach (var s in saved)
                 Sessions.Add(s);
+
+            // 后台预热：提前加载 SemanticRouter（ONNX 模型）和卡片描述
+            // 避免首次发送消息时因懒加载导致的几秒无响应
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    // 1. 初始化语义路由器（触发 ONNX 模型和 BERT 分词器加载）
+                    var router = SemanticRouter.GetInstance();
+                    AiFlowLogger.Info($"[预热] SemanticRouter 已就绪, IsReady={router.IsReady}");
+
+                    // 2. 加载卡片描述并预计算向量（同步完成，后续请求可直接使用缓存）
+                    _service.WarmupCardDescriptions();
+                    AiFlowLogger.Info("[预热] 卡片描述和语义向量已预计算完成");
+                }
+                catch (Exception ex)
+                {
+                    AiFlowLogger.Warn($"[预热] 后台初始化失败（不影响功能）: {ex.Message}");
+                }
+            });
         }
 
         /// <summary>
