@@ -519,16 +519,13 @@ namespace TaskFlow.Services
                 messages.Add(new { role = "user", content = (object)userPrompt });
             }
 
-            // 构建工具定义
-            var tools = BuildToolDefinitions(mode);
-
-            // 使用 JObject 构建请求体以便注入 tools
+            // 使用 JObject 构建请求体
             var requestObj = new JObject
             {
                 ["model"] = modelConfig.ModelName,
                 ["messages"] = JArray.FromObject(messages),
-                ["temperature"] = 0.3,
-                ["tools"] = tools
+                ["temperature"] = 0.3
+                // 注：为规避中转站 WAF 502 错误，不再通过底层 API 字段发送 tools schema，转由 Prompt 引导 AI 输出 JSON
             };
 
             var requestJson = requestObj.ToString(Formatting.Indented);
@@ -623,26 +620,14 @@ namespace TaskFlow.Services
 
                             AiFlowLogger.Info($"[ToolUse] analyze_flow(\"{flowName}\", start={startOrder}) → 第 {analyzeRound} 轮对话...");
 
-                            // 构建多轮对话消息：assistant(tool_call) → tool(result)
+                            // 构建精简的多轮请求：只保留 system + 原始 user + 本轮 assistant/tool
+                            // 避免多轮历史累积导致请求体以 15KB 的倍数增长，触发 502 Bad Gateway
                             var assistantMsg = new JObject
                             {
                                 ["role"] = "assistant",
                                 ["content"] = currentResponseText ?? ""
                             };
-                            assistantMsg["tool_calls"] = new JArray(new JObject
-                            {
-                                ["id"] = afId,
-                                ["type"] = "function",
-                                ["function"] = new JObject
-                                {
-                                    ["name"] = "analyze_flow",
-                                    ["arguments"] = afArgs
-                                }
-                            });
 
-
-                            // 构建精简的多轮请求：只保留 system + 原始 user + 本轮 assistant/tool
-                            // 避免多轮历史累积导致请求体以 15KB 的倍数增长，触发 502 Bad Gateway
                             var sysMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "system");
                             var originalUserMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "user");
                             var trimmedMessages = new JArray();
@@ -651,16 +636,14 @@ namespace TaskFlow.Services
                             trimmedMessages.Add(assistantMsg);
                             trimmedMessages.Add(new JObject
                             {
-                                ["role"] = "tool",
-                                ["tool_call_id"] = afId,
-                                ["content"] = flowDetail
+                                ["role"] = "user",
+                                ["content"] = $"[执行工具 {afName} 成功，返回流程详情结果：]\n{flowDetail}"
                             });
                             var requestN = new JObject
                             {
                                 ["model"] = modelConfig.ModelName,
                                 ["messages"] = trimmedMessages,
-                                ["temperature"] = 0.3,
-                                ["tools"] = tools
+                                ["temperature"] = 0.3
                             };
 
                             onDelta?.Invoke($"\n\n📋 已获取流程详情（第 {analyzeRound} 批），正在分析...\n\n");
@@ -737,10 +720,16 @@ namespace TaskFlow.Services
 
                             AiFlowLogger.Info($"[ToolUse] 截图成功 ({sw}x{sh})，注入截图发起下一轮对话...");
 
-                            // 将截图直接嵌入 user 消息（不使用 tool_calls/tool 历史格式，
-                            // 因为部分第三方 API 代理商不支持 Responses API 的 function_call input 类型）
+                            // 将截图直接嵌入 user 消息（配合 Prompt-based Text Tools）
                             var mime = base64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
-                            messagesJson.Add(new JObject
+                            
+                            var assistantMsg = new JObject
+                            {
+                                ["role"] = "assistant",
+                                ["content"] = currentResponseText ?? ""
+                            };
+
+                            var userScreenshotMsg = new JObject
                             {
                                 ["role"] = "user",
                                 ["content"] = new JArray
@@ -756,15 +745,22 @@ namespace TaskFlow.Services
                                         }
                                     }
                                 }
-                            });
+                            };
+
+                            var sysMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "system");
+                            var originalUserMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "user");
+                            var trimmedMessages = new JArray();
+                            if (sysMsg != null) trimmedMessages.Add(sysMsg);
+                            if (originalUserMsg != null) trimmedMessages.Add(originalUserMsg);
+                            trimmedMessages.Add(assistantMsg);
+                            trimmedMessages.Add(userScreenshotMsg);
 
                             // 发起下一轮请求
                             var requestN = new JObject
                             {
                                 ["model"] = modelConfig.ModelName,
-                                ["messages"] = messagesJson,
-                                ["temperature"] = 0.3,
-                                ["tools"] = tools
+                                ["messages"] = trimmedMessages,
+                                ["temperature"] = 0.3
                             };
 
                             string respN;
@@ -930,15 +926,14 @@ namespace TaskFlow.Services
                             messagesJson.Add(new JObject
                             {
                                 ["role"] = "user",
-                                ["content"] = "请直接调用 analyze_flow 工具来获取流程详情，不要用文字描述你的意图。"
+                                ["content"] = "请直接输出包含 analyze_flow 动作的 JSON 代码块来获取流程详情，不要用文字表达意图。"
                             });
 
                             var retryRequest = new JObject
                             {
                                 ["model"] = modelConfig.ModelName,
                                 ["messages"] = messagesJson,
-                                ["temperature"] = 0.3,
-                                ["tools"] = tools
+                                ["temperature"] = 0.3
                             };
 
                             try
@@ -971,36 +966,24 @@ namespace TaskFlow.Services
                                                 AiFlowLogger.Info($"[ToolUse] 重试成功 → analyze_flow(\"{flowName}\")，发起下一轮对话...");
                                                 onStatus?.Invoke($"已获取流程详情，正在分析...");
 
-                                                // 构建 tool result 并再次请求
+                                                // 构建 json 输出历史并再次请求
                                                 var assistantMsg2 = new JObject
                                                 {
                                                     ["role"] = "assistant",
                                                     ["content"] = retryResp ?? ""
                                                 };
-                                                assistantMsg2["tool_calls"] = new JArray(new JObject
-                                                {
-                                                    ["id"] = analyzeRetry.Id,
-                                                    ["type"] = "function",
-                                                    ["function"] = new JObject
-                                                    {
-                                                        ["name"] = "analyze_flow",
-                                                        ["arguments"] = analyzeRetry.Arguments
-                                                    }
-                                                });
                                                 messagesJson.Add(assistantMsg2);
                                                 messagesJson.Add(new JObject
                                                 {
-                                                    ["role"] = "tool",
-                                                    ["tool_call_id"] = analyzeRetry.Id,
-                                                    ["content"] = flowDetail
+                                                    ["role"] = "user",
+                                                    ["content"] = $"[执行工具 analyze_flow 成功，返回流程详情结果：]\n{flowDetail}"
                                                 });
 
                                                 var finalRequest = new JObject
                                                 {
                                                     ["model"] = modelConfig.ModelName,
                                                     ["messages"] = messagesJson,
-                                                    ["temperature"] = 0.3,
-                                                    ["tools"] = tools
+                                                    ["temperature"] = 0.3
                                                 };
 
                                                 string finalResp;
@@ -1168,6 +1151,40 @@ ToolRetryDone:
         }
 
         /// <summary>
+        /// 从纯文本回复中提取 Prompt-based 的 JSON 工具调用指令
+        /// </summary>
+        private static List<(string Id, string Name, string Arguments)>? ParseJsonToolCallsFromText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            try
+            {
+                // 正则寻找 ```json ... ``` 块，且要求包含 "action" 和 "params" 字段
+                var match = System.Text.RegularExpressions.Regex.Match(text, @"```json\s*(\{[\s\S]*?\""action\""[\s\S]*?\})\s*```");
+                if (!match.Success) return null;
+
+                var jsonStr = match.Groups[1].Value;
+                var jsonObj = JObject.Parse(jsonStr);
+                
+                var action = jsonObj["action"]?.ToString();
+                if (string.IsNullOrEmpty(action)) return null;
+
+                var paramsObj = jsonObj["params"] as JObject ?? new JObject();
+                // 生成一个随机 id 代替原先的 tool_call_id
+                var callId = $"call_{Guid.NewGuid():N}";
+                
+                return new List<(string Id, string Name, string Arguments)>
+                {
+                    (callId, action, paramsObj.ToString(Formatting.None))
+                };
+            }
+            catch (Exception ex)
+            {
+                AiFlowLogger.Warn($"[PromptTool] 解析文本中的 JSON 工具调用失败: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// 调用 LLM API 的通用方法（兼容 OpenAI 和 Gemini），支持返回 tool_calls
         /// </summary>
         private async Task<(string ResponseText, int InputTokens, int OutputTokens, List<(string Id, string Name, string Arguments)>? ToolCalls)> CallLlmAsync(
@@ -1178,7 +1195,8 @@ ToolRetryDone:
             cts.CancelAfter(TimeSpan.FromSeconds(timeout));
 
             bool isGemini = IsGeminiApi(modelConfig.ApiEndpoint);
-            bool isResponsesApi = modelConfig.ApiEndpoint.Contains("/v1/responses", StringComparison.OrdinalIgnoreCase);
+            // 弃用原生 Responses API，统一降级为 Chat Completions
+            bool isResponsesApi = false; 
             string actualUrl;
             object actualBody;
 
@@ -1187,14 +1205,9 @@ ToolRetryDone:
                 actualUrl = BuildGeminiUrl(modelConfig.ApiEndpoint, modelConfig.ModelName);
                 actualBody = BuildGeminiRequestBody(requestBody);
             }
-            else if (isResponsesApi)
-            {
-                actualUrl = modelConfig.ApiEndpoint;
-                actualBody = BuildResponsesApiBody(requestBody);
-            }
             else
             {
-                actualUrl = modelConfig.ApiEndpoint;
+                actualUrl = modelConfig.ApiEndpoint.Replace("/v1/responses", "/v1/chat/completions", StringComparison.OrdinalIgnoreCase);
                 actualBody = requestBody;
             }
 
@@ -1290,6 +1303,17 @@ ToolRetryDone:
                 {
                     inputTokens = (int?)usageMeta["promptTokenCount"] ?? 0;
                     outputTokens = (int?)usageMeta["candidatesTokenCount"] ?? 0;
+                }
+            }
+
+            // 如果原生 API 没有返回 toolCalls，尝试从纯文本中解析
+            if ((toolCalls == null || toolCalls.Count == 0) && !string.IsNullOrWhiteSpace(replyText))
+            {
+                var parsed = ParseJsonToolCallsFromText(replyText);
+                if (parsed != null && parsed.Count > 0)
+                {
+                    toolCalls = parsed;
+                    AiFlowLogger.Info($"[PromptTool] 从文本成功解析到动作: {parsed[0].Name}");
                 }
             }
 
@@ -1549,7 +1573,8 @@ ToolRetryDone:
             cts.CancelAfter(TimeSpan.FromSeconds(timeout));
 
             bool isGemini = IsGeminiApi(modelConfig.ApiEndpoint);
-            bool isResponsesApi = modelConfig.ApiEndpoint.Contains("/v1/responses", StringComparison.OrdinalIgnoreCase);
+            // 弃用原生 Responses API，统一降级为 Chat Completions
+            bool isResponsesApi = false;
             string actualUrl;
             object actualBody;
 
@@ -1561,17 +1586,10 @@ ToolRetryDone:
                 actualUrl = $"{cleanBase}/models/{cleanModel}:streamGenerateContent?alt=sse";
                 actualBody = BuildGeminiRequestBody(requestBody);
             }
-            else if (isResponsesApi)
-            {
-                actualUrl = modelConfig.ApiEndpoint;
-                actualBody = BuildResponsesApiBody(requestBody);
-                // 调试日志：打印转换后的 Responses API 请求体（base64 截断）
-                AiFlowLogger.Info($"[Responses API] 转换后请求体:\n{AiFlowLogger.TruncateBase64(JsonConvert.SerializeObject(actualBody, Formatting.Indented))}");
-            }
             else
             {
                 // Chat Completions：注入 stream=true
-                actualUrl = modelConfig.ApiEndpoint;
+                actualUrl = modelConfig.ApiEndpoint.Replace("/v1/responses", "/v1/chat/completions", StringComparison.OrdinalIgnoreCase);
                 var json = JObject.FromObject(requestBody);
                 json["stream"] = true;
                 actualBody = json;
@@ -1900,6 +1918,16 @@ ToolRetryDone:
                     var args = toolCallArgs.ContainsKey(kvp.Key) ? toolCallArgs[kvp.Key].ToString() : "{}";
                     parsedToolCalls.Add((id, kvp.Value, args));
                     AiFlowLogger.Info($"[SSE] Tool Call: {kvp.Value}({args.Substring(0, Math.Min(args.Length, 200))})");
+                }
+            }
+            // 如果原生 API 没有返回 toolCalls，尝试从纯文本中解析
+            if ((parsedToolCalls == null || parsedToolCalls.Count == 0) && contentBuilder.Length > 0)
+            {
+                var parsed = ParseJsonToolCallsFromText(contentBuilder.ToString());
+                if (parsed != null && parsed.Count > 0)
+                {
+                    parsedToolCalls = parsed;
+                    AiFlowLogger.Info($"[PromptTool] 从文本流成功解析到动作: {parsed[0].Name}");
                 }
             }
 
