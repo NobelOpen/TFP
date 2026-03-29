@@ -138,6 +138,8 @@ namespace TaskFlow.ViewModels
         [ObservableProperty]
         private bool _showContinueButton;
 
+        private string? _prefillAssistantContent; // 用于原生的大模型断点续写 (Assistant Prefill)
+
         /// <summary>
         /// 保存上次用户输入，用于重试
         /// </summary>
@@ -436,8 +438,13 @@ namespace TaskFlow.ViewModels
                 return;
             }
 
-            // 添加用户消息
-            AddMessage(AiChatRole.User, userInput);
+            // 仅当最后一条消息不同于当前用户输入时才添加（防止重试产生气泡堆叠）
+            var lastMsg = Messages.LastOrDefault();
+            if (lastMsg == null || lastMsg.Role != AiChatRole.User || lastMsg.Content != userInput)
+            {
+                AddMessage(AiChatRole.User, userInput);
+            }
+            
             _lastUserInput = userInput;
             InputText = "";
             IsGenerating = true;
@@ -522,8 +529,19 @@ namespace TaskFlow.ViewModels
             // 准备流式输出，WebView2 内置加载与流式显示
                 LoadingText = "⏳ 正在分析需求...";
 
+                // 消费一次性的断点续写内容
+                var prefill = _prefillAssistantContent;
+                _prefillAssistantContent = null;
+
                 // 触发流式开始事件（WebView2 创建占位消息）
                 StreamingStarted?.Invoke();
+
+                if (!string.IsNullOrEmpty(prefill))
+                {
+                    // 顺发之前生成的前半截，使 UI 瞬间恢复原状
+                    streamBuilder.Append(prefill);
+                    StreamingDelta?.Invoke(prefill);
+                }
 
                 // 流式回调：累积文本（用于持久化）+ 触发事件（用于 WebView2 增量渲染）
                 Action<string> onDelta = delta =>
@@ -547,7 +565,8 @@ namespace TaskFlow.ViewModels
                     onStatus: status => { LoadingText = status; },
                     getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                     captureScreenshot: async target => await CaptureScreenForAiAsync(
-                        string.IsNullOrWhiteSpace(target) ? "windows" : target));
+                        string.IsNullOrWhiteSpace(target) ? "windows" : target),
+                    prefillAssistantMessage: prefill);
 
                 // 判断方案是否有效内容（卡片、变量、流程或删除操作）
                 bool hasSteps = plan.Plan.Count > 0;
@@ -569,6 +588,12 @@ namespace TaskFlow.ViewModels
                     if (!string.IsNullOrEmpty(plan.Summary))
                     {
                         AiFlowLogger.Info($"分析完成（Token: {tokens2In}+{tokens2Out}）");
+                        
+                        // 检查是否为由 analyze_flow 等内部抛出的 API 请求失败（网络故障等）
+                        if (plan.Summary.Contains("请求失败") || plan.Summary.Contains("分析失败"))
+                        {
+                            ShowRetryButton = true;
+                        }
                         // 流式内容已由 WebView2 渲染，finally 中会持久化
                     }
                     else
@@ -646,9 +671,10 @@ namespace TaskFlow.ViewModels
                         {
                             await ExecuteAutonomousLoopAsync(plan);
                         }
-                        else if (hasSteps && createdCount > 0)
+                        else if (hasSteps && createdCount > 0 && string.IsNullOrWhiteSpace(plan.TargetFlow))
                         {
                             // 创建了新卡片但 AI 没指定 runCards，自动把新卡片加入运行
+                            // 注意：只有卡片创建在当前主流程时才自动运行，子流程卡片需要通过 CallSubFlow 触发
                             var newOrders = _mainViewModel.TaskCards
                                 .OrderByDescending(c => c.Order)
                                 .Take(createdCount)
@@ -657,6 +683,13 @@ namespace TaskFlow.ViewModels
                                 .ToList();
                             plan.RunCards = newOrders;
                             AiFlowLogger.Info($"自主模式：自动运行新创建的 {createdCount} 张卡片...");
+                            await ExecuteAutonomousLoopAsync(plan);
+                        }
+                        else if (hasSteps && createdCount > 0 && !string.IsNullOrWhiteSpace(plan.TargetFlow))
+                        {
+                            // 子流程卡片已创建，但不能直接运行。进入自主循环让 AI 继续决策后续步骤
+                            // （如在主流程创建 CallSubFlow、设置参数等）
+                            AiFlowLogger.Info($"自主模式：子流程卡片已创建到 {plan.TargetFlow}，继续自主循环处理后续步骤...");
                             await ExecuteAutonomousLoopAsync(plan);
                         }
                         return;
@@ -848,27 +881,75 @@ namespace TaskFlow.ViewModels
         }
 
         /// <summary>
-        /// 重试上次失败的生成
+        /// 重试上次失败的生成（自动触发断点续写）
         /// </summary>
         [RelayCommand]
         private async Task RetryAsync()
         {
-            if (string.IsNullOrEmpty(_lastUserInput) || IsGenerating) return;
+            if (IsGenerating) return;
             ShowRetryButton = false;
-            InputText = _lastUserInput;
+
+            // 1. 从后往前清理因失败残留的 System 报错提示
+            for (int i = Messages.Count - 1; i >= 0; i--)
+            {
+                var m = Messages[i];
+                if (m.Role == AiChatRole.System && m.Content != null && m.Content.Contains("❌"))
+                {
+                    Messages.RemoveAt(i);
+                }
+                else if (m.Role == AiChatRole.User || m.Role == AiChatRole.Assistant)
+                {
+                    break; // 遇到用户的实质提问或其它正常流卡片停止清理
+                }
+            }
+
+            // 2. 提取被中断或报错破坏的最后一个助手回答
+            var lastAst = Messages.LastOrDefault(m => m.Role == AiChatRole.Assistant);
+            if (lastAst != null && !string.IsNullOrEmpty(lastAst.Content))
+            {
+                var content = lastAst.Content;
+                // 剔除失败尾巴
+                int idx = content.IndexOf("❌ API 请求失败");
+                if (idx < 0) idx = content.IndexOf("❌ 生成失败");
+                if (idx < 0) idx = content.IndexOf("❌ 流程分析失败");
+                if (idx > 0) content = content.Substring(0, idx).TrimEnd();
+
+                if (content.Length > 20)
+                {
+                    // 仅当含有实质性内容时刻作为续写锚点
+                    _prefillAssistantContent = content;
+                }
+                Messages.Remove(lastAst);
+            }
+
+            var lastUser = Messages.LastOrDefault(m => m.Role == AiChatRole.User);
+            if (lastUser != null)
+            {
+                // 不要 Remove 用户的提问气泡，只是为了触发 SendMessageAsync
+                InputText = lastUser.Content;
+            }
+            else
+            {
+                InputText = _lastUserInput;
+            }
+
+            // 清理 UI 上无用的残留气泡
+            MessagesUpdated?.Invoke();
+
             await SendMessageAsync();
         }
 
         /// <summary>
-        /// 继续被截断的生成（自动发送"请继续"）
+        /// 继续被截断的生成（现在升级为真断点无缝续写）
         /// </summary>
         [RelayCommand]
         private async Task ContinueGenerationAsync()
         {
             if (IsGenerating) return;
             ShowContinueButton = false;
-            InputText = "请继续";
-            await SendMessageAsync();
+
+            // 继续操作与重试操作的容错处理如今完全一致（由于引入了预填充机制，都会恢复现场并续写）
+            await RetryAsync();
         }
 
         /// <summary>

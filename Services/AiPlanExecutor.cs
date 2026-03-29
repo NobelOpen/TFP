@@ -66,6 +66,18 @@ namespace TaskFlow.Services
                 }
             }
 
+            // 自动修复 CallSubFlow 的 targetSubFlowId（始终执行，不依赖 createFlows）：
+            // AI 可能不传 targetSubFlowId、传错主流程 ID、或传名称而非 GUID。
+            // 此修复在所有 plan 步骤中查找 CallSubFlow 并自动推断正确的子流程 ID。
+            var mainFlowId = _mainViewModel.SelectedTab?.Id.ToString() ?? "";
+            if (!string.IsNullOrEmpty(mainFlowId) && plan.Plan.Count > 0)
+            {
+                foreach (var step in plan.Plan)
+                {
+                    FixCallSubFlowId(step, plan.CreateFlows, mainFlowId);
+                }
+            }
+
             // 删除流程
             if (plan.DeleteFlows != null && plan.DeleteFlows.Count > 0)
             {
@@ -365,11 +377,67 @@ namespace TaskFlow.Services
                 }
             }
 
-            // 批量创建（向目标 Tab 直接写入）
+            // 批量创建（向目标 Tab 直接写入，支持按步骤级别的 TargetFlowOverride 分组）
             var savedSelectedTask = _mainViewModel.SelectedTask;
             _mainViewModel.SelectedTask = null;
 
-            ProcessSteps(plan.Plan, stepToCard, reports, ref createdCount, mode, modelId, targetTab);
+            // 按 TargetFlowOverride 分组步骤：null→使用全局 targetTab，""/其他→各自查找目标
+            // 保持原始顺序：使用连续分段而非 GroupBy（避免打乱步骤间引用关系）
+            var segments = new List<(WorkflowTab Tab, List<AiFlowPlanStep> Steps)>();
+            List<AiFlowPlanStep>? currentSegment = null;
+            WorkflowTab? currentSegmentTab = null;
+
+            foreach (var step in plan.Plan)
+            {
+                WorkflowTab resolvedTab;
+                if (step.TargetFlowOverride == null)
+                {
+                    // 未标记：使用全局 targetTab
+                    resolvedTab = targetTab;
+                }
+                else if (step.TargetFlowOverride == "")
+                {
+                    // 空字符串标记：表示"当前主流程"（不使用全局 targetFlow）
+                    resolvedTab = _mainViewModel.SelectedTab!;
+                }
+                else
+                {
+                    // 具体流程名
+                    var found = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == step.TargetFlowOverride)
+                             ?? _mainViewModel.Tabs.FirstOrDefault(t => t.Name == "SUB_" + step.TargetFlowOverride);
+                    resolvedTab = found ?? targetTab;
+                    if (found != null && found != targetTab)
+                    {
+                        AiFlowLogger.Info($"[TargetFlowOverride] 步骤 #{step.Step} \"{step.Name}\" 将创建到流程: {found.Name}");
+                    }
+                }
+
+                if (currentSegment == null || resolvedTab != currentSegmentTab)
+                {
+                    currentSegment = new List<AiFlowPlanStep>();
+                    currentSegmentTab = resolvedTab;
+                    segments.Add((resolvedTab, currentSegment));
+                }
+                currentSegment.Add(step);
+            }
+
+            foreach (var (segTab, segSteps) in segments)
+            {
+                // 切换目标 Tab 时需要重置编号计数器
+                var segCards = segTab == _mainViewModel.SelectedTab ? _mainViewModel.TaskCards : segTab.TaskCards;
+                if (segCards.Count == 0 && segTab.NextTaskNumber > 1)
+                {
+                    segTab.NextTaskNumber = 1;
+                    AiFlowLogger.Info($"目标流程 {segTab.Name} 为空，重置卡片编号计数器为 1");
+                }
+                // 预填充已有卡片映射
+                foreach (var existingCard in segCards)
+                {
+                    if (!stepToCard.ContainsKey(existingCard.Order))
+                        stepToCard[existingCard.Order] = existingCard;
+                }
+                ProcessSteps(segSteps, stepToCard, reports, ref createdCount, mode, modelId, segTab);
+            }
 
             // 引用重映射：将属性中的 #step引用 替换为 #actualOrder引用
             RemapStepReferences(stepToCard);
@@ -379,7 +447,7 @@ namespace TaskFlow.Services
             else if (!isTargetCurrentTab)
                 _mainViewModel.RecalculateIndentLevels(); // 确保目标 Tab 的缩进计算正确
 
-            _mainViewModel.AddLog($"[AI] 已在 {targetTab.Name} 创建 {createdCount} 个任务卡片");
+            _mainViewModel.AddLog($"[AI] 已创建 {createdCount} 个任务卡片");
             return (createdCount, reports);
         }
 
@@ -739,6 +807,117 @@ namespace TaskFlow.Services
                     catch { /* 忽略反射异常 */ }
                 }
             }
+        }
+        /// <summary>
+        /// 递归修复 CallSubFlow 步骤中错误的 targetSubFlowId。
+        /// AI 可能在同一轮中同时创建子流程和 CallSubFlow 卡片，但请求时子流程尚不存在，
+        /// AI 只能看到主流程的 ID，可能错误地用主流程 ID 作为 targetSubFlowId。
+        /// </summary>
+        private void FixCallSubFlowId(AiFlowPlanStep step, List<AiFlowNewTab>? createdFlows, string mainFlowId)
+        {
+            if (step.TaskType == "CallSubFlow")
+            {
+                bool hasTargetId = step.Properties.TryGetValue("targetSubFlowId", out var id) && !string.IsNullOrWhiteSpace(id);
+                bool needsFix = false;
+                
+                if (!hasTargetId)
+                {
+                    // 情况 1：AI 完全没传 targetSubFlowId（最常见）
+                    needsFix = true;
+                }
+                else if (id == mainFlowId)
+                {
+                    // 情况 2：AI 错误使用了主流程 ID
+                    needsFix = true;
+                }
+                else if (!Guid.TryParse(id, out _))
+                {
+                    // 情况 3：AI 传了名称而非 GUID（如 "SUB_密码加密"）
+                    needsFix = true;
+                }
+
+                if (needsFix)
+                {
+                    WorkflowTab? matchedTab = null;
+
+                    // 策略 1：如果 AI 传的是子流程名称字符串，按名称直接匹配
+                    if (hasTargetId && !Guid.TryParse(id, out _))
+                    {
+                        var nameToFind = id!;
+                        matchedTab = _mainViewModel.Tabs.FirstOrDefault(t =>
+                            t.Type == FlowType.SubFlow &&
+                            (t.Name.Equals(nameToFind, StringComparison.OrdinalIgnoreCase) ||
+                             t.Name.Equals("SUB_" + nameToFind, StringComparison.OrdinalIgnoreCase)));
+                    }
+
+                    // 策略 2：从新创建的子流程中查找
+                    if (matchedTab == null && createdFlows != null && createdFlows.Count > 0)
+                    {
+                        if (createdFlows.Count == 1)
+                        {
+                            var flowName = createdFlows[0].Name;
+                            var fullName = flowName.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase) ? flowName : "SUB_" + flowName;
+                            matchedTab = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == fullName);
+                        }
+                        else
+                        {
+                            foreach (var flow in createdFlows)
+                            {
+                                var fullName = flow.Name.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase) ? flow.Name : "SUB_" + flow.Name;
+                                var tab = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == fullName);
+                                if (tab != null && step.Name.Contains(flow.Name, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    matchedTab = tab;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // 策略 3：从所有已有子流程 Tabs 中推断（自主循环第 2 轮时 createFlows 为空）
+                    if (matchedTab == null)
+                    {
+                        var subFlowTabs = _mainViewModel.Tabs
+                            .Where(t => t.Type == FlowType.SubFlow && t.TaskCards.Count > 0)
+                            .ToList();
+
+                        if (subFlowTabs.Count == 1)
+                        {
+                            // 只有一个子流程，直接匹配
+                            matchedTab = subFlowTabs[0];
+                        }
+                        else if (subFlowTabs.Count > 1)
+                        {
+                            // 多个子流程，按步骤名称模糊匹配
+                            foreach (var tab in subFlowTabs)
+                            {
+                                var cleanName = tab.Name.StartsWith("SUB_") ? tab.Name.Substring(4) : tab.Name;
+                                if (step.Name.Contains(cleanName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    matchedTab = tab;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (matchedTab != null)
+                    {
+                        var newId = matchedTab.Id.ToString();
+                        step.Properties["targetSubFlowId"] = newId;
+                        AiFlowLogger.Info($"[自动修复] CallSubFlow \"{step.Name}\" 的 targetSubFlowId 设置为子流程 {matchedTab.Name} (ID: {newId})");
+                    }
+                    else
+                    {
+                        AiFlowLogger.Warn($"[修复失败] CallSubFlow \"{step.Name}\" 无法推断目标子流程 ID");
+                    }
+                }
+            }
+
+            // 递归处理嵌套的 IfBody/ElseBody/LoopBody
+            if (step.IfBody != null) foreach (var s in step.IfBody) FixCallSubFlowId(s, createdFlows, mainFlowId);
+            if (step.ElseBody != null) foreach (var s in step.ElseBody) FixCallSubFlowId(s, createdFlows, mainFlowId);
+            if (step.LoopBody != null) foreach (var s in step.LoopBody) FixCallSubFlowId(s, createdFlows, mainFlowId);
         }
     }
 }

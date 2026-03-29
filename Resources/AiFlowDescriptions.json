@@ -315,7 +315,7 @@
     "TaskType": "CustomScript",
     "Category": "数据处理",
     "Description": "使用原生 C# 代码编写自定义逻辑。通过内置全局对象 TaskFlowPro 与主流程双向通信，支持读写卡片输出、变量、图像处理等操作。引擎使用 Roslyn 动态编译，支持最新 C# 语法（using var、模式匹配、switch 表达式等），首次编译后自动缓存，脚本执行结束后自动释放所有通过 API 获取的可释放对象。",
-    "Usage": "当现有任务卡片无法满足复杂逻辑需求时使用。适合执行复杂数学运算、字符串处理、条件循环、文件操作或自定义图像处理。脚本中已预导入 System、System.Linq、System.Collections.Generic、System.Text、OpenCvSharp 等命名空间。核心 API：TaskFlowPro.GetTool('#N 任务名.属性名') 读取卡片输出、TaskFlowPro.SetVar('@变量名', value) 读写变量、TaskFlowPro.GetImage('#N 任务名') 获取图像(Mat)、TaskFlowPro.SetOutputText/SetOutputXY/SetOutputResult/SetOutputImage 设置脚本输出、Console.WriteLine 或 TaskFlowPro.Log 打印日志。",
+    "Usage": "当现有任务卡片无法满足复杂逻辑需求时使用。适合执行复杂数学运算、字符串处理、条件循环、文件操作或自定义图像处理。脚本中已预导入 System、System.Linq、System.Collections.Generic、System.Text、OpenCvSharp 等命名空间。核心 API：TaskFlowPro.GetTool(\"#N 任务名.属性名\") 读取卡片输出、TaskFlowPro.SetVar(\"@变量名\", value) 读写变量、TaskFlowPro.GetImage(\"#N 任务名\") 获取图像(Mat)、TaskFlowPro.SetOutputText/SetOutputXY/SetOutputResult/SetOutputImage 设置脚本输出、Console.WriteLine 或 TaskFlowPro.Log 打印日志。",
     "KeyProperties": ["scriptCode: C# 脚本代码"],
     "Outputs": ["outputText: 通过 SetOutputText 设置的文本", "outputImage: 通过 SetOutputImage 设置的图像", "outputX/outputY: 通过 SetOutputXY 设置的坐标", "outputResult: 通过 SetOutputResult 设置的布尔结果"]
   }

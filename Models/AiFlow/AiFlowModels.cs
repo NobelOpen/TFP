@@ -63,6 +63,14 @@ namespace TaskFlow.Models.AiFlow
 
         /// <summary>ForLoopBlock 的循环体子步骤列表</summary>
         public List<AiFlowPlanStep>? LoopBody { get; set; }
+
+        /// <summary>
+        /// [运行时] 多 submit_plan 合并时，标记每个步骤应写入的目标流程名。
+        /// 不参与 JSON 序列化/反序列化，仅在内存中由 MergeSubmitPlans 设置。
+        /// 为 null 时表示使用 plan 级别的 TargetFlow；非 null 时覆盖全局 TargetFlow。
+        /// </summary>
+        [JsonIgnore]
+        public string? TargetFlowOverride { get; set; }
     }
 
     /// <summary>

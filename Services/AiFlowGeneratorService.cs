@@ -439,7 +439,8 @@ namespace TaskFlow.Services
             Action<string>? onThinking = null,
             Action<string?>? onStatus = null,
             Func<string, int, int, string?>? getFlowDetail = null,
-            Func<string, Task<(string? Base64, int Width, int Height)>>? captureScreenshot = null)
+            Func<string, Task<(string? Base64, int Width, int Height)>>? captureScreenshot = null,
+            string? prefillAssistantMessage = null)
         {
             var modelConfig = LlmModelManager.GetModelById(modelId);
             if (modelConfig == null)
@@ -498,10 +499,11 @@ namespace TaskFlow.Services
                     messages.RemoveAt(messages.Count - 1);
 
                 // OpenAI Vision 格式：content 为数组
-                var contentParts = new List<object>
+                var contentParts = new List<object>();
+                if (!string.IsNullOrEmpty(userPrompt))
                 {
-                    new { type = "text", text = userPrompt }
-                };
+                    contentParts.Add(new { type = "text", text = userPrompt });
+                }
                 foreach (var imgB64 in imageBase64List)
                 {
                     // 根据 base64 头自动检测格式（PNG 以 iVBOR 开头）
@@ -514,18 +516,28 @@ namespace TaskFlow.Services
                 }
                 messages.Add(new { role = "user", content = (object)contentParts });
             }
-            else if (!lastHistoryIsCurrentUser)
+            else if (!lastHistoryIsCurrentUser && !string.IsNullOrEmpty(userPrompt))
             {
                 messages.Add(new { role = "user", content = (object)userPrompt });
             }
 
-            // 使用 JObject 构建请求体
+            // 【无缝续写支持】如果在消息末尾追加了中断的 assistant 预填充内容
+            if (!string.IsNullOrEmpty(prefillAssistantMessage))
+            {
+                messages.Add(new { role = "assistant", content = (object)prefillAssistantMessage });
+                AiFlowLogger.Info("已附加 Assistant Prefill 断点续写内容进行引导");
+            }
+
+            // 构建工具定义
+            var tools = BuildToolDefinitions(mode);
+
+            // 使用 JObject 构建请求体以便注入 tools
             var requestObj = new JObject
             {
                 ["model"] = modelConfig.ModelName,
                 ["messages"] = JArray.FromObject(messages),
-                ["temperature"] = 0.3
-                // 注：为规避中转站 WAF 502 错误，不再通过底层 API 字段发送 tools schema，转由 Prompt 引导 AI 输出 JSON
+                ["temperature"] = 0.3,
+                ["tools"] = tools
             };
 
             var requestJson = requestObj.ToString(Formatting.Indented);
@@ -563,6 +575,14 @@ namespace TaskFlow.Services
                 const int maxAnalyzeRounds = 10; // 防止死循环
                 int analyzeRound = 0;
 
+                // 多轮对话前清理：移除预填充的末尾续写，因为多轮工具调用不支持首轮带有预填充
+                if (!string.IsNullOrEmpty(prefillAssistantMessage))
+                {
+                    // 由于目前无法合并断点续写与 ToolCall，如果遇到预填充我们就假定模型是在补全 JSON，不会有多轮工具调用
+                    AiFlowLogger.Info("注意：已启用断点续写预填充，本轮 Tool Call 循环将被视为常规回复并合并。");
+                    responseText = prefillAssistantMessage + responseText; // 拼装后半截
+                }
+
                 // 多轮对话前清理：移除用户消息中的 base64 图片数据，避免每轮重复传输
                 foreach (var msg in messagesJson)
                 {
@@ -588,65 +608,112 @@ namespace TaskFlow.Services
 
                 while (analyzeRound < maxAnalyzeRounds)
                 {
-                    // 找到本轮中需要多轮处理的工具调用
-                    var analyzeCall = currentToolCalls?.FirstOrDefault(t => t.Name == "analyze_flow");
+                    // 找到本轮中所有需要多轮处理的工具调用
+                    var analyzeCalls = currentToolCalls?.Where(t => t.Name == "analyze_flow").ToList();
                     var screenshotCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_screenshot");
 
-                    // 优先处理 analyze_flow，其次 request_screenshot
-                    if (analyzeCall != null && analyzeCall.Value.Name == "analyze_flow")
+                    // 优先处理 analyze_flow（支持一次返回多个），其次 request_screenshot
+                    if (analyzeCalls != null && analyzeCalls.Count > 0)
                     {
-                        // ---- 处理 analyze_flow ----
+                        // ---- 处理所有 analyze_flow 调用 ----
 
                         analyzeRound++;
-                        var (afId, afName, afArgs) = analyzeCall.Value;
 
                         try
                         {
-                            var flowArg = JObject.Parse(afArgs);
-                            var flowName = flowArg["flow_name"]?.ToString();
-                            var startOrder = (int?)flowArg["start_order"] ?? 0;
-                            var count = (int?)flowArg["count"] ?? 2000;
+                            // 构建 assistant 消息中的 tool_calls 数组和对应的 tool result 消息
+                            var toolCallsArray = new JArray();
+                            var toolResultMessages = new List<JObject>();
 
-                            if (string.IsNullOrEmpty(flowName) || getFlowDetail == null)
-                                break;
-
-                            var flowDetail = getFlowDetail(flowName, startOrder, count);
-                            if (flowDetail == null)
+                            foreach (var analyzeCall in analyzeCalls)
                             {
-                                AiFlowLogger.Warn($"[ToolUse] 流程「{flowName}」不存在");
-                                onDelta?.Invoke($"\n\n⚠️ 流程「{flowName}」不存在。\n");
-                                break;
+                                var (afId, afName, afArgs) = analyzeCall;
+
+                                JObject flowArg;
+                                try { flowArg = JObject.Parse(afArgs); }
+                                catch { continue; }
+
+                                var flowName = flowArg["flow_name"]?.ToString();
+                                var startOrder = (int?)flowArg["start_order"] ?? 0;
+                                var count = (int?)flowArg["count"] ?? 2000;
+
+                                // 构建 tool_call 条目
+                                toolCallsArray.Add(new JObject
+                                {
+                                    ["id"] = afId,
+                                    ["type"] = "function",
+                                    ["function"] = new JObject
+                                    {
+                                        ["name"] = "analyze_flow",
+                                        ["arguments"] = afArgs
+                                    }
+                                });
+
+                                if (string.IsNullOrEmpty(flowName) || getFlowDetail == null)
+                                {
+                                    toolResultMessages.Add(new JObject
+                                    {
+                                        ["role"] = "tool",
+                                        ["tool_call_id"] = afId,
+                                        ["content"] = "错误：未指定流程名"
+                                    });
+                                    continue;
+                                }
+
+                                var flowDetail = getFlowDetail(flowName, startOrder, count);
+                                if (flowDetail == null)
+                                {
+                                    AiFlowLogger.Warn($"[ToolUse] 流程「{flowName}」不存在");
+                                    toolResultMessages.Add(new JObject
+                                    {
+                                        ["role"] = "tool",
+                                        ["tool_call_id"] = afId,
+                                        ["content"] = $"流程「{flowName}」不存在"
+                                    });
+                                    continue;
+                                }
+
+                                AiFlowLogger.Info($"[ToolUse] analyze_flow(\"{flowName}\", start={startOrder}) → 第 {analyzeRound} 轮对话...");
+                                toolResultMessages.Add(new JObject
+                                {
+                                    ["role"] = "tool",
+                                    ["tool_call_id"] = afId,
+                                    ["content"] = flowDetail
+                                });
                             }
 
-                            AiFlowLogger.Info($"[ToolUse] analyze_flow(\"{flowName}\", start={startOrder}) → 第 {analyzeRound} 轮对话...");
+                            if (toolCallsArray.Count == 0 || toolResultMessages.Count == 0)
+                                break;
 
-                            // 构建精简的多轮请求：只保留 system + 原始 user + 本轮 assistant/tool
-                            // 避免多轮历史累积导致请求体以 15KB 的倍数增长，触发 502 Bad Gateway
+                            // 构建 assistant 消息（包含所有 tool_calls）
                             var assistantMsg = new JObject
                             {
                                 ["role"] = "assistant",
                                 ["content"] = currentResponseText ?? ""
                             };
+                            assistantMsg["tool_calls"] = toolCallsArray;
 
+                            // 构建精简的多轮请求：只保留 system + 原始 user + 本轮 assistant + 所有 tool results
+                            // 避免多轮历史累积导致请求体以 15KB 的倍数增长，触发 502 Bad Gateway
                             var sysMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "system");
-                            var originalUserMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "user");
+                            var originalUserMsg = messagesJson.LastOrDefault(m => m["role"]?.ToString() == "user");
                             var trimmedMessages = new JArray();
                             if (sysMsg != null) trimmedMessages.Add(sysMsg);
                             if (originalUserMsg != null) trimmedMessages.Add(originalUserMsg);
                             trimmedMessages.Add(assistantMsg);
-                            trimmedMessages.Add(new JObject
-                            {
-                                ["role"] = "user",
-                                ["content"] = $"[执行工具 {afName} 成功，返回流程详情结果：]\n{flowDetail}"
-                            });
+                            // Chat Completions 协议要求每个 tool_call 对应一条 tool 消息
+                            foreach (var toolMsg in toolResultMessages)
+                                trimmedMessages.Add(toolMsg);
+
                             var requestN = new JObject
                             {
                                 ["model"] = modelConfig.ModelName,
                                 ["messages"] = trimmedMessages,
-                                ["temperature"] = 0.3
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
                             };
 
-                            onDelta?.Invoke($"\n\n📋 已获取流程详情（第 {analyzeRound} 批），正在分析...\n\n");
+                            onDelta?.Invoke($"\n\n📋 已获取流程详情（第 {analyzeRound} 批，{analyzeCalls.Count} 个流程），正在分析...\n\n");
 
                             string respN;
                             int inN, outN;
@@ -720,16 +787,10 @@ namespace TaskFlow.Services
 
                             AiFlowLogger.Info($"[ToolUse] 截图成功 ({sw}x{sh})，注入截图发起下一轮对话...");
 
-                            // 将截图直接嵌入 user 消息（配合 Prompt-based Text Tools）
+                            // 将截图直接嵌入 user 消息（不使用 tool_calls/tool 历史格式，
+                            // 因为部分第三方 API 代理商不支持 Responses API 的 function_call input 类型）
                             var mime = base64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
-                            
-                            var assistantMsg = new JObject
-                            {
-                                ["role"] = "assistant",
-                                ["content"] = currentResponseText ?? ""
-                            };
-
-                            var userScreenshotMsg = new JObject
+                            messagesJson.Add(new JObject
                             {
                                 ["role"] = "user",
                                 ["content"] = new JArray
@@ -745,22 +806,15 @@ namespace TaskFlow.Services
                                         }
                                     }
                                 }
-                            };
-
-                            var sysMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "system");
-                            var originalUserMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "user");
-                            var trimmedMessages = new JArray();
-                            if (sysMsg != null) trimmedMessages.Add(sysMsg);
-                            if (originalUserMsg != null) trimmedMessages.Add(originalUserMsg);
-                            trimmedMessages.Add(assistantMsg);
-                            trimmedMessages.Add(userScreenshotMsg);
+                            });
 
                             // 发起下一轮请求
                             var requestN = new JObject
                             {
                                 ["model"] = modelConfig.ModelName,
-                                ["messages"] = trimmedMessages,
-                                ["temperature"] = 0.3
+                                ["messages"] = messagesJson,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
                             };
 
                             string respN;
@@ -816,11 +870,12 @@ namespace TaskFlow.Services
                     }
                     else if (tcName == "submit_plan")
                     {
-                        // AI 提交了操作方案
+                        // AI 提交了操作方案（可能有多个 submit_plan，合并而非覆盖）
                         try
                         {
-                            plan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(tcArgs) ?? new();
-                            AiFlowLogger.Info($"[ToolUse] submit_plan: {plan.Plan.Count} 个步骤");
+                            var newPlan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(tcArgs) ?? new();
+                            plan = MergeSubmitPlans(plan, newPlan);
+                            AiFlowLogger.Info($"[ToolUse] submit_plan: {newPlan.Plan.Count} 个新步骤（合并后共 {plan.Plan.Count} 个步骤, {plan.ModifyCards.Count} 个修改）");
                         }
                         catch (Exception ex)
                         {
@@ -885,6 +940,13 @@ namespace TaskFlow.Services
             else
             {
                 // 没有 tool_calls —— AI 仅用自然语言回复（兼容不支持 tools 的 API / 回退模式）
+                
+                // 【无缝续写支持】如果是断点续写，前置原本的半截文本
+                if (!string.IsNullOrEmpty(prefillAssistantMessage))
+                {
+                    responseText = prefillAssistantMessage + responseText;
+                }
+
                 // 尝试从 responseText 提取 JSON（兼容旧模式）
                 try
                 {
@@ -926,14 +988,15 @@ namespace TaskFlow.Services
                             messagesJson.Add(new JObject
                             {
                                 ["role"] = "user",
-                                ["content"] = "请直接输出包含 analyze_flow 动作的 JSON 代码块来获取流程详情，不要用文字表达意图。"
+                                ["content"] = "请直接调用 analyze_flow 工具来获取流程详情，不要用文字描述你的意图。"
                             });
 
                             var retryRequest = new JObject
                             {
                                 ["model"] = modelConfig.ModelName,
                                 ["messages"] = messagesJson,
-                                ["temperature"] = 0.3
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
                             };
 
                             try
@@ -966,24 +1029,36 @@ namespace TaskFlow.Services
                                                 AiFlowLogger.Info($"[ToolUse] 重试成功 → analyze_flow(\"{flowName}\")，发起下一轮对话...");
                                                 onStatus?.Invoke($"已获取流程详情，正在分析...");
 
-                                                // 构建 json 输出历史并再次请求
+                                                // 构建 tool result 并再次请求
                                                 var assistantMsg2 = new JObject
                                                 {
                                                     ["role"] = "assistant",
                                                     ["content"] = retryResp ?? ""
                                                 };
+                                                assistantMsg2["tool_calls"] = new JArray(new JObject
+                                                {
+                                                    ["id"] = analyzeRetry.Id,
+                                                    ["type"] = "function",
+                                                    ["function"] = new JObject
+                                                    {
+                                                        ["name"] = "analyze_flow",
+                                                        ["arguments"] = analyzeRetry.Arguments
+                                                    }
+                                                });
                                                 messagesJson.Add(assistantMsg2);
                                                 messagesJson.Add(new JObject
                                                 {
-                                                    ["role"] = "user",
-                                                    ["content"] = $"[执行工具 analyze_flow 成功，返回流程详情结果：]\n{flowDetail}"
+                                                    ["role"] = "tool",
+                                                    ["tool_call_id"] = analyzeRetry.Id,
+                                                    ["content"] = flowDetail
                                                 });
 
                                                 var finalRequest = new JObject
                                                 {
                                                     ["model"] = modelConfig.ModelName,
                                                     ["messages"] = messagesJson,
-                                                    ["temperature"] = 0.3
+                                                    ["temperature"] = 0.3,
+                                                    ["tools"] = tools
                                                 };
 
                                                 string finalResp;
@@ -1151,40 +1226,6 @@ ToolRetryDone:
         }
 
         /// <summary>
-        /// 从纯文本回复中提取 Prompt-based 的 JSON 工具调用指令
-        /// </summary>
-        private static List<(string Id, string Name, string Arguments)>? ParseJsonToolCallsFromText(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return null;
-            try
-            {
-                // 正则寻找 ```json ... ``` 块，且要求包含 "action" 和 "params" 字段
-                var match = System.Text.RegularExpressions.Regex.Match(text, @"```json\s*(\{[\s\S]*?\""action\""[\s\S]*?\})\s*```");
-                if (!match.Success) return null;
-
-                var jsonStr = match.Groups[1].Value;
-                var jsonObj = JObject.Parse(jsonStr);
-                
-                var action = jsonObj["action"]?.ToString();
-                if (string.IsNullOrEmpty(action)) return null;
-
-                var paramsObj = jsonObj["params"] as JObject ?? new JObject();
-                // 生成一个随机 id 代替原先的 tool_call_id
-                var callId = $"call_{Guid.NewGuid():N}";
-                
-                return new List<(string Id, string Name, string Arguments)>
-                {
-                    (callId, action, paramsObj.ToString(Formatting.None))
-                };
-            }
-            catch (Exception ex)
-            {
-                AiFlowLogger.Warn($"[PromptTool] 解析文本中的 JSON 工具调用失败: {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
         /// 调用 LLM API 的通用方法（兼容 OpenAI 和 Gemini），支持返回 tool_calls
         /// </summary>
         private async Task<(string ResponseText, int InputTokens, int OutputTokens, List<(string Id, string Name, string Arguments)>? ToolCalls)> CallLlmAsync(
@@ -1195,19 +1236,22 @@ ToolRetryDone:
             cts.CancelAfter(TimeSpan.FromSeconds(timeout));
 
             bool isGemini = IsGeminiApi(modelConfig.ApiEndpoint);
-            // 弃用原生 Responses API，统一降级为 Chat Completions
-            bool isResponsesApi = false; 
             string actualUrl;
             object actualBody;
 
+            // 将 /v1/responses 端点自动替换为 /v1/chat/completions（与流式方法保持一致）
+            var endpoint = modelConfig.ApiEndpoint;
+            if (endpoint.Contains("/v1/responses", StringComparison.OrdinalIgnoreCase))
+                endpoint = endpoint.Replace("/v1/responses", "/v1/chat/completions");
+
             if (isGemini)
             {
-                actualUrl = BuildGeminiUrl(modelConfig.ApiEndpoint, modelConfig.ModelName);
+                actualUrl = BuildGeminiUrl(endpoint, modelConfig.ModelName);
                 actualBody = BuildGeminiRequestBody(requestBody);
             }
             else
             {
-                actualUrl = modelConfig.ApiEndpoint.Replace("/v1/responses", "/v1/chat/completions", StringComparison.OrdinalIgnoreCase);
+                actualUrl = endpoint;
                 actualBody = requestBody;
             }
 
@@ -1242,12 +1286,7 @@ ToolRetryDone:
             // 注入自定义请求头
             ApplyCustomHeaders(requestMessage, modelConfig);
 
-            // Responses API 使用流式，需要 ResponseHeadersRead 以避免等待完整响应
-            var completionOption = isResponsesApi
-                ? HttpCompletionOption.ResponseHeadersRead
-                : HttpCompletionOption.ResponseContentRead;
-
-            var response = await _httpClient.SendAsync(requestMessage, completionOption, cts.Token);
+            var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseContentRead, cts.Token);
             var responseString = await response.Content.ReadAsStringAsync(cts.Token);
 
             if (!response.IsSuccessStatusCode)
@@ -1255,17 +1294,11 @@ ToolRetryDone:
                 throw new HttpRequestException($"API 请求失败: {response.StatusCode} - {responseString}");
             }
 
-            // 解析响应
+            // 解析响应（统一使用 Chat Completions 格式）
             string replyText;
             int inputTokens = 0, outputTokens = 0;
             List<(string Id, string Name, string Arguments)>? toolCalls = null;
 
-            if (isResponsesApi)
-            {
-                // Responses API 使用 stream=true，返回 SSE 格式
-                (replyText, inputTokens, outputTokens, toolCalls) = ParseResponsesApiStream(responseString);
-            }
-            else
             {
                 var jsonResponse = JObject.Parse(responseString);
 
@@ -1303,17 +1336,6 @@ ToolRetryDone:
                 {
                     inputTokens = (int?)usageMeta["promptTokenCount"] ?? 0;
                     outputTokens = (int?)usageMeta["candidatesTokenCount"] ?? 0;
-                }
-            }
-
-            // 如果原生 API 没有返回 toolCalls，尝试从纯文本中解析
-            if ((toolCalls == null || toolCalls.Count == 0) && !string.IsNullOrWhiteSpace(replyText))
-            {
-                var parsed = ParseJsonToolCallsFromText(replyText);
-                if (parsed != null && parsed.Count > 0)
-                {
-                    toolCalls = parsed;
-                    AiFlowLogger.Info($"[PromptTool] 从文本成功解析到动作: {parsed[0].Name}");
                 }
             }
 
@@ -1573,23 +1595,32 @@ ToolRetryDone:
             cts.CancelAfter(TimeSpan.FromSeconds(timeout));
 
             bool isGemini = IsGeminiApi(modelConfig.ApiEndpoint);
-            // 弃用原生 Responses API，统一降级为 Chat Completions
-            bool isResponsesApi = false;
             string actualUrl;
             object actualBody;
+
+            // 将 /v1/responses 端点自动替换为 /v1/chat/completions
+            // 原因：Responses API 的 SSE 事件中每帧都携带完整 instructions + tools 定义（约 20KB），
+            // 中转站转发时容易触发 Cloudflare/WAF 的 502 Bad Gateway。
+            // Chat Completions 的 SSE delta 每帧仅约 200 字节，兼容性和稳定性远优于 Responses API。
+            var endpoint = modelConfig.ApiEndpoint;
+            if (endpoint.Contains("/v1/responses", StringComparison.OrdinalIgnoreCase))
+            {
+                endpoint = endpoint.Replace("/v1/responses", "/v1/chat/completions");
+                AiFlowLogger.Info($"[协议切换] /v1/responses → /v1/chat/completions (稳定性优化)");
+            }
 
             if (isGemini)
             {
                 // Gemini 流式：使用 streamGenerateContent 端点
                 var cleanModel = modelConfig.ModelName.Replace(":generateContent", "").Trim();
-                var cleanBase = modelConfig.ApiEndpoint.TrimEnd('/');
+                var cleanBase = endpoint.TrimEnd('/');
                 actualUrl = $"{cleanBase}/models/{cleanModel}:streamGenerateContent?alt=sse";
                 actualBody = BuildGeminiRequestBody(requestBody);
             }
             else
             {
                 // Chat Completions：注入 stream=true
-                actualUrl = modelConfig.ApiEndpoint.Replace("/v1/responses", "/v1/chat/completions", StringComparison.OrdinalIgnoreCase);
+                actualUrl = endpoint;
                 var json = JObject.FromObject(requestBody);
                 json["stream"] = true;
                 actualBody = json;
@@ -1644,6 +1675,9 @@ ToolRetryDone:
             var toolCallIds = new Dictionary<int, string>();
             var toolCallNames = new Dictionary<int, string>();
             var toolCallArgs = new Dictionary<int, StringBuilder>();
+
+            // SSE 格式自动检测：正常走 Chat Completions，但如果中转站实际返回 Responses API 格式，自动切换解析模式
+            bool isResponsesApi = false;
 
             // 当前活跃输出项的 phase（Responses API 支持 commentary/final_answer）
             // commentary 是模型的内心思考，不应显示给用户；只显示 final_answer 的内容
@@ -1862,7 +1896,7 @@ ToolRetryDone:
                                     if (funcObj != null)
                                     {
                                         var name = funcObj["name"]?.ToString();
-                                        if (name != null)
+                                        if (!string.IsNullOrEmpty(name))
                                             toolCallNames[idx] = name;
 
                                         var args = funcObj["arguments"]?.ToString();
@@ -1920,16 +1954,6 @@ ToolRetryDone:
                     AiFlowLogger.Info($"[SSE] Tool Call: {kvp.Value}({args.Substring(0, Math.Min(args.Length, 200))})");
                 }
             }
-            // 如果原生 API 没有返回 toolCalls，尝试从纯文本中解析
-            if ((parsedToolCalls == null || parsedToolCalls.Count == 0) && contentBuilder.Length > 0)
-            {
-                var parsed = ParseJsonToolCallsFromText(contentBuilder.ToString());
-                if (parsed != null && parsed.Count > 0)
-                {
-                    parsedToolCalls = parsed;
-                    AiFlowLogger.Info($"[PromptTool] 从文本流成功解析到动作: {parsed[0].Name}");
-                }
-            }
 
             // 回退：流式解析未获取到任何内容且无 tool calls 时，使用非流式方式重试
             if (contentBuilder.Length == 0 && parsedToolCalls == null && rawLineCount > 0)
@@ -1964,6 +1988,94 @@ ToolRetryDone:
                 else
                     request.Headers.TryAddWithoutValidation(headerKey, headerVal);
             }
+        }
+
+        /// <summary>
+        /// 合并多个 submit_plan 调用的结果。
+        /// AI 可能在一次响应中返回多个 submit_plan 工具调用（如先修改子流程卡片，再创建主流程卡片），
+        /// 需要将它们合并为一个统一的 plan 对象，而非后者覆盖前者。
+        /// </summary>
+        private static AiFlowPlanResponse MergeSubmitPlans(AiFlowPlanResponse existing, AiFlowPlanResponse incoming)
+        {
+            // 列表类字段：追加
+            if (incoming.Plan.Count > 0)
+            {
+                // 为每个步骤标记它所属的 targetFlow（多 submit_plan 时各自独立）
+                // 使用约定：空字符串 "" 表示"当前主流程"(即不覆盖)，null 表示"未设置"
+                var incomingTarget = incoming.TargetFlow;
+                foreach (var step in incoming.Plan)
+                {
+                    // 仅在 incoming 有明确的 targetFlow 时标记
+                    // 如果 incoming 没有 targetFlow 且 existing 有，需要标记为 "" 以区分
+                    if (!string.IsNullOrEmpty(incomingTarget))
+                    {
+                        step.TargetFlowOverride = incomingTarget;
+                    }
+                    else if (!string.IsNullOrEmpty(existing.TargetFlow))
+                    {
+                        // existing 已有 targetFlow，但 incoming 没有 → 步骤写入当前流程（用 "" 标记）
+                        step.TargetFlowOverride = "";
+                    }
+                }
+                existing.Plan.AddRange(incoming.Plan);
+            }
+            if (incoming.Variables.Count > 0)
+                existing.Variables.AddRange(incoming.Variables);
+            if (incoming.DeleteVariables.Count > 0)
+                existing.DeleteVariables.AddRange(incoming.DeleteVariables);
+            if (incoming.ModifyVariables.Count > 0)
+                existing.ModifyVariables.AddRange(incoming.ModifyVariables);
+            if (incoming.ModifyCards.Count > 0)
+                existing.ModifyCards.AddRange(incoming.ModifyCards);
+            if (incoming.DeleteCards.Count > 0)
+                existing.DeleteCards.AddRange(incoming.DeleteCards);
+            if (incoming.RunCards.Count > 0)
+                existing.RunCards.AddRange(incoming.RunCards);
+            if (incoming.InsertCards?.Count > 0)
+            {
+                existing.InsertCards ??= new();
+                existing.InsertCards.AddRange(incoming.InsertCards);
+            }
+            if (incoming.CreateFlows?.Count > 0)
+            {
+                existing.CreateFlows ??= new();
+                existing.CreateFlows.AddRange(incoming.CreateFlows);
+            }
+            if (incoming.DeleteFlows?.Count > 0)
+            {
+                existing.DeleteFlows ??= new();
+                existing.DeleteFlows.AddRange(incoming.DeleteFlows);
+            }
+            if (incoming.ShellCommands?.Count > 0)
+            {
+                existing.ShellCommands ??= new();
+                existing.ShellCommands.AddRange(incoming.ShellCommands);
+            }
+            if (incoming.FallbackPlan?.Count > 0)
+            {
+                existing.FallbackPlan ??= new();
+                existing.FallbackPlan.AddRange(incoming.FallbackPlan);
+            }
+
+            // 标量字段：后者覆盖前者（取最后一次设置）
+            if (!string.IsNullOrEmpty(incoming.TargetFlow))
+                existing.TargetFlow = incoming.TargetFlow;
+            if (!string.IsNullOrEmpty(incoming.SwitchFlow))
+                existing.SwitchFlow = incoming.SwitchFlow;
+            if (!string.IsNullOrEmpty(incoming.FailureStrategy))
+                existing.FailureStrategy = incoming.FailureStrategy;
+            if (!string.IsNullOrEmpty(incoming.Summary))
+                existing.Summary = incoming.Summary;
+            if (!string.IsNullOrEmpty(incoming.ScreenshotTarget))
+                existing.ScreenshotTarget = incoming.ScreenshotTarget;
+            if (!string.IsNullOrEmpty(incoming.AnalyzeFlow))
+                existing.AnalyzeFlow = incoming.AnalyzeFlow;
+
+            // 布尔字段：任一为 true 则 true
+            if (incoming.Done) existing.Done = true;
+            if (incoming.NeedsScreenshot) existing.NeedsScreenshot = true;
+
+            return existing;
         }
     }
 }

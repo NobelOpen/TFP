@@ -265,15 +265,30 @@ namespace TaskFlow.ViewModels
                     // 获取原始用户请求
                     var originalRequest = Messages.LastOrDefault(m => m.Role == AiChatRole.User)?.Content ?? "执行流程";
 
-                    // 构建所有卡片状态清单
+                    // 构建所有卡片状态清单（包含主流程和子流程）
                     var allCardsInfo = new System.Text.StringBuilder();
-                    allCardsInfo.AppendLine("当前画布上所有卡片：");
+                    // 主流程卡片
+                    var mainTabName = _mainViewModel.SelectedTab?.Name ?? "主流程";
+                    allCardsInfo.AppendLine($"[当前流程] {mainTabName} 的卡片：");
+                    if (_mainViewModel.TaskCards.Count == 0)
+                        allCardsInfo.AppendLine("  （空，没有任何卡片）");
                     foreach (var c in _mainViewModel.TaskCards)
                     {
                         var statusMark = c.Status == Models.TaskCards.TaskStatus.Success ? "✅" :
                                          c.Status == Models.TaskCards.TaskStatus.Failed ? "❌" :
                                          c.Status == Models.TaskCards.TaskStatus.Running ? "🔄" : "⬜";
                         allCardsInfo.AppendLine($"  {statusMark} #{c.Order} {c.Name} [{c.TaskType}] - 状态: {c.Status}");
+                    }
+                    // 子流程卡片：让 AI 知道子流程中已有哪些卡片，防止重复创建
+                    foreach (var tab in _mainViewModel.Tabs)
+                    {
+                        if (tab == _mainViewModel.SelectedTab) continue; // 跳过当前流程（已在上面列出）
+                        if (tab.TaskCards.Count == 0) continue;
+                        allCardsInfo.AppendLine($"\n[子流程] {tab.Name} 的卡片（已创建完成，无需再次创建）：");
+                        foreach (var c in tab.TaskCards)
+                        {
+                            allCardsInfo.AppendLine($"  ✅ #{c.Order} {c.Name} [{c.TaskType}]");
+                        }
                     }
 
                     // 构建详细的用户消息
@@ -486,8 +501,9 @@ namespace TaskFlow.ViewModels
                         AddMessage(AiChatRole.Assistant, nextPlan.Summary);
                     }
 
-                    // 处理失败回退策略（仅当任务未完成时才生效；done=true 时忽略 failureStrategy）
-                    if (!nextPlan.Done && !string.IsNullOrEmpty(nextPlan.FailureStrategy))
+                    // 处理失败回退策略（仅当上一轮有卡片运行失败 且 任务未完成时才生效）
+                    // AI 可能预防性地设置 failureStrategy，但如果没有实际失败，应忽略
+                    if (hasFailedCards && !nextPlan.Done && !string.IsNullOrEmpty(nextPlan.FailureStrategy))
                     {
                         var strategy = nextPlan.FailureStrategy.ToLowerInvariant();
                         if (strategy == "retry")

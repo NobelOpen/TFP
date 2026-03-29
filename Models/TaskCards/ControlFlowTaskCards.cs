@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
 using TaskFlow.Models.AiFlow;
@@ -778,6 +779,49 @@ namespace TaskFlow.Models.TaskCards
         public override bool OutputsText => true;
         public override bool OutputsCoordinates => true;
         public override bool OutputsBoolResult => true;
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            // 目标子流程 ID
+            if (props.TryGetValue("targetSubFlowId", out var subId) && Guid.TryParse(subId, out var guid))
+                TargetSubFlowId = guid;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "目标子流程", Hint = "需要选择要调用的子流程" });
+
+            // 传入图像来源
+            if (props.TryGetValue("inputImage", out var inputImage))
+            {
+                var imgGuid = SubFlowHelper.ResolveSourceGuid(inputImage, stepToCard);
+                if (imgGuid.HasValue) SourceTaskIdForImage = imgGuid.Value;
+            }
+
+            // 传入文本来源
+            if (props.TryGetValue("inputText", out var inputText))
+            {
+                var txtGuid = SubFlowHelper.ResolveSourceGuid(inputText, stepToCard);
+                if (txtGuid.HasValue) SourceTaskIdForText = txtGuid.Value;
+            }
+
+            // 传入坐标 X 来源
+            if (props.TryGetValue("inputX", out var inputX))
+            {
+                var xGuid = SubFlowHelper.ResolveSourceGuid(inputX, stepToCard);
+                if (xGuid.HasValue) SourceTaskIdForX = xGuid.Value;
+            }
+
+            // 传入坐标 Y 来源
+            if (props.TryGetValue("inputY", out var inputY))
+            {
+                var yGuid = SubFlowHelper.ResolveSourceGuid(inputY, stepToCard);
+                if (yGuid.HasValue) SourceTaskIdForY = yGuid.Value;
+            }
+
+            return missing;
+        }
     }
 
     /// <summary>
@@ -827,6 +871,50 @@ namespace TaskFlow.Models.TaskCards
         }
 
         public override bool CanBeReferenced => false;
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            // 返回图像来源
+            if (props.TryGetValue("returnImage", out var retImg))
+            {
+                var imgGuid = SubFlowHelper.ResolveSourceGuid(retImg, stepToCard);
+                if (imgGuid.HasValue) SourceTaskIdForImage = imgGuid.Value;
+            }
+
+            // 返回文本来源
+            if (props.TryGetValue("returnText", out var retText))
+            {
+                var txtGuid = SubFlowHelper.ResolveSourceGuid(retText, stepToCard);
+                if (txtGuid.HasValue) SourceTaskIdForText = txtGuid.Value;
+            }
+
+            // 返回坐标 X 来源
+            if (props.TryGetValue("returnX", out var retX))
+            {
+                var xGuid = SubFlowHelper.ResolveSourceGuid(retX, stepToCard);
+                if (xGuid.HasValue) SourceTaskIdForX = xGuid.Value;
+            }
+
+            // 返回坐标 Y 来源
+            if (props.TryGetValue("returnY", out var retY))
+            {
+                var yGuid = SubFlowHelper.ResolveSourceGuid(retY, stepToCard);
+                if (yGuid.HasValue) SourceTaskIdForY = yGuid.Value;
+            }
+
+            // 返回布尔结果来源
+            if (props.TryGetValue("returnResult", out var retResult))
+            {
+                var resGuid = SubFlowHelper.ResolveSourceGuid(retResult, stepToCard);
+                if (resGuid.HasValue) SourceTaskIdForResult = resGuid.Value;
+            }
+
+            return missing;
+        }
     }
 
     /// <summary>
@@ -870,6 +958,38 @@ namespace TaskFlow.Models.TaskCards
         {
             base.Reset();
             OutputLog = "";
+        }
+    }
+
+    /// <summary>
+    /// 辅助类：解析 AI 属性中的 #N 引用格式为 TaskCard Guid
+    /// </summary>
+    internal static class SubFlowHelper
+    {
+        /// <summary>
+        /// 从 AI 属性值中解析出目标 TaskCard 的 Guid。
+        /// 支持格式：
+        ///   - "#N 卡片名.输出属性" → 从 stepToCard[N] 获取 Id
+        ///   - 直接的 Guid 字符串
+        /// </summary>
+        public static Guid? ResolveSourceGuid(string value, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value == "null")
+                return null;
+
+            // 尝试解析 #N 引用格式（如 "#2 拼接加密后缀.输出文本"）
+            var match = Regex.Match(value.Trim(), @"^#(\d+)");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out var stepNum))
+            {
+                if (stepToCard.TryGetValue(stepNum, out var card))
+                    return card.Id;
+            }
+
+            // 尝试直接作为 Guid 解析
+            if (Guid.TryParse(value, out var directGuid))
+                return directGuid;
+
+            return null;
         }
     }
 }
