@@ -393,7 +393,11 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 从消息列表中提取最近的 User + Assistant 对话历史
+        /// 从消息列表中提取最近的 User + Assistant 对话历史（梯度衰减策略）。
+        /// - 最近 4 条：保留全文（最长 500 字符）
+        /// - 5~10 条：压缩到 150 字符摘要
+        /// - 11~20 条：仅保留一句话意图概括
+        /// - 超过 20 条：丢弃
         /// </summary>
         public List<(string Role, string Content)> BuildConversationHistory(ObservableCollection<AiChatMessage> messages)
         {
@@ -403,22 +407,42 @@ namespace TaskFlow.Services
                 .Where(m => m.Role != AiChatRole.System)
                 .ToList();
 
+            // 最多取最近 20 条
             var recent = relevantMessages.Skip(Math.Max(0, relevantMessages.Count - 20)).ToList();
 
-            foreach (var msg in recent)
+            for (int i = 0; i < recent.Count; i++)
             {
+                var msg = recent[i];
                 var role = msg.Role == AiChatRole.User ? "user" : "assistant";
+                // 距离末尾的偏移量（0 = 最新的一条）
+                int distFromEnd = recent.Count - 1 - i;
                 string content;
-                if (msg.Role == AiChatRole.User)
+
+                if (distFromEnd < 4)
                 {
-                    content = msg.Content;
+                    // 第一档：最近 4 条 → 保留全文（最长 500 字符）
+                    content = msg.Content.Length > 500
+                        ? msg.Content[..500] + "..."
+                        : msg.Content;
+                }
+                else if (distFromEnd < 10)
+                {
+                    // 第二档：5~10 条 → 压缩到 150 字符摘要
+                    var cleaned = msg.Content.Replace("\r\n", " ").Replace("\n", " ");
+                    content = cleaned.Length > 150
+                        ? cleaned[..150] + "…"
+                        : cleaned;
                 }
                 else
                 {
-                    content = msg.Content.Length > 300
-                        ? msg.Content[..300] + "..."
-                        : msg.Content;
+                    // 第三档：11~20 条 → 一句话意图概括
+                    var cleaned = msg.Content.Replace("\r\n", " ").Replace("\n", " ");
+                    var roleLabel = msg.Role == AiChatRole.User ? "用户" : "助手";
+                    // 取首句或前 60 字符作为摘要
+                    var firstSentence = cleaned.Length > 60 ? cleaned[..60] + "…" : cleaned;
+                    content = $"[{roleLabel}: {firstSentence}]";
                 }
+
                 history.Add((role, content));
             }
 

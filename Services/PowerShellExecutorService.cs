@@ -20,7 +20,7 @@ namespace TaskFlow.Services
         /// <summary>
         /// 单条命令输出最大字符数
         /// </summary>
-        private const int MaxOutputLength = 2000;
+        private const int MaxOutputLength = 4000;
 
         /// <summary>
         /// 命令最大长度限制（防止注入超长脚本）
@@ -314,15 +314,22 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 截断过长的输出
+        /// 双极截断：保留头部上下文 + 尾部报错堆栈，中间省略。
+        /// 确保 AI 既能看到命令输出开头的环境信息，也能看到末尾的异常堆栈。
         /// </summary>
+        private const int TruncateHeadLength = 500;
+        private const int TruncateTailLength = 1500;
+
         private static string TruncateOutput(string output)
         {
             if (string.IsNullOrEmpty(output)) return output;
             output = output.TrimEnd();
-            if (output.Length > MaxOutputLength)
-                return output[..MaxOutputLength] + $"\n... (输出已截断，共 {output.Length} 字符)";
-            return output;
+            if (output.Length <= MaxOutputLength) return output;
+
+            var head = output[..TruncateHeadLength];
+            var tail = output[^TruncateTailLength..];
+            var hiddenCount = output.Length - TruncateHeadLength - TruncateTailLength;
+            return $"{head}\n\n... [已省略中间 {hiddenCount} 字符，共 {output.Length} 字符] ...\n\n{tail}";
         }
     }
 }

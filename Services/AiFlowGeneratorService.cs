@@ -424,6 +424,110 @@ namespace TaskFlow.Services
                 });
             }
 
+            // ===== 以下工具在所有模式下均可用（只读零风险操作） =====
+
+            // 工具: read_file —— 读取文件内容（支持分页）
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
+                {
+                    ["name"] = "read_file",
+                    ["description"] = "读取指定文件的内容。支持分页：默认返回前 200 行，可通过 start_line 和 count 参数获取后续内容。适用于查看代码、配置文件、日志等文本文件。",
+                    ["parameters"] = new JObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject
+                        {
+                            ["file_path"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "文件绝对路径"
+                            },
+                            ["start_line"] = new JObject
+                            {
+                                ["type"] = "integer",
+                                ["description"] = "起始行号（从 1 开始，默认 1）"
+                            },
+                            ["count"] = new JObject
+                            {
+                                ["type"] = "integer",
+                                ["description"] = "最多返回行数（默认 200，最大 500）"
+                            }
+                        },
+                        ["required"] = new JArray("file_path")
+                    }
+                }
+            });
+
+            // 工具: list_directory —— 列出目录内容
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
+                {
+                    ["name"] = "list_directory",
+                    ["description"] = "列出指定目录下的文件和子目录。返回每个条目的名称、类型和大小。适用于了解项目结构、查找文件位置。",
+                    ["parameters"] = new JObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject
+                        {
+                            ["path"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "目录绝对路径"
+                            },
+                            ["recursive"] = new JObject
+                            {
+                                ["type"] = "boolean",
+                                ["description"] = "是否递归列出子目录（默认 false，最深 3 层）"
+                            }
+                        },
+                        ["required"] = new JArray("path")
+                    }
+                }
+            });
+
+            // 工具: search_text —— 在文件中搜索关键词
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
+                {
+                    ["name"] = "search_text",
+                    ["description"] = "在指定路径中搜索包含关键词的文件。返回匹配的文件名、行号和行内容。最多返回 50 处匹配。",
+                    ["parameters"] = new JObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject
+                        {
+                            ["path"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "搜索起始路径（文件或目录的绝对路径）"
+                            },
+                            ["query"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "搜索关键词或正则表达式"
+                            },
+                            ["is_regex"] = new JObject
+                            {
+                                ["type"] = "boolean",
+                                ["description"] = "是否为正则表达式（默认 false）"
+                            },
+                            ["includes"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "文件名过滤模式（如 *.cs, *.json），默认搜索所有文本文件"
+                            }
+                        },
+                        ["required"] = new JArray("path", "query")
+                    }
+                }
+            });
+
             return tools;
         }
 
@@ -611,8 +715,9 @@ namespace TaskFlow.Services
                     // 找到本轮中所有需要多轮处理的工具调用
                     var analyzeCalls = currentToolCalls?.Where(t => t.Name == "analyze_flow").ToList();
                     var screenshotCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_screenshot");
+                    var fileToolCalls = currentToolCalls?.Where(t => t.Name is "read_file" or "list_directory" or "search_text").ToList();
 
-                    // 优先处理 analyze_flow（支持一次返回多个），其次 request_screenshot
+                    // 优先处理 analyze_flow（支持一次返回多个），其次 request_screenshot，再次文件工具
                     if (analyzeCalls != null && analyzeCalls.Count > 0)
                     {
                         // ---- 处理所有 analyze_flow 调用 ----
@@ -674,6 +779,20 @@ namespace TaskFlow.Services
                                 }
 
                                 AiFlowLogger.Info($"[ToolUse] analyze_flow(\"{flowName}\", start={startOrder}) → 第 {analyzeRound} 轮对话...");
+
+                                // 超大流程详情二次截断：防止请求体过大触发 502
+                                const int MaxFlowDetailLength = 6000;
+                                const int FlowDetailHead = 2000;
+                                const int FlowDetailTail = 2000;
+                                if (flowDetail.Length > MaxFlowDetailLength)
+                                {
+                                    var fdHead = flowDetail[..FlowDetailHead];
+                                    var fdTail = flowDetail[^FlowDetailTail..];
+                                    var fdHidden = flowDetail.Length - FlowDetailHead - FlowDetailTail;
+                                    flowDetail = $"{fdHead}\n\n... [已省略中间 {fdHidden} 字符，流程详情过长。可通过 start_order 参数分页查看] ...\n\n{fdTail}";
+                                    AiFlowLogger.Info($"[ToolUse] 流程详情过长（{flowDetail.Length} 字符），已二次截断");
+                                }
+
                                 toolResultMessages.Add(new JObject
                                 {
                                     ["role"] = "tool",
@@ -849,6 +968,132 @@ namespace TaskFlow.Services
                             onDelta?.Invoke($"\n\n{errMsg}\n");
                             // 设置 Summary 让上层不误报"未能生成有效方案"
                             plan.Summary = errMsg;
+                            break;
+                        }
+                    }
+                    else if (fileToolCalls != null && fileToolCalls.Count > 0)
+                    {
+                        // ---- 处理文件系统工具调用（read_file / list_directory / search_text） ----
+                        analyzeRound++;
+
+                        try
+                        {
+                            var fsService = new FileSystemService();
+                            var toolCallsArray = new JArray();
+                            var toolResultMessages = new List<JObject>();
+
+                            foreach (var (ftId, ftName, ftArgs) in fileToolCalls)
+                            {
+                                JObject ftArg;
+                                try { ftArg = JObject.Parse(ftArgs); }
+                                catch { continue; }
+
+                                toolCallsArray.Add(new JObject
+                                {
+                                    ["id"] = ftId,
+                                    ["type"] = "function",
+                                    ["function"] = new JObject
+                                    {
+                                        ["name"] = ftName,
+                                        ["arguments"] = ftArgs
+                                    }
+                                });
+
+                                string result;
+                                switch (ftName)
+                                {
+                                    case "read_file":
+                                        var filePath = ftArg["file_path"]?.ToString() ?? "";
+                                        var startLine = (int?)ftArg["start_line"] ?? 1;
+                                        var count = (int?)ftArg["count"] ?? 200;
+                                        result = fsService.ReadFile(filePath, startLine, count);
+                                        break;
+
+                                    case "list_directory":
+                                        var dirPath = ftArg["path"]?.ToString() ?? "";
+                                        var recursive = (bool?)ftArg["recursive"] ?? false;
+                                        result = fsService.ListDirectory(dirPath, recursive);
+                                        break;
+
+                                    case "search_text":
+                                        var searchPath = ftArg["path"]?.ToString() ?? "";
+                                        var query = ftArg["query"]?.ToString() ?? "";
+                                        var isRegex = (bool?)ftArg["is_regex"] ?? false;
+                                        var includes = ftArg["includes"]?.ToString();
+                                        result = fsService.SearchText(searchPath, query, isRegex, includes);
+                                        break;
+
+                                    default:
+                                        result = $"未知文件工具: {ftName}";
+                                        break;
+                                }
+
+                                toolResultMessages.Add(new JObject
+                                {
+                                    ["role"] = "tool",
+                                    ["tool_call_id"] = ftId,
+                                    ["content"] = result
+                                });
+                            }
+
+                            if (toolCallsArray.Count == 0 || toolResultMessages.Count == 0)
+                                break;
+
+                            // 构建精简的多轮请求
+                            var assistantMsg = new JObject
+                            {
+                                ["role"] = "assistant",
+                                ["content"] = currentResponseText ?? ""
+                            };
+                            assistantMsg["tool_calls"] = toolCallsArray;
+
+                            var sysMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "system");
+                            var originalUserMsg = messagesJson.LastOrDefault(m => m["role"]?.ToString() == "user");
+                            var trimmedMessages = new JArray();
+                            if (sysMsg != null) trimmedMessages.Add(sysMsg);
+                            if (originalUserMsg != null) trimmedMessages.Add(originalUserMsg);
+                            trimmedMessages.Add(assistantMsg);
+                            foreach (var toolMsg in toolResultMessages)
+                                trimmedMessages.Add(toolMsg);
+
+                            var requestN = new JObject
+                            {
+                                ["model"] = modelConfig.ModelName,
+                                ["messages"] = trimmedMessages,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
+                            };
+
+                            onDelta?.Invoke($"\n\n📂 已执行 {fileToolCalls.Count} 个文件操作，正在分析结果...\n\n");
+
+                            string respN;
+                            int inN, outN;
+                            List<(string Id, string Name, string Arguments)>? tcN;
+
+                            if (onDelta != null)
+                            {
+                                (respN, inN, outN, tcN, _) =
+                                    await CallLlmStreamAsync(modelConfig, requestN, onDelta, cancellationToken, onThinking);
+                            }
+                            else
+                            {
+                                (respN, inN, outN, tcN) =
+                                    await CallLlmAsync(modelConfig, requestN, cancellationToken);
+                            }
+
+                            AiFlowLogger.LogLlmResponse($"阶段2-文件工具第{analyzeRound}轮", respN, inN, outN);
+
+                            inputTokens += inN;
+                            outputTokens += outN;
+                            responseText = respN;
+                            currentToolCalls = tcN;
+                            currentResponseText = respN;
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[ToolUse] 文件工具处理失败: {ex.Message}");
+                            plan.Summary = $"❌ 文件操作失败: {ex.Message}";
+                            onDelta?.Invoke($"\n\n{plan.Summary}\n");
                             break;
                         }
                     }
