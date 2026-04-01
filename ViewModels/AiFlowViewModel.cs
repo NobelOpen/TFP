@@ -32,10 +32,6 @@ namespace TaskFlow.ViewModels
         public MainViewModel MainVm => _mainViewModel;
         private CancellationTokenSource? _cts;
 
-        // 思考中动画
-        private System.Windows.Threading.DispatcherTimer? _thinkingTimer;
-        private int _thinkingDotCount;
-        private string _thinkingBaseText = "";
 
         // 加载状态循环提示
         private System.Windows.Threading.DispatcherTimer? _loadingStatusTimer;
@@ -381,6 +377,28 @@ namespace TaskFlow.ViewModels
         }
 
         /// <summary>
+        /// 递归评估步骤列表（含嵌套 IfBody/ElseBody/LoopBody）的最高风险等级
+        /// </summary>
+        private static void EvaluateStepsRisk(List<AiFlowPlanStep> steps, ref TaskRiskLevel maxRisk)
+        {
+            foreach (var step in steps)
+            {
+                if (Enum.TryParse<TaskType>(step.TaskType, out var tt))
+                {
+                    var risk = TaskRiskClassifier.GetRiskLevel(tt);
+                    if (risk > maxRisk) maxRisk = risk;
+                }
+                // 递归检查嵌套结构
+                if (step.IfBody != null && step.IfBody.Count > 0)
+                    EvaluateStepsRisk(step.IfBody, ref maxRisk);
+                if (step.ElseBody != null && step.ElseBody.Count > 0)
+                    EvaluateStepsRisk(step.ElseBody, ref maxRisk);
+                if (step.LoopBody != null && step.LoopBody.Count > 0)
+                    EvaluateStepsRisk(step.LoopBody, ref maxRisk);
+            }
+        }
+
+        /// <summary>
         /// 发送用户消息并生成方案
         /// </summary>
         [RelayCommand]
@@ -459,6 +477,8 @@ namespace TaskFlow.ViewModels
             var streamBuilder = new System.Text.StringBuilder();
             var thinkingBuilder = new System.Text.StringBuilder();
 
+            int streamInsertIndex = Messages.Count;
+
             try
             {
                 // 阶段1：确定类别（可通过设置跳过）
@@ -528,6 +548,7 @@ namespace TaskFlow.ViewModels
 
             // 准备流式输出，WebView2 内置加载与流式显示
                 LoadingText = "⏳ 正在分析需求...";
+                streamInsertIndex = Messages.Count; // 更新为流式消息应当插入的位置
 
                 // 消费一次性的断点续写内容
                 var prefill = _prefillAssistantContent;
@@ -569,20 +590,7 @@ namespace TaskFlow.ViewModels
                     prefillAssistantMessage: prefill);
 
                 // 判断方案是否有效内容（卡片、变量、流程或删除操作）
-                bool hasSteps = plan.Plan.Count > 0;
-                bool hasVariables = plan.Variables != null && plan.Variables.Count > 0;
-                bool hasDeletes = plan.DeleteVariables != null && plan.DeleteVariables.Count > 0;
-                bool hasModifies = plan.ModifyVariables != null && plan.ModifyVariables.Count > 0;
-                bool hasCardModifies = plan.ModifyCards != null && plan.ModifyCards.Count > 0;
-                bool hasCardDeletes = plan.DeleteCards != null && plan.DeleteCards.Count > 0;
-                bool hasRunCards = plan.RunCards != null && plan.RunCards.Count > 0;
-                bool hasInsertCards = plan.InsertCards != null && plan.InsertCards.Count > 0;
-                bool hasFlowOps2 = (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
-                    || (plan.DeleteFlows != null && plan.DeleteFlows.Count > 0)
-                    || !string.IsNullOrWhiteSpace(plan.SwitchFlow);
-                bool hasShellCmds2 = plan.ShellCommands != null && plan.ShellCommands.Count > 0;
-
-                if (!hasSteps && !hasVariables && !hasDeletes && !hasModifies && !hasCardModifies && !hasCardDeletes && !hasRunCards && !hasInsertCards && !hasFlowOps2 && !hasShellCmds2)
+                if (!plan.HasAnyAction)
                 {
                     // 分析模式：AI 仅返回了分析结果（无需创建卡片或变量）
                     if (!string.IsNullOrEmpty(plan.Summary))
@@ -613,9 +621,9 @@ namespace TaskFlow.ViewModels
                 AiFlowLogger.Info($"方案生成完成（Token: {tokens2In}+{tokens2Out}）");
 
                 // 纯 shellCommands 方案（无卡片/变量操作）：自主模式下直接执行，无需"确认创建"
-                bool isShellOnly = hasShellCmds2 && !hasSteps && !hasVariables && !hasDeletes
-                    && !hasModifies && !hasCardModifies && !hasCardDeletes && !hasRunCards
-                    && !hasInsertCards && !hasFlowOps2;
+                bool isShellOnly = plan.HasShellCommands && !plan.HasSteps && !plan.HasVariables && !plan.HasDeleteVariables
+                    && !plan.HasModifyVariables && !plan.HasModifyCards && !plan.HasDeleteCards && !plan.HasRunCards
+                    && !plan.HasInsertCards && !plan.HasFlowOps;
 
                 if (isShellOnly && CurrentMode == AiAssistantMode.Autonomous)
                 {
@@ -628,16 +636,9 @@ namespace TaskFlow.ViewModels
                 // ===== 自主模式：低风险方案自动确认（免交互） =====
                 if (CurrentMode == AiAssistantMode.Autonomous)
                 {
-                    // 评估方案中所有新建卡片的最高风险级别
+                    // 评估方案中所有新建卡片的最高风险级别（递归包含嵌套步骤）
                     var maxRisk = TaskRiskLevel.Low;
-                    foreach (var step in plan.Plan)
-                    {
-                        if (Enum.TryParse<TaskType>(step.TaskType, out var tt))
-                        {
-                            var risk = TaskRiskClassifier.GetRiskLevel(tt);
-                            if (risk > maxRisk) maxRisk = risk;
-                        }
-                    }
+                    EvaluateStepsRisk(plan.Plan, ref maxRisk);
                     // 运行已有卡片的风险也考虑在内
                     if (plan.RunCards != null)
                     {
@@ -666,14 +667,13 @@ namespace TaskFlow.ViewModels
                         MessagesUpdated?.Invoke();
 
                         // 自动运行
-                        bool hasRunNow = plan.RunCards != null && plan.RunCards.Count > 0;
-                        if (hasRunNow)
+                        if (plan.HasRunCards)
                         {
                             await ExecuteAutonomousLoopAsync(plan);
                         }
-                        else if (hasSteps && createdCount > 0 && string.IsNullOrWhiteSpace(plan.TargetFlow))
+                        else if (!plan.Done && plan.HasSteps && createdCount > 0 && string.IsNullOrWhiteSpace(plan.TargetFlow))
                         {
-                            // 创建了新卡片但 AI 没指定 runCards，自动把新卡片加入运行
+                            // 流程尚未完成，且创建了新卡片但 AI 没指定 runCards，自动把新卡片加入运行
                             // 注意：只有卡片创建在当前主流程时才自动运行，子流程卡片需要通过 CallSubFlow 触发
                             var newOrders = _mainViewModel.TaskCards
                                 .OrderByDescending(c => c.Order)
@@ -685,9 +685,9 @@ namespace TaskFlow.ViewModels
                             AiFlowLogger.Info($"自主模式：自动运行新创建的 {createdCount} 张卡片...");
                             await ExecuteAutonomousLoopAsync(plan);
                         }
-                        else if (hasSteps && createdCount > 0 && !string.IsNullOrWhiteSpace(plan.TargetFlow))
+                        else if (!plan.Done && plan.HasSteps && createdCount > 0 && !string.IsNullOrWhiteSpace(plan.TargetFlow))
                         {
-                            // 子流程卡片已创建，但不能直接运行。进入自主循环让 AI 继续决策后续步骤
+                            // 流程尚未完成，且子流程卡片已创建，但不能直接运行。进入自主循环让 AI 继续决策后续步骤
                             // （如在主流程创建 CallSubFlow、设置参数等）
                             AiFlowLogger.Info($"自主模式：子流程卡片已创建到 {plan.TargetFlow}，继续自主循环处理后续步骤...");
                             await ExecuteAutonomousLoopAsync(plan);
@@ -734,7 +734,10 @@ namespace TaskFlow.ViewModels
                     };
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Messages.Add(finalMsg);
+                        if (streamInsertIndex <= Messages.Count)
+                            Messages.Insert(streamInsertIndex, finalMsg);
+                        else
+                            Messages.Add(finalMsg);
                     });
                 }
 
@@ -764,19 +767,7 @@ namespace TaskFlow.ViewModels
                 return;
 
             // 判断方案是否有有效内容（含流程操作）
-            bool hasSteps = PendingPlan.Plan.Count > 0;
-            bool hasVariables = PendingPlan.Variables != null && PendingPlan.Variables.Count > 0;
-            bool hasDeletes = PendingPlan.DeleteVariables != null && PendingPlan.DeleteVariables.Count > 0;
-            bool hasModifies = PendingPlan.ModifyVariables != null && PendingPlan.ModifyVariables.Count > 0;
-            bool hasCardModifies = PendingPlan.ModifyCards != null && PendingPlan.ModifyCards.Count > 0;
-            bool hasCardDeletes = PendingPlan.DeleteCards != null && PendingPlan.DeleteCards.Count > 0;
-            bool hasRunCards = PendingPlan.RunCards != null && PendingPlan.RunCards.Count > 0;
-            bool hasInsertCards = PendingPlan.InsertCards != null && PendingPlan.InsertCards.Count > 0;
-            bool hasFlowOps = (PendingPlan.CreateFlows != null && PendingPlan.CreateFlows.Count > 0)
-                || (PendingPlan.DeleteFlows != null && PendingPlan.DeleteFlows.Count > 0)
-                || !string.IsNullOrWhiteSpace(PendingPlan.SwitchFlow);
-            bool hasShellCmds = PendingPlan.ShellCommands != null && PendingPlan.ShellCommands.Count > 0;
-            if (!hasSteps && !hasVariables && !hasDeletes && !hasModifies && !hasCardModifies && !hasCardDeletes && !hasRunCards && !hasInsertCards && !hasFlowOps && !hasShellCmds)
+            if (!PendingPlan.HasAnyAction)
                 return;
 
             try
@@ -830,12 +821,12 @@ namespace TaskFlow.ViewModels
                 MessagesUpdated?.Invoke();
 
                 // 如果方案包含 runCards，进入自主执行循环
-                if (hasRunCards)
+                if (currentPlan.HasRunCards)
                 {
                     await ExecuteAutonomousLoopAsync(currentPlan);
                 }
-                // 自主模式下：创建了新卡片但没有 runCards 时，自动将新卡片加入执行循环
-                else if (CurrentMode == AiAssistantMode.Autonomous && hasSteps && createdCount > 0)
+                // 自主模式下：如果流程尚未完成，创建了新卡片但没有 runCards 时，自动将新卡片加入执行循环
+                else if (CurrentMode == AiAssistantMode.Autonomous && !currentPlan.Done && currentPlan.HasSteps && createdCount > 0)
                 {
                     // 收集新创建卡片的 order
                     var newOrders = _mainViewModel.TaskCards
@@ -850,7 +841,7 @@ namespace TaskFlow.ViewModels
                     await ExecuteAutonomousLoopAsync(currentPlan);
                 }
                 // 自主模式下：仅有 shellCommands 时，直接执行并进入自主循环
-                else if (CurrentMode == AiAssistantMode.Autonomous && hasShellCmds)
+                else if (CurrentMode == AiAssistantMode.Autonomous && currentPlan.HasShellCommands)
                 {
                     AiFlowLogger.Info("自主模式：执行 PowerShell 命令...");
                     await ExecuteAutonomousLoopAsync(currentPlan);
@@ -1022,75 +1013,6 @@ namespace TaskFlow.ViewModels
             });
         }
 
-        /// <summary>
-        /// 更新最后一条系统消息
-        /// </summary>
-        private void UpdateLastSystemMessage(string content)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                var last = Messages.LastOrDefault(m => m.Role == AiChatRole.System);
-                if (last != null)
-                {
-                    var idx = Messages.IndexOf(last);
-                    Messages[idx] = new AiChatMessage
-                    {
-                        Role = AiChatRole.System,
-                        Content = content,
-                        Timestamp = DateTime.Now
-                    };
-                }
-            });
-        }
-
-        /// <summary>
-        /// 启动思考中的点点动画（. → .. → ...）
-        /// </summary>
-        private void StartThinkingAnimation(string baseText)
-        {
-            _thinkingBaseText = baseText;
-            _thinkingDotCount = 0;
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                _thinkingTimer?.Stop();
-                _thinkingTimer = new System.Windows.Threading.DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(400)
-                };
-                _thinkingTimer.Tick += (_, _) =>
-                {
-                    _thinkingDotCount = (_thinkingDotCount % 3) + 1;
-                    var dots = new string('.', _thinkingDotCount);
-                    var last = Messages.LastOrDefault(m => m.Role == AiChatRole.System);
-                    if (last != null)
-                    {
-                        var idx = Messages.IndexOf(last);
-                        if (idx >= 0)
-                        {
-                            Messages[idx] = new AiChatMessage
-                            {
-                                Role = AiChatRole.System,
-                                Content = $"{_thinkingBaseText}{dots}",
-                                Timestamp = DateTime.Now
-                            };
-                        }
-                    }
-                };
-                _thinkingTimer.Start();
-            });
-        }
-
-        /// <summary>
-        /// 停止思考中动画
-        /// </summary>
-        private void StopThinkingAnimation()
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                _thinkingTimer?.Stop();
-                _thinkingTimer = null;
-            });
-        }
 
     }
 }

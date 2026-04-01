@@ -136,6 +136,14 @@
     "Outputs": ["outputX/outputY: 匹配位置坐标", "outputResult: 是否匹配成功"]
   },
   {
+    "TaskType": "ImgOnnxDetect",
+    "Category": "图像处理",
+    "Description": "使用 ONNX 视觉模型进行目标检测（YOLO 定位），返回最高置信度目标的坐标或所有目标的数组",
+    "Usage": "当需要在屏幕画面中查找由 YOLO/ONNX 模型训练识别的目标（如玩家、怪物、特定的复杂图标）位置时使用。支持类别过滤和置信度调整。",
+    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务（如截图卡片）", "onnxModelId: ONNX视觉模型ID", "filterClassName: 过滤类别名称（逗号分隔）", "confidenceOverride: 覆盖置信度阈值（数字，0为使用模型默认）"],
+    "Outputs": ["outputX/outputY: 置信度最高的目标中心坐标", "outputResult: 是否检测到匹配目标", "outputDetectionCount: 检测到的目标数量(int)", "outputTopClassName: 最佳匹配的类别名", "outputTopConfidence: 最佳匹配的置信度(double)", "outputDetectionsArray: 所有目标的数组数据字符串"]
+  },
+  {
     "TaskType": "ImgCrop",
     "Category": "图像处理",
     "Description": "裁剪图像的指定区域",
@@ -318,5 +326,29 @@
     "Usage": "当现有任务卡片无法满足复杂逻辑需求时使用。适合执行复杂数学运算、字符串处理、条件循环、文件操作或自定义图像处理。脚本中已预导入 System、System.Linq、System.Collections.Generic、System.Text、OpenCvSharp 等命名空间。核心 API：TaskFlowPro.GetTool(\"#N 任务名.属性名\") 读取卡片输出、TaskFlowPro.SetVar(\"@变量名\", value) 读写变量、TaskFlowPro.GetImage(\"#N 任务名\") 获取图像(Mat)、TaskFlowPro.SetOutputText/SetOutputXY/SetOutputResult/SetOutputImage 设置脚本输出、Console.WriteLine 或 TaskFlowPro.Log 打印日志。",
     "KeyProperties": ["scriptCode: C# 脚本代码"],
     "Outputs": ["outputText: 通过 SetOutputText 设置的文本", "outputImage: 通过 SetOutputImage 设置的图像", "outputX/outputY: 通过 SetOutputXY 设置的坐标", "outputResult: 通过 SetOutputResult 设置的布尔结果"]
+  },
+  {
+    "TaskType": "BrowserGetText",
+    "Category": "浏览器自动化",
+    "Description": "通过 CDP 连接浏览器，获取网页中指定元素的可视文本或 HTML 属性",
+    "Usage": "当需要抓取网页上的文字（如价格、标题）或链接时使用。需要浏览器以 --remote-debugging-port 启动",
+    "KeyProperties": ["selectorType: 选择器类型(Css/XPath)", "selector: 元素选择器表达式", "attributeName: HTML属性名(可选，留空则获取innerText)", "debuggingPort: CDP调试端口(默认9222)"],
+    "Outputs": ["outputText: 抓取到的文本内容"]
+  },
+  {
+    "TaskType": "BrowserExecuteJs",
+    "Category": "浏览器自动化",
+    "Description": "通过 CDP 连接浏览器，在当前页面执行自定义的 JavaScript 脚本",
+    "Usage": "当普通的选择器或抓取无法满足需求，需要直接执行 JS 代码操作 DOM 或获取复杂数据结构时使用",
+    "KeyProperties": ["scriptCode: 要执行的 JavaScript 代码（支持 return 语句）", "debuggingPort: CDP调试端口(默认9222)"],
+    "Outputs": ["outputText: JS脚本通过 return 返回的字符串"]
+  },
+  {
+    "TaskType": "BrowserWaitForElement",
+    "Category": "浏览器自动化",
+    "Description": "通过 CDP 连接浏览器，等待页面中特定的元素出现或消失",
+    "Usage": "当流程需要等待页面异步加载完成，比如等待 Loading 圈消失，或者等待某个按钮出现后再继续后续操作时使用，充当同步锁",
+    "KeyProperties": ["selectorType: 选择器类型(Css/XPath)", "selector: 元素选择器表达式", "waitMode: 等待模式 出现(Visible)/消失(Hidden)", "timeoutMs: 超时时间(毫秒)", "debuggingPort: CDP调试端口(默认9222)"],
+    "Outputs": ["outputResult: 是否在超时前成功匹配(布尔值)"]
   }
 ]

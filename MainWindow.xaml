@@ -296,6 +296,7 @@
                             <Button Click="OpenVariableManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8F1; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Variables}"/></StackPanel></Button>
                             <Button Click="OpenFlowManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9F5; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Flows}"/></StackPanel></Button>
                             <Button Click="OpenModelManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9FA; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_Models}"/></StackPanel></Button>
+                            <Button Click="OpenOnnxModelManager_Click" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8B9; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Main_VisionModels}"/></StackPanel></Button>
                             <Button Click="OpenHelp_Click" Style="{StaticResource ToolbarButton}" Margin="4,0"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE897; " FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="{x:Static res:Strings.Common_Help}"/></StackPanel></Button>
                         </ToolBar>
                     </ToolBarTray>
@@ -669,6 +670,7 @@
                                         <MenuItem Header="{x:Static res:Strings.Menu_ImgProc}">
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgCrop}" Click="AddTask_Click" Tag="ImgCrop"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgTemplateMatch}" Click="AddTask_Click" Tag="ImgTemplateMatch"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_ImgOnnxDetect}" Click="AddTask_Click" Tag="ImgOnnxDetect"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgOcr}" Click="AddTask_Click" Tag="ImgOcr"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgColorDetect}" Click="AddTask_Click" Tag="ImgColorDetect"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgColorSegment}" Click="AddTask_Click" Tag="ImgColorSegment"/>
@@ -686,6 +688,12 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_FileRead}" Click="AddTask_Click" Tag="FileRead"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ArraySearch}" Click="AddTask_Click" Tag="ArraySearch"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_CustomScript}" Click="AddTask_Click" Tag="CustomScript"/>
+                                        </MenuItem>
+                                        <!-- Browser -->
+                                        <MenuItem Header="{x:Static res:Strings.Menu_BrowserOps}">
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_BrowserGetText}" Click="AddTask_Click" Tag="BrowserGetText"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_BrowserExecuteJs}" Click="AddTask_Click" Tag="BrowserExecuteJs"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_BrowserWaitForElement}" Click="AddTask_Click" Tag="BrowserWaitForElement"/>
                                         </MenuItem>
                                         <!-- AI -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_AiOps}">

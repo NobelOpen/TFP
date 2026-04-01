@@ -327,23 +327,6 @@
             <TextBlock x:Name="TxtOrchidSection" Text="✦ Orchid 设置" Style="{StaticResource SectionHeader}"/>
             <CheckBox x:Name="ChkSingleStage" Content="开启单层调用（提高输出速度，但会增加Token消耗）"
                       Style="{StaticResource SettingCheckBox}"/>
-            <Button x:Name="BtnViewCalibration" Content="查看标定结果" Click="ViewCalibration_Click"
-                    Padding="12,6" Cursor="Hand" HorizontalAlignment="Left"
-                    Background="{DynamicResource SurfaceHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BorderLightBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
 
             <!-- 语言设置 -->
             <TextBlock x:Name="TxtLangSection" Text="语言设置 / Language" Style="{StaticResource SectionHeader}"/>

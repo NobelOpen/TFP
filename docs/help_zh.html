@@ -413,6 +413,7 @@
         <li><a href="#VarMgr">变量管理</a></li>
         <li><a href="#FlowMgr">流程管理</a></li>
         <li><a href="#ModelMgr">模型管理</a></li>
+        <li><a href="#VisionModelMgr">视觉模型管理</a></li>
         <li><a href="#SettingsUI">常用设置与OCR</a></li>
 
         <li class="toc-category">通用任务</li>
@@ -420,6 +421,7 @@
         <li><a href="#GetTimestamp">获取当前时间</a></li>
         <li><a href="#EndTask">结束当前流程</a></li>
         <li><a href="#EndAllFlows">结束全部流程</a></li>
+        <li><a href="#RestartFlow">重开当前流程</a></li>
 
         <li class="toc-category">Windows 操作</li>
         <li><a href="#WinLaunchApp">Win启动应用</a></li>
@@ -430,6 +432,8 @@
         <li><a href="#WinSimulateInput">Win模拟输入</a></li>
         <li><a href="#WinSubtitle">Win字幕提示</a></li>
         <li><a href="#WinFindFile">Win路径查找</a></li>
+        <li><a href="#WinTextInput">Win文本输入</a></li>
+        <li><a href="#InputCombo">Win输入组合</a></li>
         <li><a href="#EventListener">Win事件监听</a></li>
 
         <li class="toc-category">ADB 操作</li>
@@ -439,10 +443,15 @@
         <li><a href="#AdbClick">ADB模拟点击</a></li>
         <li><a href="#AdbCloseApp">ADB关闭应用</a></li>
         <li><a href="#AdbDisconnect">ADB断开设备</a></li>
+        <li class="toc-category">浏览器自动化</li>
+        <li><a href="#BrowserGetText">浏览器取文本</a></li>
+        <li><a href="#BrowserExecuteJs">浏览器执行脚本</a></li>
+        <li><a href="#BrowserWaitForElement">浏览器等待元素</a></li>
 
         <li class="toc-category">图像处理</li>
         <li><a href="#ImgCrop">图像裁剪</a></li>
         <li><a href="#ImgTemplateMatch">模板匹配</a></li>
+        <li><a href="#ImgOnnxDetect">ONNX定位</a></li>
         <li><a href="#ImgOcr">OCR识别</a></li>
         <li><a href="#ImgColorDetect">颜色识别</a></li>
         <li><a href="#ImgColorSegment">颜色分割</a></li>
@@ -468,6 +477,7 @@
         <li><a href="#IfElse">If-Else分支</a></li>
         <li><a href="#ForLoop">For循环</a></li>
         <li><a href="#BreakLoop">中止循环</a></li>
+        <li><a href="#SubFlow">子流程</a></li>
         <li><a href="#CustomScript">自定义脚本</a></li>
       </ul>
     </div>
@@ -597,6 +607,32 @@
       </div>
     </div>
 
+    <div class="card-doc" id="VisionModelMgr">
+      <h3>视觉模型管理</h3>
+      <p>管理基于 ONNX Runtime 的本地化视觉推理模型，专用于图像目标定位与检测操作。通过工具栏的 <strong>🧿 视觉</strong> 按钮打开。</p>
+      <dl class="props">
+        <dt>适用场景</dt>
+        <dd>目前主要加载导出为 ONNX 格式的 YOLO 目标检测模型（如 YOLOv8 等）。由于模型在本地纯 CPU 环境中推理，建议选用轻量级的 Nano 或 Small 级别模型（如 yolov8n.onnx）以保证运行速度。与需要联网调用且成本昂贵的大语言视觉模型（LlmVision）不同，本地 ONNX 模型更适合高频次、实时的低延迟坐标定位任务。</dd>
+        
+        <dt>模型列表</dt>
+        <dd>统一展示已导入的视觉模型，配置参数均在本地保存，供各个工程中的卡片调用。</dd>
+        
+        <dt>导入模型</dt>
+        <dd>点击右上角 <strong>导入</strong> 按钮，从本地磁盘挑选 .onnx 模型文件。系统会自动将其安全拷贝至程序的专属数据存储目录（%LOCALAPPDATA%/TaskFlow/onnx_models/）中隔离管理。底层原生支持并自适配了动态输入维度运算。</dd>
+        
+        <dt>编辑模型参数</dt>
+        <dd>
+          为确保推理性能与结果准确性，通常需要针对每个具体模型调校其预处理要求与后处理阈值：<br>
+          <strong>显示名称：</strong>自定义名称，用于在任务卡片下拉框中易于识别。<br>
+          <strong>Input Width / Height：</strong>要求输入的图像张量尺寸策略。通常为 640×640。配置合理的尺寸避免宽高比失真。<br>
+          <strong>默认置信度：</strong>模型输出结果的基础置信度过滤阈值（0~1，如 0.4）。分数低于该值的检测边框将被抛弃。<br>
+          <strong>标签名称列表：</strong>目标类别的英文或中文具体名称映射表，多个标签请务必用<strong>英文逗号</strong>分隔（如：<code>person,car,dog</code>）并确保排列顺序严格对齐模型训练时设定的 category 索引号（0,1,2...）。这对于卡片在使用该模型进行特定类别“名称过滤”时起决定性作用。如果不设置，系统只会输出检测到的目标但无法通过名字过滤。
+        </dd>
+        <dt>删除模型</dt>
+        <dd>点击右上角 <strong>删除</strong> 按钮并确认后，将同时解除配置项并删除其位于底层数据存储目录中的 .onnx 物理文件释放空间。如卡片正在依赖此模型可能会导致卡片报错。</dd>
+      </dl>
+    </div>
+
     <div class="card-doc" id="SettingsUI">
       <h3>常用设置与OCR</h3>
       <p>在此处可以配置软件启动行为、任务执行逻辑与引擎路径等。</p>
@@ -716,6 +752,15 @@
       <div class="output-section">
         <div class="output-title"> 输出</div>
         <div class="output-item">无输出（仅控制流程终止）</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="RestartFlow">
+      <h3>重开当前流程 <span class="badge badge-general">通用</span></h3>
+      <p>立即结束并从头开始重新执行当前流程。</p>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">无输出（仅控制流程重置）</div>
       </div>
     </div>
 
@@ -928,8 +973,41 @@
       </div>
     </div>
 
-    <!-- ==================== ADB 操作 ==================== -->
-    <div class="category-title">ADB 操作</div>
+    <div class="card-doc" id="WinTextInput">
+      <h3>Win文本输入 <span class="badge badge-win">Windows</span></h3>
+      <p>一次性输入一段完整文本。支持逐字符模拟和剪贴板粘贴两种模式。</p>
+      <dl class="props">
+        <dt>输入文本</dt>
+        <dd>要输入的文本，支持 <code>@变量</code> 和 <code>#任务引用</code> 表达式。</dd>
+        <dt>输入方式</dt>
+        <dd><strong>逐字符模拟</strong>：逐个字符模拟键盘输入（适合防注入框）；<strong>剪贴板粘贴</strong>：直接将文本复制到剪贴板并模拟 Ctrl+V（速度更快）。</dd>
+        <dt>字符间隔</dt>
+        <dd>逐字符模式下每个字符输入的间隔（毫秒），默认 50ms。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">无输出</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="InputCombo">
+      <h3>Win输入组合 <span class="badge badge-win">Windows</span></h3>
+      <p>支持多按键编排（长按/单击混合）的复杂输入系统，非阻塞后台执行。常用于游戏或复杂应用宏的编写。</p>
+      <dl class="props">
+        <dt>按键列表</dt>
+        <dd>支持添加多个按键动作（如 W、A、Space、LeftClick）。每个动作可以选择 <strong>单击(Tap)</strong> 或 <strong>长按(Hold)</strong>，并可单独配置动作后的延迟时间。长按模式下，该键会保持按下状态直到整个卡片任务结束。</dd>
+        <dt>循环次数</dt>
+        <dd>整个动作序列的重复执行次数。设为 <code>0</code> 为无限循环（需配合中止条件）。</dd>
+        <dt>中止条件表达式</dt>
+        <dd>每轮循环执行后求值的表达式（为 <code>false</code> 时中止执行）。默认 <code>true</code> 一直执行。</dd>
+        <dt>最大执行时长</dt>
+        <dd>单位毫秒（0=不限时）。超时将强制中止并释放在此期间处于长按状态的所有按键。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.text</code> — 记录此次执行的组合按键和状态信息</div>
+      </div>
+    </div>
 
     <div class="card-doc" id="EventListener">
       <h3>Win 事件监听 <span class="badge badge-win">Windows</span></h3>
@@ -943,6 +1021,9 @@
         <div class="output-item"><code>#N.result</code> — 监听到事件时返回 true</div>
       </div>
     </div>
+
+    <!-- ==================== ADB 操作 ==================== -->
+    <div class="category-title">ADB 操作</div>
 
     <div class="card-doc" id="AdbConnect">
       <h3>ADB连接设备 <span class="badge badge-adb">ADB</span></h3>
@@ -1078,6 +1159,34 @@
         <div class="output-item"><code>OutputMatchScore</code> — 最佳匹配分数（0~1）</div>
         <div class="output-item"><code>OutputMatchCount</code> — 匹配到的目标数量</div>
         <div class="output-item"><code>OutputMatchResults</code> — 多目标匹配结果列表（含 X, Y, Score）</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="ImgOnnxDetect">
+      <h3>ONNX定位 <span class="badge badge-img">图像</span></h3>
+      <p>使用存放在本地的 ONNX 视觉模型（如 YOLO）对图像进行实时的目标检测和定位追踪。</p>
+      <dl class="props">
+        <dt>源图像</dt>
+        <dd>目标检测的图片来源，通常引用前序截屏卡片（如 <code>#1</code>）或裁剪卡片的输出。</dd>
+        <dt>视觉模型选择</dt>
+        <dd>从已在“视觉模型管理”中导入登记的 ONNX 模型下拉菜单中，选择本次推理要使用的具体模型。</dd>
+        <dt>查找类别过滤 (逗号分隔)</dt>
+        <dd>可选，填入你需要专门过滤的目标标签名称。举例：你的模型同时识别了猫(cat)和狗(dog)，但你本次只想找狗的坐标，你只需在此填入 <code>dog</code>；如果为空，则输出画面中识别到的所有置信度达标的目标结果。</dd>
+        <dt>置信阈值覆盖</dt>
+        <dd>可选，填入一个 0~1 的小数（如 <code>0.65</code>），临时覆盖并替换模型本身的默认识别置信度。如果你发现模型当前漏检严重，可将这个值调低；如果发现模型经常把错认的假目标框出来，可将这个值调高。填 0 表示仍沿用该模型在其管理器中的默认置信度设定。</dd>
+      </dl>
+      <div class="example-section">
+        <div class="example-title"> 应用场景</div>
+        <div class="example-item">当画面存在光照变化、图标有细微形变、甚至部分被遮挡的情况下，“模板匹配”(TemplateMatch) 将发生不同程度的失效。此时可调度训练过泛化特征的 ONNX 目标检测模型介入，凭借深度学习的泛化能力提供高鲁棒性的目标准星定位与坐标获取引擎。</div>
+      </div>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.image</code> — 重新绘制了所有有效识别目标彩色检测框以及置信分数的高亮预览图像。</div>
+        <div class="output-item"><code>#N.result</code> — 本次推理是否检测到了至少一条符合要求的目标（true/false）。</div>
+        <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — 所有合格目标中，<strong style="color:var(--accent);">置信度排名最高（第一顺位）</strong>目标的包围框中心点 X / Y 坐标（方便与“Win模拟点击”卡片组合直接发起点击）。</div>
+        <div class="output-item"><code>OutputMatchScore</code> — 该“最高置信度”目标的实际检出分数。</div>
+        <div class="output-item"><code>OutputMatchCount</code> — 本次推理总共成功检出了多少个符合条件的目标数量。</div>
+        <div class="output-item"><code>OutputMatchResults</code> — 一维数组，包含所有检出目标的坐标集合数据等。</div>
       </div>
     </div>
 
@@ -1502,6 +1611,23 @@
       </div>
     </div>
 
+    <div class="card-doc" id="SubFlow">
+      <h3>子流程 <span class="badge badge-flow">控制流</span></h3>
+      <p>支持将复杂流程模块化。主流程可调用子流程，并通过输入/返回机制传递和获取数据。由 <code>调用子流程</code>(主流程内)、<code>子流程输入</code>和<code>子流程返回</code> 三部分组成。</p>
+      <dl class="props">
+        <dt>调用子流程 (主流程内)</dt>
+        <dd>选择目标子流程。可将主流程中的图像、文本或坐标输出映射传入子流程。执行时主流程会挂起，等待子流程完成。</dd>
+        <dt>子流程输入 (位于子流程画布最顶端)</dt>
+        <dd>接收主流程调用时传来的参数，供本子流程内部卡片引用（例如 <code>#1 子流程输入.image</code>）。</dd>
+        <dt>子流程返回 (位于子流程内任意结束位置)</dt>
+        <dd>打断并结束子流程执行，将内部计算的结果映射返回给主流程的调用卡片。主流程后续可直接引用调用卡片（如 <code>#5 调用子流程.text</code>）。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">调用卡片的输出即为 "子流程返回" 卡片所映射的内容（支持坐标、布尔值、图像和文本等全部类型）。</div>
+      </div>
+    </div>
+
     <div class="card-doc" id="CustomScript">
       <h3>自定义脚本 <span class="badge badge-flow">控制流</span></h3>
       <p>允许用户通过编写原生 C# 代码来实现最高自由度的逻辑定制。这适合用来执行复杂的运算引擎、循环、文件处理，或者处理其他任务卡片无法直接完成的数据操作。引擎使用 Roslyn 动态编译执行并具有 MD5 缓存优化，提供近乎原生的执行性能。</p>
@@ -1560,6 +1686,83 @@
         <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — 用户使用 SetOutputXY 指定的坐标内容</div>
         <div class="output-item"><code>#N.result</code> — 用户指定的布尔结果</div>
         <div class="output-item"><code>#N.image</code> — 用户设置的高级图像数据流</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserGetText">
+      <h3>浏览器取文本 <span class="badge badge-win">浏览器</span></h3>
+      <p>通过 CDP（Chrome DevTools Protocol）连接已运行的 Chrome/Edge 浏览器，使用 CSS 选择器或 XPath 定位 DOM 元素，提取其 <code>innerText</code> 或指定 HTML 属性值（如 <code>href</code>、<code>src</code>、<code>value</code>）。</p>
+
+      <div class="tip-box" style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
+        <strong>⚠️ 使用前提：</strong>需要浏览器以调试端口启动，例如 Chrome：<br/>
+        <code>chrome.exe --remote-debugging-port=9222</code><br/>
+        任务卡片默认连接本机 9222 端口。
+      </div>
+
+      <dl class="props">
+        <dt>选择器类型</dt>
+        <dd>支持 <code>CSS 选择器</code> 或 <code>XPath</code>，默认使用 CSS。可根据您的熟悉程度或网页元素的特征选择合适的定位方式。</dd>
+        <dt>选择器表达式</dt>
+        <dd>元素定位的具体表达式。例如，要获取某个商品的价格文本，您可以填入 CSS 选择器 <code>.price-text</code>，或者 XPath <code>id('product')/div/span[1]</code>。支持注入 <code>@变量</code> 或 <code>#卡片输出引用</code>（例如 <code>#{@目标商品ID}</code>）。</dd>
+        <dt>属性名</dt>
+        <dd>如果留空，则提取元素的内部可视文本（<code>innerText</code>）；如果您需要提取元素的特定属性（例如图片的URL链接、超链接地址），可输入属性名称，如 <code>src</code>、<code>href</code>、<code>value</code> 等。</dd>
+        <dt>CDP 端口</dt>
+        <dd>指定浏览器开放调试的端口号（默认 <code>9222</code>）。如果您多开浏览器，可以分别指定 9223、9224 等以控制不同的浏览器实例。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.text</code> — 提取到的文本或指定的属性值。您可以将此输出供后续流程处理（如转换为数字或存入全局变量管理）。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserExecuteJs">
+      <h3>浏览器执行脚本 <span class="badge badge-win">浏览器</span></h3>
+      <p>在当前激活的浏览器页面中注入并执行一段自定义或任意 JavaScript 代码。代码内部通过 <code>return</code> 语句返回的值将被自动读取并转化为当前卡片的输出文本。这能够应付诸如页面跳跃拦截、复杂跨域读取或者隐性元素的直接点击等高级需求。</p>
+      
+      <div class="tip-box" style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
+        <strong>🚨 警告：此操作为高风险操作！</strong> 执行来历不明的脚本可能导致网页隐私泄露或页面产生不可预料的行为，请确保脚本来源于您自己编写或完全可信！
+      </div>
+
+      <dl class="props">
+        <dt>要执行的 JavaScript 代码</dt>
+        <dd>在此处填写多行的执行脚本。您可以通过在脚本最后 <code>return</code> 语句返回值。<br/>
+        <strong>示例 1 (纯取属性)：</strong> <code>return document.title;</code>（获取并输出网页标题）。<br/>
+        <strong>示例 2 (复杂逻辑)：</strong><br/>
+        <code>
+          let items = document.querySelectorAll('.list-item');<br/>
+          return items.length > 0 ? items[0].innerText : "无商品";
+        </code>
+        </dd>
+        <dt>CDP 端口</dt>
+        <dd>对应需要控制的浏览器的调试端口，默认为 <code>9222</code>。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.text</code> — 脚本内 <code>return</code> 到浏览器上下文的内容，将被转化为字符串类型的输出任务结果。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserWaitForElement">
+      <h3>浏览器等待元素 <span class="badge badge-win">浏览器</span></h3>
+      <p>使工作流在此处挂起并一直等待，直到网页内特定选择器描述的元素匹配到您要求的状态（出现/可见，或是消失/被移除）为止。通常用于在异步加载完成验证、倒计时结束等不确定等待时间的场景下发挥“同步锁”的作用。</p>
+      <dl class="props">
+        <dt>选择器类型</dt>
+        <dd>与取文本任务一样，支持 <code>CSS 选择器</code> 或 <code>XPath</code> 来标识要观察的 DOM 元素。</dd>
+        <dt>选择器表达式</dt>
+        <dd>监控元素的定位器。例如：如果页面加载时有个 <code>#loading-spinner</code> 的加载圈元素，您可以使用它的 CSS Selector。</dd>
+        <dt>等待模式</dt>
+        <dd>
+          <strong>等待元素出现（可见）：</strong> 监控直到指定的元素被加载到页面并且可见后，流程才放行。<br/>
+          <strong>等待元素消失（隐藏）：</strong> 监控直到指定的元素彻底隐藏或从对象树移除后，流程才放行（这经常配合上面的加载圈一起使用：让流程一直休眠到加载圈状态消失代表页面内容加载完毕）。
+        </dd>
+        <dt>超时时间（毫秒）</dt>
+        <dd>等待的最长期限（如 <code>10000</code> 表示最多等 10 秒）。如果您等的元素在这段时间内始终未能满足等待模式的条件放弃等待跳过，并在输出结果中反馈为失败状态。</dd>
+        <dt>CDP 端口</dt>
+        <dd>指定要连接的浏览器端口（默认 <code>9222</code>）。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.result</code> — 此布尔值指代在超时期限前，流程是否成功等到元素特定状态的变化（成功为 <code>true</code>，若超时未能满足状态则为 <code>false</code>）。该结果可配合 If-Else 分支任务来确定步骤失败时的处理策略。</div>
       </div>
     </div>
 

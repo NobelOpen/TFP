@@ -121,28 +121,13 @@ namespace TaskFlow.ViewModels
                     }
 
                     // 没有要运行的卡片且没有其他操作，退出循环
-                    bool hasRunCards = currentPlan.RunCards != null && currentPlan.RunCards.Count > 0;
-                    bool hasShellCommands = currentPlan.ShellCommands != null && currentPlan.ShellCommands.Count > 0;
-                    bool hasOtherActions = (currentPlan.Plan?.Count > 0) ||
-                        (currentPlan.Variables?.Count > 0) ||
-                        (currentPlan.DeleteVariables?.Count > 0) ||
-                        (currentPlan.ModifyVariables?.Count > 0) ||
-                        (currentPlan.ModifyCards?.Count > 0) ||
-                        (currentPlan.DeleteCards?.Count > 0) ||
-                        (currentPlan.InsertCards?.Count > 0) ||
-                        (currentPlan.CreateFlows?.Count > 0) ||     // ← 创建子流程
-                        (currentPlan.DeleteFlows?.Count > 0) ||     // ← 删除子流程
-                        !string.IsNullOrWhiteSpace(currentPlan.SwitchFlow) || // ← 切换流程
-                        hasShellCommands ||
-                        currentPlan.NeedsScreenshot;  // 请求截图也算有效动作
-
-                    if (!hasRunCards && !hasOtherActions)
+                    if (!currentPlan.HasRunCards && !currentPlan.HasAnyAction && !currentPlan.NeedsScreenshot)
                     {
                         AiFlowLogger.Info($"AI 自主执行结束: {currentPlan.Summary}");
                         break;
                     }
 
-                    if (!hasRunCards)
+                    if (!currentPlan.HasRunCards)
                     {
                         // 有其他操作但没有 runCards，继续下一轮让 AI 决策
                         AiFlowLogger.Info("AI 执行了操作，继续决策...");
@@ -150,14 +135,14 @@ namespace TaskFlow.ViewModels
 
                     // ===== PowerShell 命令执行 =====
                     string shellResultsText = "";
-                    if (hasShellCommands)
+                    if (currentPlan.HasShellCommands)
                     {
                         shellResultsText = await ExecuteShellCommandsAsync(currentPlan.ShellCommands!, _cts.Token);
                     }
 
                     string resultsText = "";
                     bool hasFailedCards = false;
-                    if (hasRunCards)
+                    if (currentPlan.HasRunCards)
                     {
                         // 运行指定卡片（带风险分级批准）
                         AiFlowLogger.Info($"AI 自主执行中（第 {round} 轮）：运行卡片 {string.Join(", ", currentPlan.RunCards!.Select(o => $"#{o}"))}");
@@ -206,33 +191,6 @@ namespace TaskFlow.ViewModels
 
                             AiFlowLogger.Info($"自主模式: 运行卡片 #{order} {card.Name} (风险: {riskLevel})");
 
-                            // WinClick 自动标定：执行前检查并触发标定
-                            if (card is WinClickTaskCard clickCard
-                                && clickCard.StartX != 0 && clickCard.StartY != 0
-                                && string.IsNullOrEmpty(clickCard.StartXExpression))
-                            {
-                                var ssCard = _mainViewModel.TaskCards
-                                    .LastOrDefault(c => c is WinScreenshotTaskCard && c.OutputImage != null && !c.OutputImage.Empty());
-                                if (ssCard?.OutputImage != null)
-                                {
-                                    int w = ssCard.OutputImage.Width, h = ssCard.OutputImage.Height;
-                                    var cal = CalibrationService.GetCalibration(SelectedModelId, w, h);
-                                    if (cal == null)
-                                    {
-                                        // 没有标定数据，自动执行标定
-                                        AiFlowLogger.Info($"[标定] 首次使用模型估坐标，自动执行标定...");
-                                        var calibService = new CalibrationService(msg => AiFlowLogger.Info(msg));
-                                        cal = await calibService.CalibrateAsync(SelectedModelId, w, h, _cts.Token);
-                                    }
-                                    if (cal != null)
-                                    {
-                                        var (cx, cy) = CalibrationService.CalibrateCoordinates(cal, clickCard.StartX, clickCard.StartY);
-                                        AiFlowLogger.Info($"标定校正: ({clickCard.StartX},{clickCard.StartY}) → ({cx},{cy})");
-                                        clickCard.StartX = cx;
-                                        clickCard.StartY = cy;
-                                    }
-                                }
-                            }
 
                             await _mainViewModel.ExecuteSingleCardAsync(card, _cts.Token);
 
@@ -317,22 +275,6 @@ namespace TaskFlow.ViewModels
                     autonomousPrompt.AppendLine("- 严禁自行添加验证/确认/二次检查步骤（如截图验证、LlmVision 分析结果等），除非用户明确要求验证");
                     autonomousPrompt.AppendLine("- 你自己就是多模态 Vision 模型，不需要创建 LlmVision 卡片来分析图像，你已经能直接看到卡片输出的图像");
 
-                    // 注入标定校正信息
-                    var calSsCard = _mainViewModel.TaskCards
-                        .LastOrDefault(c => c is Models.TaskCards.WinScreenshotTaskCard && c.OutputImage != null && !c.OutputImage.Empty());
-                    if (calSsCard?.OutputImage != null && !string.IsNullOrEmpty(SelectedModelId))
-                    {
-                        var cal = CalibrationService.GetCalibration(SelectedModelId, calSsCard.OutputImage.Width, calSsCard.OutputImage.Height);
-                        if (cal != null)
-                        {
-                            autonomousPrompt.AppendLine();
-                            autonomousPrompt.AppendLine($"[坐标校正] 你在此分辨率({cal.Width}x{cal.Height})下的坐标估算存在系统偏差，" +
-                                $"请对你估算的所有坐标应用校正公式：" +
-                                $"correctedX = {cal.ScaleX:F4} * rawX + {cal.OffsetX:F1}，" +
-                                $"correctedY = {cal.ScaleY:F4} * rawY + {cal.OffsetY:F1}。");
-                        }
-                    }
-
                     // 失败回退指令
                     if (hasFailedCards)
                     {
@@ -349,7 +291,6 @@ namespace TaskFlow.ViewModels
 
                     // Orchid 按需截屏：仅当 AI 请求时截取屏幕
                     List<string>? autoImageList = null;
-                    int autoScreenW = 0, autoScreenH = 0;
                     if (currentPlan.NeedsScreenshot)
                     {
                         var target = string.IsNullOrWhiteSpace(currentPlan.ScreenshotTarget)
@@ -360,39 +301,8 @@ namespace TaskFlow.ViewModels
                         if (scrBase64 != null)
                         {
                             autoImageList = new List<string> { scrBase64 };
-                            autoScreenW = sw;
-                            autoScreenH = sh;
                             AiFlowLogger.Info($"已附加屏幕截图 ({sw}x{sh})");
                             AddMessage(AiChatRole.System, $"📸 已截取{targetLabel} ({sw}x{sh})");
-                        }
-                    }
-
-                    // 有截图时自动标定
-                    if (autoImageList?.Count > 0 && autoScreenW > 0
-                        && !string.IsNullOrEmpty(SelectedModelId))
-                    {
-                        var existingCal = CalibrationService.GetCalibration(SelectedModelId, autoScreenW, autoScreenH);
-                        if (existingCal == null)
-                        {
-                            AiFlowLogger.Info("[标定] 自主循环检测到截图但无标定数据，自动执行标定...");
-                            try
-                            {
-                                var calibSvc = new CalibrationService(msg => AiFlowLogger.Info(msg));
-                                var newCal = await calibSvc.CalibrateAsync(SelectedModelId, autoScreenW, autoScreenH, _cts.Token);
-                                if (newCal != null)
-                                {
-                                    // 重新注入校正公式到 prompt
-                                    autonomousPrompt.AppendLine();
-                                    autonomousPrompt.AppendLine($"[坐标校正] 你在此分辨率({newCal.Width}x{newCal.Height})下的坐标估算存在系统偏差，" +
-                                        $"请对你估算的所有坐标应用校正公式：" +
-                                        $"correctedX = {newCal.ScaleX:F4} * rawX + {newCal.OffsetX:F1}，" +
-                                        $"correctedY = {newCal.ScaleY:F4} * rawY + {newCal.OffsetY:F1}。");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                AiFlowLogger.Warn($"[标定] 自动标定失败: {ex.Message}");
-                            }
                         }
                     }
 
@@ -406,6 +316,7 @@ namespace TaskFlow.ViewModels
 
                     // 为自主循环的决策轮也提供流式回调，让 AI 的总结文本能实时显示
                     var loopStreamBuilder = new System.Text.StringBuilder();
+                    var loopThinkingBuilder = new System.Text.StringBuilder();
                     StreamingStarted?.Invoke();
 
                     while (true)
@@ -420,6 +331,11 @@ namespace TaskFlow.ViewModels
                                 {
                                     loopStreamBuilder.Append(delta);
                                     StreamingDelta?.Invoke(delta);
+                                },
+                                onThinking: thinking =>
+                                {
+                                    loopThinkingBuilder.Append(thinking);
+                                    StreamingThinking?.Invoke(thinking);
                                 },
                                 getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                                 captureScreenshot: async target => await CaptureScreenForAiAsync(
@@ -449,9 +365,10 @@ namespace TaskFlow.ViewModels
                     StreamingEnded?.Invoke();
                     // 如果有流式文本，持久化为 Assistant 消息
                     var loopStreamedText = loopStreamBuilder.ToString();
+                    var loopThinkingText = loopThinkingBuilder.Length > 0 ? loopThinkingBuilder.ToString() : null;
                     if (!string.IsNullOrWhiteSpace(loopStreamedText))
                     {
-                        var streamMsg = new AiChatMessage { Role = AiChatRole.Assistant, Content = loopStreamedText, IsStreamedToWebView = true };
+                        var streamMsg = new AiChatMessage { Role = AiChatRole.Assistant, Content = loopStreamedText, ThinkingContent = loopThinkingText, IsStreamedToWebView = true };
                         Application.Current.Dispatcher.Invoke(() => Messages.Add(streamMsg));
                     }
                     else if (nextPlan.Done)
@@ -476,17 +393,8 @@ namespace TaskFlow.ViewModels
                             shellResultsText = nextShellResults;
                     }
 
-                    bool hasNewActions = (nextPlan.Plan?.Count > 0) ||
-                        (nextPlan.Variables?.Count > 0) ||
-                        (nextPlan.DeleteVariables?.Count > 0) ||
-                        (nextPlan.ModifyVariables?.Count > 0) ||
-                        (nextPlan.ModifyCards?.Count > 0) ||
-                        (nextPlan.DeleteCards?.Count > 0) ||
-                        (nextPlan.InsertCards?.Count > 0) ||
-                        (nextPlan.CreateFlows?.Count > 0) ||   // ← 修复遗漏
-                        (nextPlan.DeleteFlows?.Count > 0) ||   // ← 修复遗漏
-                        !string.IsNullOrWhiteSpace(nextPlan.SwitchFlow) || // ← 修复遗漏
-                        !string.IsNullOrWhiteSpace(nextPlan.TargetFlow);   // ← 修复遗漏
+                    bool hasNewActions = nextPlan.HasAnyAction
+                        || !string.IsNullOrWhiteSpace(nextPlan.TargetFlow);
 
                     if (hasNewActions)
                     {

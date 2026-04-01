@@ -641,6 +641,107 @@ namespace TaskFlow.Services
             }
         }
 
+        /// <summary>
+        /// 执行 ONNX 目标检测（YOLO 定位）
+        /// </summary>
+        private async Task<bool> ExecuteImgOnnxDetectAsync(ImgOnnxDetectTaskCard task, IList<TaskCardBase> allTasks)
+        {
+            Mat? sourceImage = GetSourceImage(task.UseSourceTaskImage, task.SourceTaskIdForImage, task.ImageFilePath, allTasks, out bool shouldDispose);
+
+            if (sourceImage == null)
+            {
+                task.ErrorMessage = "无法获取源图像";
+                return false;
+            }
+
+            try
+            {
+                // 获取模型配置
+                var config = TaskFlow.Helpers.OnnxModelManager.GetModelById(task.OnnxModelId);
+                if (config == null)
+                {
+                    task.ErrorMessage = "未选择 ONNX 模型或模型不存在，请在属性面板中选择模型";
+                    return false;
+                }
+
+                if (!config.FileExists)
+                {
+                    task.ErrorMessage = $"模型文件不存在: {config.FilePath}";
+                    return false;
+                }
+
+                // 如果卡片覆盖了置信度阈值，临时修改配置
+                var originalThreshold = config.ConfidenceThreshold;
+                if (task.ConfidenceOverride > 0 && task.ConfidenceOverride <= 1)
+                {
+                    config.ConfidenceThreshold = task.ConfidenceOverride;
+                }
+
+                // 在线程池中执行推理（避免阻塞 UI）
+                var detections = await Task.Run(() =>
+                {
+                    if (_onnxDetectionService == null)
+                        _onnxDetectionService = new OnnxDetectionService();
+                    return _onnxDetectionService.Detect(sourceImage, config);
+                });
+
+                // 恢复原始阈值
+                config.ConfidenceThreshold = originalThreshold;
+
+                // 过滤类别
+                if (!string.IsNullOrWhiteSpace(task.FilterClassName))
+                {
+                    var filterClasses = task.FilterClassName
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    detections = detections.Where(d => filterClasses.Contains(d.ClassName)).ToList();
+                }
+
+                // 写入输出
+                task.OutputDetectionCount = detections.Count;
+                task.OutputResult = detections.Count > 0;
+
+                if (detections.Count > 0)
+                {
+                    var top = detections[0]; // 已按置信度降序
+                    task.OutputX = top.X;
+                    task.OutputY = top.Y;
+                    task.OutputTopClassName = top.ClassName;
+                    task.OutputTopConfidence = top.Confidence;
+
+                    // 生成坐标数组字符串
+                    task.OutputDetectionsArray = string.Join(";",
+                        detections.Select(d => $"{d.X},{d.Y}"));
+
+                    // 绘制检测结果
+                    var annotated = _onnxDetectionService!.DrawDetections(sourceImage, detections);
+                    task.OutputImage?.Dispose();
+                    task.OutputImage = annotated;
+
+                    Log($"[{DateTime.Now:HH:mm:ss}] ONNX 检测: 找到 {detections.Count} 个目标, " +
+                        $"最高置信度: {top.ClassName} ({top.Confidence:F4}), 坐标: ({top.X}, {top.Y})");
+                }
+                else
+                {
+                    task.OutputTopClassName = null;
+                    task.OutputTopConfidence = 0;
+                    task.OutputDetectionsArray = null;
+                    Log($"[{DateTime.Now:HH:mm:ss}] ONNX 检测: 未找到目标");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = $"ONNX 推理失败: {ex.Message}";
+                return false;
+            }
+            finally
+            {
+                if (shouldDispose) sourceImage.Dispose();
+            }
+        }
+
         #endregion
 
         #region String Substring

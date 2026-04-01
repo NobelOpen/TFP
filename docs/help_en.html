@@ -308,6 +308,7 @@
     <li><a href="#VarMgr">Variable Manager</a></li>
     <li><a href="#FlowMgr">Flow Manager</a></li>
     <li><a href="#ModelMgr">Model Manager</a></li>
+    <li><a href="#VisionModelMgr">Vision Model Manager</a></li>
     <li><a href="#SettingsUI">Settings &amp; OCR</a></li>
 
     <li class="toc-category">General Tasks</li>
@@ -315,6 +316,7 @@
     <li><a href="#GetTimestamp">Get Timestamp</a></li>
     <li><a href="#EndTask">End Current Flow</a></li>
     <li><a href="#EndAllFlows">End All Flows</a></li>
+    <li><a href="#RestartFlow">Restart Flow</a></li>
 
     <li class="toc-category">Windows Operations</li>
     <li><a href="#WinLaunchApp">Win Launch App</a></li>
@@ -325,6 +327,8 @@
     <li><a href="#WinSimulateInput">Win Simulate Input</a></li>
     <li><a href="#WinSubtitle">Win Subtitle Overlay</a></li>
     <li><a href="#WinFindFile">Win Path Finder</a></li>
+    <li><a href="#WinTextInput">Win Text Input</a></li>
+    <li><a href="#InputCombo">Win Input Combo</a></li>
     <li><a href="#EventListener">Win Event Listener</a></li>
 
     <li class="toc-category">ADB Operations</li>
@@ -334,10 +338,15 @@
     <li><a href="#AdbClick">ADB Simulate Click</a></li>
     <li><a href="#AdbCloseApp">ADB Close App</a></li>
     <li><a href="#AdbDisconnect">ADB Disconnect</a></li>
+    <li class="toc-category">Browser Automation</li>
+    <li><a href="#BrowserGetText">Browser Get Text</a></li>
+    <li><a href="#BrowserExecuteJs">Browser Execute JS</a></li>
+    <li><a href="#BrowserWaitForElement">Browser Wait Element</a></li>
 
     <li class="toc-category">Image Processing</li>
     <li><a href="#ImgCrop">Image Crop</a></li>
     <li><a href="#ImgTemplateMatch">Template Match</a></li>
+    <li><a href="#ImgOnnxDetect">ONNX Detect</a></li>
     <li><a href="#ImgOcr">OCR Recognition</a></li>
     <li><a href="#ImgColorDetect">Color Detection</a></li>
     <li><a href="#ImgColorSegment">Color Segmentation</a></li>
@@ -363,6 +372,8 @@
     <li><a href="#IfElse">If-Else Branch</a></li>
     <li><a href="#ForLoop">For Loop</a></li>
     <li><a href="#BreakLoop">Break Loop</a></li>
+    <li><a href="#SubFlow">SubFlow</a></li>
+    <li><a href="#CustomScript">Custom Script</a></li>
   </ul>
 </div>
 
@@ -419,7 +430,7 @@
 
 <div class="card-doc" id="FlowMgr">
   <h3>Flow Manager</h3>
-  <p>Opened via the <strong>� Flows</strong> button. TaskFlow allows creating multiple flows within a project (vertical tabs on the left) to break down complex logic.</p>
+  <p>Opened via the <strong> Flows</strong> button. TaskFlow allows creating multiple flows within a project (vertical tabs on the left) to break down complex logic.</p>
   <dl class="props">
     <dt>Basic Operations</dt>
     <dd>Add new flows, rename, or delete. Note: Deleting a flow will also delete <strong>all task cards and local variables</strong> within it. This action cannot be undone.</dd>
@@ -471,6 +482,33 @@
     <div class="example-item"><strong>Google Gemini:</strong> API Endpoint = <code>https://generativelanguage.googleapis.com/v1beta/</code>, API Key = <code>AIzaSy...</code>, Model Name = <code>gemini-2.0-flash</code></div>
     <div class="example-item"><strong>Self-hosted / Proxy:</strong> API Endpoint = <code>https://your-proxy.com/v1/chat/completions</code>, API Key = as required by the provider</div>
   </div>
+</div>
+
+<div class="card-doc" id="VisionModelMgr">
+  <h3>Vision Model Manager</h3>
+  <p>Manages ONNX Runtime-based local vision inference models, specifically designed for image object detection and localization tasks. Open via the <strong>🧿 Vision</strong> button in the toolbar.</p>
+  <dl class="props">
+    <dt>Applicable Scenarios</dt>
+    <dd>Currently primarily loads exported ONNX format YOLO object detection models (e.g., YOLOv8). Since the model infers strictly locally on the CPU, lightweight models (like Nano or Small variants, e.g., yolov8n.onnx) are recommended to ensure fast execution speeds. Unlike expensive cloud-based Large Vision Models (LlmVision), local ONNX models are perfectly suited for high-frequency, real-time, low-latency coordinate positioning tasks.</dd>
+    
+    <dt>Model List</dt>
+    <dd>Displays all imported vision models centrally. Configuration parameters are securely saved locally for cross-project invocation.</dd>
+    
+    <dt>Import Model</dt>
+    <dd>Click the <strong>Import</strong> button at the top right to select a .onnx model file from your local disk. The system will automatically copy and isolate it in the application's dedicated data directory (%LOCALAPPDATA%/TaskFlow/onnx_models/). The underlying layer natively supports dynamic input dimension processing.</dd>
+    
+    <dt>Edit Model Parameters</dt>
+    <dd>
+      To ensure optimal inference speed and accuracy, each model usually requires tuning its preprocessing configuration and post-processing thresholds:<br>
+      <strong>Display Name:</strong> A custom name for easy identification in the task card's dropdown menu.<br>
+      <strong>Input Width / Height:</strong> The required input image tensor size. Often 640x640. Set appropriately to avoid severe aspect ratio distortion.<br>
+      <strong>Default Confidence:</strong> The base confidence filtering threshold applied to model output (0~1, e.g. 0.4). Bounding boxes scoring below this value are discarded.<br>
+      <strong>Labels List:</strong> Comma-separated target class names (e.g., <code>person,car,dog</code>). Ensure the order strictly aligns with the category index (0, 1, 2...) set during model training. This is crucial when cards utilize "Class Filter" capabilities. If left empty, the system outputs bounding boxes but cannot filter by class names.
+    </dd>
+    
+    <dt>Delete Model</dt>
+    <dd>Clicking the <strong>Delete</strong> button securely removes both the configuration and the underlying .onnx physical file from the storage directory. Note that deleting a model currently referenced by a card will cause errors in the flow.</dd>
+  </dl>
 </div>
 
 <div class="card-doc" id="SettingsUI">
@@ -581,6 +619,15 @@
   <div class="output-section">
     <div class="output-title"> Output</div>
     <div class="output-item">No output (controls flow termination only)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="RestartFlow">
+  <h3>Restart Flow <span class="badge badge-general">General</span></h3>
+  <p>Immediately terminates current flow and restarts execution from the beginning.</p>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item">No output (controls flow reset only)</div>
   </div>
 </div>
 
@@ -783,8 +830,41 @@
   </div>
 </div>
 
-<!-- ==================== ADB Operations ==================== -->
-<div class="category-title">ADB Operations</div>
+<div class="card-doc" id="WinTextInput">
+  <h3>Win Text Input <span class="badge badge-win">Windows</span></h3>
+  <p>Inputs a complete block of text at once. Supports character-by-character simulation and clipboard pasting.</p>
+  <dl class="props">
+    <dt>Input Text</dt>
+    <dd>The text to input. Supports <code>@variables</code> and <code>#task references</code>.</dd>
+    <dt>Input Mode</dt>
+    <dd><strong>Char-by-Char</strong>: simulates keyboard input for each character (useful for anti-injection fields); <strong>Clipboard Paste</strong>: copies text to clipboard and simulates Ctrl+V (faster).</dd>
+    <dt>Char Interval</dt>
+    <dd>Interval (ms) between each character in character-by-character mode, default 50ms.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item">No output</div>
+  </div>
+</div>
+
+<div class="card-doc" id="InputCombo">
+  <h3>Win Input Combo <span class="badge badge-win">Windows</span></h3>
+  <p>Supports multi-key orchestration (mix of tap and hold) with non-blocking background execution. Often used for gaming or complex application macros.</p>
+  <dl class="props">
+    <dt>Key List</dt>
+    <dd>Add multiple key actions (e.g., W, A, Space, LeftClick). Each action can be set to <strong>Tap</strong> or <strong>Hold</strong> with dedicated post-action delay. Held keys remain pressed until the task card ends.</dd>
+    <dt>Repeat Count</dt>
+    <dd>Number of times the action sequence repeats. Set to <code>0</code> for infinite loop (requires a stop condition).</dd>
+    <dt>Stop Expression</dt>
+    <dd>Evaluated after each cycle (stops execution if <code>false</code>). Default <code>true</code>.</dd>
+    <dt>Max Duration</dt>
+    <dd>In milliseconds (0 = unlimited). Timeout forces termination and releases all held keys.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item"><code>#N.text</code> — Records the key combos and status info for this execution</div>
+  </div>
+</div>
 
 <div class="card-doc" id="EventListener">
   <h3>Win Event Listener <span class="badge badge-win">Windows</span></h3>
@@ -798,6 +878,9 @@
     <div class="output-item"><code>#N.result</code> — Returns true when the event is triggered</div>
   </div>
 </div>
+
+<!-- ==================== ADB Operations ==================== -->
+<div class="category-title">ADB Operations</div>
 
 <div class="card-doc" id="AdbConnect">
   <h3>ADB Connect Device <span class="badge badge-adb">ADB</span></h3>
@@ -931,6 +1014,34 @@
     <div class="output-item"><code>OutputMatchScore</code> — Best match score (0–1)</div>
     <div class="output-item"><code>OutputMatchCount</code> — Number of matches found</div>
     <div class="output-item"><code>OutputMatchResults</code> — Multi-target match result list (with X, Y, Score)</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgOnnxDetect">
+  <h3>ONNX Detect <span class="badge badge-img">Image</span></h3>
+  <p>Performs real-time object detection and localization tracking on images using a local ONNX vision model (e.g., YOLO).</p>
+  <dl class="props">
+    <dt>Source Image</dt>
+    <dd>The target image source, usually referenced from a preceding screenshot card (e.g., <code>#1</code>) or a crop card output.</dd>
+    <dt>Vision Model Selection</dt>
+    <dd>Select the specific model to use from the dropdown menu, populated by models imported via the "Vision Model Manager".</dd>
+    <dt>Class Filter (Comma-separated)</dt>
+    <dd>Optional. Enter specific target label names you want to filter. For instance, if your model detects both cats and dogs, but you only want dog coordinates, type <code>dog</code> here. Leave empty to output all detected objects that meet the confidence threshold.</dd>
+    <dt>Confidence Override</dt>
+    <dd>Optional. A decimal value between 0 and 1 (e.g., <code>0.65</code>) to temporarily override the model's default confidence threshold. Lower this value if the model is missing detections; raise it if there are too many false positives. Use <code>0</code> to retain the model's default setting defined in the Manager.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title"> Application Scenarios</div>
+    <div class="example-item">When dealing with changing lighting conditions, minor icon deformations, or partial occlusions, traditional "Template Match" often fails. In these cases, deploying deep learning-based ONNX object detection models provides highly robust crosshair positioning and dynamic coordinate acquisition.</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item"><code>#N.image</code> — Highlit preview image with colored bounding boxes and confidence scores drawn for all valid detections.</div>
+    <div class="output-item"><code>#N.result</code> — Whether at least one required target was detected (true/false).</div>
+    <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Coordinates (X/Y) representing the center point of the bounding box for the <strong style="color:var(--accent);">highest-confidence target (First Rank)</strong> among the qualified results. Perfect for chaining directly with a "Win Simulate Click" card.</div>
+    <div class="output-item"><code>OutputMatchScore</code> — The actual confidence score of the aforementioned "highest-confidence" target.</div>
+    <div class="output-item"><code>OutputMatchCount</code> — The total number of valid targets successfully detected during this inference pass.</div>
+    <div class="output-item"><code>OutputMatchResults</code> — A 1D array containing comprehensive data (like X, Y coordinates, and scores) for all detected targets if loop handling is needed.</div>
   </div>
 </div>
 
@@ -1346,6 +1457,23 @@
   </div>
 </div>
 
+<div class="card-doc" id="SubFlow">
+  <h3>SubFlow <span class="badge badge-flow">Control Flow</span></h3>
+  <p>Modularizes complex workflows. The main flow can call subflows and exchange data via an input/return mechanism. Consists of <code>Call SubFlow</code> (in main flow), <code>SubFlow Input</code>, and <code>SubFlow Output</code>.</p>
+  <dl class="props">
+    <dt>Call SubFlow (in main flow)</dt>
+    <dd>Selects target subflow. Maps main flow's image, text, or coordinate outputs as parameters. Pauses the main flow until the subflow completes.</dd>
+    <dt>SubFlow Input (top of subflow)</dt>
+    <dd>Receives parameters from the caller, acting as a source for internal subflow cards (e.g., <code>#1 SubFlow Input.image</code>).</dd>
+    <dt>SubFlow Output (anywhere in subflow)</dt>
+    <dd>Interrupts and ends the subflow, mapping internal results back to the caller. The main flow can reference these mapped results (e.g., <code>#5 Call SubFlow.text</code>).</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item">The calling card's output reflects the mapped fields (coordinates, booleans, images, text) of the "SubFlow Output" card.</div>
+  </div>
+</div>
+
 <div class="card-doc" id="CustomScript">
   <h3>Custom Script <span class="badge badge-flow">Control Flow</span></h3>
   <p>Allows users to write native C# code for the highest degree of customized logic. This is ideal for executing complex math operations, custom loops, file operations, or data manipulation that other cards cannot achieve directly. The engine utilizes Roslyn for dynamic compilation with MD5 caching optimization, providing near-native execution performance.</p>
@@ -1406,6 +1534,85 @@
     <div class="output-item"><code>#N.image</code> — Driven by your SetOutputImage action</div>
   </div>
 </div>
+
+</div>
+
+    <div class="card-doc" id="BrowserGetText">
+      <h3>Browser Get Text <span class="badge badge-win">Browser</span></h3>
+      <p>Connect to a running Chrome or Edge browser via CDP (Chrome DevTools Protocol) using CSS selectors or XPath to locate a DOM element, and extract its <code>innerText</code> or a specific HTML attribute value (e.g. <code>href</code>, <code>src</code>, <code>value</code>).</p>
+
+      <div class="tip-box" style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
+        <strong>⚠️ Prerequisite:</strong> The browser must be launched with the remote debugging port enabled, e.g. for Chrome:<br/>
+        <code>chrome.exe --remote-debugging-port=9222</code><br/>
+        Task cards connect to port 9222 on localhost by default.
+      </div>
+
+      <dl class="props">
+        <dt>Selector Type</dt>
+        <dd>Supports <code>CSS Selector</code> or <code>XPath</code>. CSS is the default. Choose the appropriate location method based on your familiarity and the characteristics of the webpage elements.</dd>
+        <dt>Selector Expression</dt>
+        <dd>The specific expression for element positioning. For example, to get the price of a product, you can enter the CSS selector <code>.price-text</code>, or the XPath <code>id('product')/div/span[1]</code>. Supports injecting <code>@variables</code> and <code>#card output references</code> (e.g. <code>#{@TargetProductID}</code>).</dd>
+        <dt>Attribute Name</dt>
+        <dd>Leave this field blank to extract the inner visible text of the element (<code>innerText</code>). If you need to extract specific attributes of an element (such as an image URL or hyperlink address), enter the attribute name, like <code>src</code>, <code>href</code>, <code>value</code>, etc.</dd>
+        <dt>CDP Port</dt>
+        <dd>The port number where the browser has opened debugging (default is <code>9222</code>). If you are multi-boxing browsers, you can specify different ports like 9223, 9224 to control distinct physical browser instances.</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item"><code>#N.text</code> — The extracted text or the specified attribute value. You can use this output for subsequent flow processing (like converting to a number or saving to the variable manager).</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserExecuteJs">
+      <h3>Browser Execute JS <span class="badge badge-win">Browser</span></h3>
+      <p>Inject and execute a custom or arbitrary block of JavaScript code within the currently active browser page. The value returned inside the code using the <code>return</code> statement will be automatically captured and converted into the textual output of the current card. This is highly capable of handling advanced requirements such as intercepting page jumps, reading complex cross-domain data, or triggering direct clicks on hidden DOM elements.</p>
+      
+      <div class="tip-box" style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
+        <strong>🚨 Warning: High-risk Operation!</strong> Executing scripts of unknown origin may lead to web privacy leaks or unpredictable page behavior. Make absolutely sure the script comes from yourself or is completely trusted!
+      </div>
+
+      <dl class="props">
+        <dt>JavaScript Code</dt>
+        <dd>Enter the multi-line script to be executed here. You can return the resulting value using the <code>return</code> statement at the end of the script.<br/>
+        <strong>Example 1 (Simple Value):</strong> <code>return document.title;</code> (Gets and outputs the webpage title).<br/>
+        <strong>Example 2 (Complex Logic):</strong><br/>
+        <code>
+          let items = document.querySelectorAll('.list-item');<br/>
+          return items.length > 0 ? items[0].innerText : "No items";
+        </code>
+        </dd>
+        <dt>CDP Port</dt>
+        <dd>The corresponding debugging port of the browser to be controlled. Defaults to <code>9222</code>.</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item"><code>#N.text</code> — The content returned via <code>return</code> directly from the browser context will be converted into string-typed output.</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserWaitForElement">
+      <h3>Browser Wait Element <span class="badge badge-win">Browser</span></h3>
+      <p>Suspends the workflow and waits indefinitely at this stage until the element described by a specific selector hits your requested state (Appears/Visible, or Disappears/Removed). This often serves as a "synchronization lock" in scenarios with unpredictable wait times, such as validating the completion of asynchronous loading or the end of a countdown timer.</p>
+      <dl class="props">
+        <dt>Selector Type</dt>
+        <dd>Like the Get Text task, it supports <code>CSS Selector</code> or <code>XPath</code> to identify the DOM element being monitored.</dd>
+        <dt>Selector Expression</dt>
+        <dd>The locator for the monitored element. For example: If there is a loading spinner like <code>#loading-spinner</code> when the page is loading, you can use its CSS Selector here.</dd>
+        <dt>Wait Mode</dt>
+        <dd>
+          <strong>Wait until visible:</strong> Monitors until the specified element is loaded into the page and becomes visible, then resumes the flow.<br/>
+          <strong>Wait until hidden:</strong> Monitors until the specified element is completely hidden or removed from the object tree, then resumes the flow (this is often used in combination with a loading spinner: making the flow sleep until the spinner's status disappears, meaning the page content analysis is fully over).
+        </dd>
+        <dt>Timeout (ms)</dt>
+        <dd>The maximum time limit to wait (e.g., <code>10000</code> means waiting for at most 10 seconds). If the element you are waiting for fails to satisfy the Wait Mode condition within this period, it skips waiting and sets the output result as failed.</dd>
+        <dt>CDP Port</dt>
+        <dd>The corresponding debugging port of the browser. Defaults to <code>9222</code>.</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item"><code>#N.result</code> — This boolean value indicates whether the flow successfully waited for the specific state change of the element before the timeout limit (<code>true</code> for success, and <code>false</code> if the state is unfulfilled upon timeout). This result can be paired with an If-Else branch task to determine the handling strategy when a step fails.</div>
+      </div>
+    </div>
 
 </div><!-- /container -->
 

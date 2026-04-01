@@ -47,6 +47,9 @@ namespace TaskFlow.Services
         private readonly VariableStore _variableStore;
         private readonly SubtitleService _subtitleService;
 
+        /// <summary>ONNX 推理服务（延迟初始化，保持推理会话缓存）</summary>
+        private OnnxDetectionService? _onnxDetectionService;
+
         private CancellationTokenSource? _cts;
         private bool _isRunning;
 
@@ -500,6 +503,7 @@ namespace TaskFlow.Services
                     TaskType.ImgPreprocess => ExecuteImgPreprocess((ImgPreprocessTaskCard)task, allTasks),
                     TaskType.ImgBlobAnalysis => ExecuteImgBlobAnalysis((ImgBlobAnalysisTaskCard)task, allTasks),
                     TaskType.ImgResize => ExecuteImgResize((ImgResizeTaskCard)task, allTasks),
+                    TaskType.ImgOnnxDetect => await ExecuteImgOnnxDetectAsync((ImgOnnxDetectTaskCard)task, allTasks),
 
                     // 逻辑判断
                     TaskType.ExpressionEval => ExecuteExpressionEval((ExpressionEvalTaskCard)task, allTasks),
@@ -541,6 +545,11 @@ namespace TaskFlow.Services
 
                     // 自定义脚本
                     TaskType.CustomScript => await ExecuteCustomScriptAsync((CustomScriptTaskCard)task, allTasks, cancellationToken),
+
+                    // 浏览器操作（CDP 附着模式）
+                    TaskType.BrowserGetText => await ExecuteBrowserGetTextAsync((BrowserGetTextTaskCard)task, allTasks, cancellationToken),
+                    TaskType.BrowserExecuteJs => await ExecuteBrowserExecuteJsAsync((BrowserExecuteJsTaskCard)task, allTasks, cancellationToken),
+                    TaskType.BrowserWaitForElement => await ExecuteBrowserWaitForElementAsync((BrowserWaitForElementTaskCard)task, allTasks, cancellationToken),
 
                     _ => false
                 };

@@ -504,6 +504,14 @@ namespace TaskFlow
             dialog.ShowDialog();
         }
 
+        private void OpenOnnxModelManager_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel.IsBusy) return;
+
+            var dialog = new OnnxModelManagerDialog(this);
+            dialog.ShowDialog();
+        }
+
         /// <summary>
         /// 工具栏帮助按钮 —— 打开帮助文档首页
         /// </summary>
@@ -668,6 +676,8 @@ namespace TaskFlow
                     => "IfElse",
                 TaskType.ForLoopStart or TaskType.ForLoopEnd
                     => "ForLoop",
+                TaskType.CallSubFlow or TaskType.SubFlowInput or TaskType.SubFlowOutput
+                    => "SubFlow",
                 _ => type.ToString()
             };
         }
@@ -867,6 +877,7 @@ namespace TaskFlow
             var imgProc = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_ImgProc };
             foreach (var (type, tag) in new[] {
                 (TaskType.ImgCrop, "ImgCrop"), (TaskType.ImgTemplateMatch, "ImgTemplateMatch"),
+                (TaskType.ImgOnnxDetect, "ImgOnnxDetect"),
                 (TaskType.ImgOcr, "ImgOcr"), (TaskType.ImgColorDetect, "ImgColorDetect"),
                 (TaskType.ImgColorSegment, "ImgColorSegment"),
                 (TaskType.ImgPreprocess, "ImgPreprocess"), (TaskType.ImgBlobAnalysis, "ImgBlobAnalysis"),
@@ -891,6 +902,19 @@ namespace TaskFlow
                 dataProc.Items.Add(mi);
             }
             addBelow.Items.Add(dataProc);
+
+            // 浏览器操作
+            var browserOps = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_BrowserOps };
+            foreach (var (type, tag) in new[] {
+                (TaskType.BrowserGetText, "BrowserGetText"),
+                (TaskType.BrowserExecuteJs, "BrowserExecuteJs"),
+                (TaskType.BrowserWaitForElement, "BrowserWaitForElement") })
+            {
+                var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
+                mi.Click += AddTaskBelow_Click;
+                browserOps.Items.Add(mi);
+            }
+            addBelow.Items.Add(browserOps);
 
             // AI 操作
             var aiOps = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_AiOps };

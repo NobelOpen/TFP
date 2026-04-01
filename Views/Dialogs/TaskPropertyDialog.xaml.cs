@@ -161,6 +161,10 @@ namespace TaskFlow.Views.Dialogs
                     AddIntProperty("MaxMatchCount", TaskFlow.Resources.Strings.Prop_MaxMatchCount, matchCard.MaxMatchCount);
                     break;
 
+                case ImgOnnxDetectTaskCard detectCard:
+                    AddOnnxDetectProperties(detectCard);
+                    break;
+
                 case CallSubFlowTaskCard callSubFlowCard:
                     AddCallSubFlowProperties(callSubFlowCard);
                     break;
@@ -316,6 +320,18 @@ namespace TaskFlow.Views.Dialogs
 
                 case ArrayParseTaskCard arrayParseCard:
                     AddArrayParseProperties(arrayParseCard);
+                    break;
+
+                case BrowserGetTextTaskCard browserGetCard:
+                    AddBrowserGetTextProperties(browserGetCard);
+                    break;
+
+                case BrowserExecuteJsTaskCard browserJsCard:
+                    AddBrowserExecuteJsProperties(browserJsCard);
+                    break;
+
+                case BrowserWaitForElementTaskCard browserWaitCard:
+                    AddBrowserWaitForElementProperties(browserWaitCard);
                     break;
             }
         }
@@ -873,7 +889,7 @@ namespace TaskFlow.Views.Dialogs
             };
 
             // 加载模型列表并绑定
-            TaskFlow.Helpers.LlmModelManager.Load();
+
             modelCombo.ItemsSource = TaskFlow.Helpers.LlmModelManager.Models;
 
             if (!string.IsNullOrEmpty(card.ModelId))
@@ -940,7 +956,7 @@ namespace TaskFlow.Views.Dialogs
             };
 
             // 加载模型列表并绑定
-            TaskFlow.Helpers.LlmModelManager.Load();
+
             modelCombo.ItemsSource = TaskFlow.Helpers.LlmModelManager.Models;
 
             if (!string.IsNullOrEmpty(card.ModelId))
@@ -1446,6 +1462,28 @@ namespace TaskFlow.Views.Dialogs
             PropertyPanel.Children.Add(taskLabel); PropertyPanel.Children.Add(taskCombo); _propertyControls["SourceTaskIdForImage"] = taskCombo;
             PropertyPanel.Children.Add(fileLabel); PropertyPanel.Children.Add(fileGrid);
             UpdateVis(card.UseSourceTaskImage);
+        }
+
+        private void AddOnnxDetectProperties(ImgOnnxDetectTaskCard card)
+        {
+            AddImageSourceProperty_Generic(card.UseSourceTaskImage, card.SourceTaskIdForImage, card.ImageFilePath);
+
+            // 分割线
+            PropertyPanel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(Color.FromRgb(232, 230, 220)) });
+
+            var modelLabel = new TextBlock { Text = TaskFlow.Resources.Strings.Main_VisionModels, Style = FindResource("PropertyLabel") as Style };
+            var modelCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            modelCombo.DisplayMemberPath = "DisplayName";
+            modelCombo.SelectedValuePath = "Id";
+            modelCombo.ItemsSource = TaskFlow.Helpers.OnnxModelManager.Models;
+            modelCombo.SelectedValue = card.OnnxModelId;
+
+            PropertyPanel.Children.Add(modelLabel);
+            PropertyPanel.Children.Add(modelCombo);
+            _propertyControls["OnnxModelId"] = modelCombo;
+
+            AddTextProperty("FilterClassName", "过滤类别 (多选逗号分隔)", card.FilterClassName ?? "");
+            AddDoubleProperty("ConfidenceOverride", "置信度覆盖 (0=默认)", card.ConfidenceOverride);
         }
 
         private void AddImageSourcePropertyMatch(ImgTemplateMatchTaskCard card)
@@ -2028,6 +2066,18 @@ namespace TaskFlow.Views.Dialogs
                         SaveWinFindFileProperties(findFileCard);
                         break;
 
+                    case BrowserGetTextTaskCard browserGetCard:
+                        SaveBrowserGetTextProperties(browserGetCard);
+                        break;
+
+                    case BrowserExecuteJsTaskCard browserJsCard:
+                        SaveBrowserExecuteJsProperties(browserJsCard);
+                        break;
+
+                    case BrowserWaitForElementTaskCard browserWaitCard:
+                        SaveBrowserWaitForElementProperties(browserWaitCard);
+                        break;
+
                     case InputComboTaskCard comboCard:
                         SaveInputComboProperties(comboCard);
                         break;
@@ -2227,6 +2277,10 @@ namespace TaskFlow.Views.Dialogs
 
                     case ImgTemplateMatchTaskCard matchCard:
                         SaveTemplateMatchProperties(matchCard);
+                        break;
+
+                    case ImgOnnxDetectTaskCard detectCard:
+                        SaveOnnxDetectProperties(detectCard);
                         break;
 
                     case ImgOcrTaskCard ocrCard:
@@ -2486,6 +2540,22 @@ namespace TaskFlow.Views.Dialogs
                     setExpr(input);
                 }
             }
+        }
+
+        private void SaveOnnxDetectProperties(ImgOnnxDetectTaskCard card)
+        {
+            SaveGenericImageSource(card);
+
+            if (_propertyControls.TryGetValue("OnnxModelId", out var modelCtrl) && modelCtrl is ComboBox modelCombo)
+            {
+                card.OnnxModelId = modelCombo.SelectedValue as string;
+            }
+
+            if (GetStringValue("FilterClassName", out string filter))
+                card.FilterClassName = filter;
+
+            if (GetDoubleValue("ConfidenceOverride", out double conf))
+                card.ConfidenceOverride = conf;
         }
 
         private void SaveTemplateMatchProperties(ImgTemplateMatchTaskCard card)
@@ -3399,7 +3469,7 @@ namespace TaskFlow.Views.Dialogs
                 SelectedValuePath = "Id",
                 Margin = new Thickness(0, 0, 0, 8)
             };
-            TaskFlow.Helpers.LlmModelManager.Load();
+
             modelCombo.ItemsSource = TaskFlow.Helpers.LlmModelManager.Models;
             if (!string.IsNullOrEmpty(card.ModelId)) modelCombo.SelectedValue = card.ModelId;
             modelCombo.SelectionChanged += (s, e) =>
@@ -4089,6 +4159,121 @@ namespace TaskFlow.Views.Dialogs
             }
 
             if (GetIntValue("CharIntervalMs", out int interval)) card.CharIntervalMs = interval;
+        }
+
+        #endregion
+
+        #region 浏览器自动化属性
+
+        /// <summary>浏览器取文本：选择器类型、选择器表达式、属性名、CDP端口</summary>
+        private void AddBrowserGetTextProperties(BrowserGetTextTaskCard card)
+        {
+            // 选择器类型
+            var selectorTypeLabel = new TextBlock { Text = "选择器类型", Style = FindResource("PropertyLabel") as Style };
+            var selectorTypeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            selectorTypeCombo.Items.Add(new ComboBoxItem { Content = "CSS 选择器", Tag = BrowserSelectorType.Css });
+            selectorTypeCombo.Items.Add(new ComboBoxItem { Content = "XPath", Tag = BrowserSelectorType.XPath });
+            selectorTypeCombo.SelectedIndex = (int)card.SelectorType;
+            PropertyPanel.Children.Add(selectorTypeLabel);
+            PropertyPanel.Children.Add(selectorTypeCombo);
+            _propertyControls["SelectorType"] = selectorTypeCombo;
+
+            // 选择器表达式
+            AddTextProperty("Selector", "选择器表达式", card.Selector);
+
+            // 属性名（留空=innerText）
+            AddTextProperty("AttributeName", "属性名（留空表示取文本）", card.AttributeName);
+
+            // CDP 端口
+            AddIntProperty("CdpPort", "CDP 端口（默认 9222）", card.CdpPort);
+        }
+
+        private void SaveBrowserGetTextProperties(BrowserGetTextTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("SelectorType", out var stCtrl) && stCtrl is ComboBox stCombo
+                && stCombo.SelectedItem is ComboBoxItem stItem && stItem.Tag is BrowserSelectorType st)
+                card.SelectorType = st;
+
+            if (GetStringValue("Selector", out string sel)) card.Selector = sel;
+            if (GetStringValue("AttributeName", out string attr)) card.AttributeName = attr;
+            if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
+        }
+
+        /// <summary>浏览器执行脚本：JS脚本、CDP端口</summary>
+        private void AddBrowserExecuteJsProperties(BrowserExecuteJsTaskCard card)
+        {
+            // 脚本内容（多行文本框）
+            var scriptLabel = new TextBlock { Text = "要执行的 JavaScript", Style = FindResource("PropertyLabel") as Style };
+            var scriptBox = new TextBox
+            {
+                Text = card.Script,
+                Style = FindResource("PropertyTextBox") as Style,
+                AcceptsReturn = true,
+                MinHeight = 80,
+                VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+                TextWrapping = TextWrapping.Wrap
+            };
+            PropertyPanel.Children.Add(scriptLabel);
+            PropertyPanel.Children.Add(scriptBox);
+            _propertyControls["Script"] = scriptBox;
+
+            // CDP 端口
+            AddIntProperty("CdpPort", "CDP 端口（默认 9222）", card.CdpPort);
+        }
+
+        private void SaveBrowserExecuteJsProperties(BrowserExecuteJsTaskCard card)
+        {
+            if (GetStringValue("Script", out string script)) card.Script = script;
+            if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
+        }
+
+        /// <summary>浏览器等待元素：选择器类型/内容、等待模式、超时、CDP端口</summary>
+        private void AddBrowserWaitForElementProperties(BrowserWaitForElementTaskCard card)
+        {
+            // 选择器类型
+            var selectorTypeLabel = new TextBlock { Text = "选择器类型", Style = FindResource("PropertyLabel") as Style };
+            var selectorTypeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            selectorTypeCombo.Items.Add(new ComboBoxItem { Content = "CSS 选择器", Tag = BrowserSelectorType.Css });
+            selectorTypeCombo.Items.Add(new ComboBoxItem { Content = "XPath", Tag = BrowserSelectorType.XPath });
+            selectorTypeCombo.SelectedIndex = (int)card.SelectorType;
+            PropertyPanel.Children.Add(selectorTypeLabel);
+            PropertyPanel.Children.Add(selectorTypeCombo);
+            _propertyControls["SelectorType"] = selectorTypeCombo;
+
+            // 选择器表达式
+            AddTextProperty("Selector", "选择器表达式", card.Selector);
+
+            // 等待模式
+            var waitModeLabel = new TextBlock { Text = "等待模式", Style = FindResource("PropertyLabel") as Style };
+            var waitModeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            waitModeCombo.Items.Add(new ComboBoxItem { Content = "等待元素出现（可见）", Tag = BrowserWaitMode.Visible });
+            waitModeCombo.Items.Add(new ComboBoxItem { Content = "等待元素消失（隐藏）", Tag = BrowserWaitMode.Hidden });
+            waitModeCombo.SelectedIndex = (int)card.WaitMode;
+            PropertyPanel.Children.Add(waitModeLabel);
+            PropertyPanel.Children.Add(waitModeCombo);
+            _propertyControls["WaitMode"] = waitModeCombo;
+
+            // 超时时间
+            AddIntProperty("TimeoutMs", "超时时间（毫秒）", card.TimeoutMs);
+
+            // CDP 端口
+            AddIntProperty("CdpPort", "CDP 端口（默认 9222）", card.CdpPort);
+        }
+
+        private void SaveBrowserWaitForElementProperties(BrowserWaitForElementTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("SelectorType", out var stCtrl) && stCtrl is ComboBox stCombo
+                && stCombo.SelectedItem is ComboBoxItem stItem && stItem.Tag is BrowserSelectorType st)
+                card.SelectorType = st;
+
+            if (GetStringValue("Selector", out string sel)) card.Selector = sel;
+
+            if (_propertyControls.TryGetValue("WaitMode", out var wmCtrl) && wmCtrl is ComboBox wmCombo
+                && wmCombo.SelectedItem is ComboBoxItem wmItem && wmItem.Tag is BrowserWaitMode wm)
+                card.WaitMode = wm;
+
+            if (GetIntValue("TimeoutMs", out int timeout)) card.TimeoutMs = timeout;
+            if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
         }
 
         #endregion

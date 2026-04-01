@@ -23,7 +23,7 @@ namespace TaskFlow
             System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
             System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
 
-            TaskFlow.Helpers.LlmModelManager.Load();
+
 
             EventManager.RegisterClassHandler(typeof(Window), Window.LoadedEvent, new RoutedEventHandler(OnWindowLoaded));
         }

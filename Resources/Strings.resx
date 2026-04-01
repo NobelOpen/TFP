@@ -189,6 +189,12 @@
   <data name="TaskType_ImgResize" xml:space="preserve">
     <value>Image Resize</value>
   </data>
+  <data name="TaskType_ImgOnnxDetect" xml:space="preserve">
+    <value>ONNX Detect</value>
+  </data>
+  <data name="Main_VisionModels" xml:space="preserve">
+    <value>Vision Models</value>
+  </data>
   <data name="TaskType_ExpressionEval" xml:space="preserve">
     <value>Expression Eval</value>
   </data>
@@ -373,6 +379,9 @@
   </data>
   <data name="Menu_AiOps" xml:space="preserve">
     <value>AI Operations</value>
+  </data>
+  <data name="Menu_BrowserOps" xml:space="preserve">
+    <value>Browser</value>
   </data>
   <data name="Menu_ControlFlow" xml:space="preserve">
     <value>Control Flow</value>
@@ -2675,5 +2684,14 @@ See our troubleshooting guide for more help.</value>
   </data>
   <data name="TaskType_CustomScript" xml:space="preserve">
     <value>Custom Script</value>
+  </data>
+  <data name="TaskType_BrowserGetText" xml:space="preserve">
+    <value>Browser Get Text</value>
+  </data>
+  <data name="TaskType_BrowserExecuteJs" xml:space="preserve">
+    <value>Browser Execute JS</value>
+  </data>
+  <data name="TaskType_BrowserWaitForElement" xml:space="preserve">
+    <value>Browser Wait Element</value>
   </data>
 </root>

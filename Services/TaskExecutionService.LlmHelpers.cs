@@ -27,7 +27,7 @@ namespace TaskFlow.Services
                 return false;
             }
 
-            TaskFlow.Helpers.LlmModelManager.Load();
+
             var modelConfig = TaskFlow.Helpers.LlmModelManager.Models.FirstOrDefault(m => m.Id == task.ModelId);
             if (modelConfig == null)
             {
@@ -183,7 +183,7 @@ namespace TaskFlow.Services
                 return false;
             }
 
-            TaskFlow.Helpers.LlmModelManager.Load();
+
             var modelConfig = TaskFlow.Helpers.LlmModelManager.Models.FirstOrDefault(m => m.Id == task.ModelId);
             if (modelConfig == null)
             {
@@ -429,7 +429,7 @@ namespace TaskFlow.Services
                 return false;
             }
 
-            TaskFlow.Helpers.LlmModelManager.Load();
+
             var modelConfig = TaskFlow.Helpers.LlmModelManager.Models.FirstOrDefault(m => m.Id == task.ModelId);
             if (modelConfig == null)
             {

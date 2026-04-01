@@ -461,12 +461,6 @@ namespace TaskFlow.ViewModels
             RecalculateIndentLevels();
         }
 
-        [RelayCommand]
-        private void RenameTask(TaskCardBase task)
-        {
-            // 重命名通过属性对话框处理
-        }
-
         /// <summary>
         /// 复制选中的任务卡片（序列化为 JSON 存储）
         /// </summary>
@@ -1010,6 +1004,7 @@ namespace TaskFlow.ViewModels
                 TaskType.ImgPreprocess => new ImgPreprocessTaskCard(),
                 TaskType.ImgBlobAnalysis => new ImgBlobAnalysisTaskCard(),
                 TaskType.ImgResize => new ImgResizeTaskCard(),
+                TaskType.ImgOnnxDetect => new ImgOnnxDetectTaskCard(),
                 TaskType.ExpressionEval => new ExpressionEvalTaskCard(),
                 TaskType.BreakLoop => new BreakLoopTaskCard(),
                 TaskType.StringSubstring => new StringSubstringTaskCard(),
@@ -1029,6 +1024,9 @@ namespace TaskFlow.ViewModels
                 TaskType.SubFlowInput => new SubFlowInputTaskCard(),
                 TaskType.SubFlowOutput => new SubFlowOutputTaskCard(),
                 TaskType.CustomScript => new CustomScriptTaskCard(),
+                TaskType.BrowserGetText => new BrowserGetTextTaskCard(),
+                TaskType.BrowserExecuteJs => new BrowserExecuteJsTaskCard(),
+                TaskType.BrowserWaitForElement => new BrowserWaitForElementTaskCard(),
                 _ => throw new ArgumentException($"Unsupported task type: {taskType}")
             };
         }

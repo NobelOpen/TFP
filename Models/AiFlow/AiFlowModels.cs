@@ -129,8 +129,6 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>截图目标进程名（如 msedge、notepad），为空时截全屏</summary>
         public string? ScreenshotTarget { get; set; }
 
-        /// <summary>AI 请求查看指定流程的详细卡片结构（按需加载）</summary>
-        public string? AnalyzeFlow { get; set; }
 
         /// <summary>失败回退策略：retry / fallback / abort（自主模式卡片失败时使用）</summary>
         public string? FailureStrategy { get; set; }
@@ -163,6 +161,55 @@ namespace TaskFlow.Models.AiFlow
 
         /// <summary>需要执行的 PowerShell 命令列表（可选，仅自主模式）</summary>
         public List<AiShellCommand>? ShellCommands { get; set; }
+
+        // ===== 便捷只读属性：避免多处重复判断方案有效性 =====
+
+        /// <summary>是否包含新建卡片步骤</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasSteps => Plan.Count > 0;
+
+        /// <summary>是否包含新建变量</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasVariables => Variables != null && Variables.Count > 0;
+
+        /// <summary>是否包含删除变量</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasDeleteVariables => DeleteVariables != null && DeleteVariables.Count > 0;
+
+        /// <summary>是否包含修改变量</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasModifyVariables => ModifyVariables != null && ModifyVariables.Count > 0;
+
+        /// <summary>是否包含修改卡片</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasModifyCards => ModifyCards != null && ModifyCards.Count > 0;
+
+        /// <summary>是否包含删除卡片</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasDeleteCards => DeleteCards != null && DeleteCards.Count > 0;
+
+        /// <summary>是否包含运行卡片</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasRunCards => RunCards != null && RunCards.Count > 0;
+
+        /// <summary>是否包含插入卡片</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasInsertCards => InsertCards != null && InsertCards.Count > 0;
+
+        /// <summary>是否包含流程级操作（创建/删除/切换流程）</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasFlowOps => (CreateFlows != null && CreateFlows.Count > 0)
+            || (DeleteFlows != null && DeleteFlows.Count > 0)
+            || !string.IsNullOrWhiteSpace(SwitchFlow);
+
+        /// <summary>是否包含 Shell 命令</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasShellCommands => ShellCommands != null && ShellCommands.Count > 0;
+
+        /// <summary>是否包含任何有效操作（卡片/变量/流程/命令）</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasAnyAction => HasSteps || HasVariables || HasDeleteVariables || HasModifyVariables
+            || HasModifyCards || HasDeleteCards || HasRunCards || HasInsertCards || HasFlowOps || HasShellCommands;
     }
 
     /// <summary>

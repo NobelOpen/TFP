@@ -81,44 +81,69 @@ namespace TaskFlow.Services
         private static string GetDisplayName(string taskType) =>
             _typeNames.TryGetValue(taskType, out var n) ? n : taskType;
 
-        /// <summary>转义 Markdown 表格单元格中的特殊字符并截断</summary>
-        private static string EscapeMd(string? text)
+        /// <summary>截断过长文本，用于方案列表展示</summary>
+        private static string TruncateText(string? text, int maxLen = 60)
         {
             if (string.IsNullOrEmpty(text)) return "";
-            var r = text.Replace("|", "\\|").Replace("\r\n", " ").Replace("\n", " ").Replace("\r", "");
-            return r.Length > 55 ? r[..52] + "…" : r;
+            var r = text.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", "");
+            return r.Length > maxLen ? r[..(maxLen - 3)] + "…" : r;
         }
 
         /// <summary>
-        /// 将步骤列表渲染为 Markdown 表格，支持嵌套控制流
+        /// 将步骤列表渲染为紧凑的 Markdown 列表，支持嵌套控制流
         /// </summary>
-        private void AppendStepsTable(StringBuilder sb, List<AiFlowPlanStep> steps)
+        private void AppendStepsList(StringBuilder sb, List<AiFlowPlanStep> steps, string indent = "")
         {
-            sb.AppendLine("| # | 类型 | 名称 | 说明 | 关键属性 |");
-            sb.AppendLine("|:--|:-----|:-----|:-----|:---------|");
             foreach (var step in steps)
-                AppendStepRows(sb, step, step.Step.ToString());
+                AppendStepItem(sb, step, indent);
         }
 
-        /// <summary>递归追加单个步骤行（含嵌套 If/Else/Loop）</summary>
-        private void AppendStepRows(StringBuilder sb, AiFlowPlanStep step, string stepNum)
+        /// <summary>递归追加单个步骤项（含嵌套 If/Else/Loop）</summary>
+        private void AppendStepItem(StringBuilder sb, AiFlowPlanStep step, string indent)
         {
             var typeName = GetDisplayName(step.TaskType);
-            var name     = EscapeMd(step.Name);
-            var desc     = EscapeMd(step.Description);
-            var propStr  = "";
+            var name = step.Name ?? "";
+
+            // 主行：编号 + 类型 + 名称
+            sb.Append($"{indent}{step.Step}. **{typeName}** — {name}");
+
+            // 如有说明，紧跟在后面（截断避免过长）
+            if (!string.IsNullOrWhiteSpace(step.Description))
+            {
+                var desc = TruncateText(step.Description, 80);
+                sb.Append($"：{desc}");
+            }
+            sb.AppendLine();
+
+            // 关键属性用缩进子项展示（最多 4 个）
             if (step.Properties.Count > 0)
             {
-                propStr = string.Join(" ", step.Properties
+                var filtered = step.Properties
                     .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
-                    .Take(3)
-                    .Select(kv => $"`{kv.Key}`={EscapeMd(kv.Value)}"));
+                    .Take(4);
+                foreach (var kv in filtered)
+                {
+                    var val = TruncateText(kv.Value, 50);
+                    sb.AppendLine($"{indent}   - `{kv.Key}` = `{val}`");
+                }
             }
-            sb.AppendLine($"| {stepNum} | {typeName} | {name} | {desc} | {propStr} |");
+
             // 嵌套分支
-            foreach (var s in step.IfBody   ?? new()) AppendStepRows(sb, s, "↳If");
-            foreach (var s in step.ElseBody ?? new()) AppendStepRows(sb, s, "↳Else");
-            foreach (var s in step.LoopBody ?? new()) AppendStepRows(sb, s, "↻");
+            if (step.IfBody != null && step.IfBody.Count > 0)
+            {
+                sb.AppendLine($"{indent}   **If 分支：**");
+                AppendStepsList(sb, step.IfBody, indent + "   ");
+            }
+            if (step.ElseBody != null && step.ElseBody.Count > 0)
+            {
+                sb.AppendLine($"{indent}   **Else 分支：**");
+                AppendStepsList(sb, step.ElseBody, indent + "   ");
+            }
+            if (step.LoopBody != null && step.LoopBody.Count > 0)
+            {
+                sb.AppendLine($"{indent}   **循环体：**");
+                AppendStepsList(sb, step.LoopBody, indent + "   ");
+            }
         }
 
         /// <summary>
@@ -128,9 +153,8 @@ namespace TaskFlow.Services
         {
             var sb = new StringBuilder();
 
-            // 方案摘要
-            if (!string.IsNullOrWhiteSpace(plan.Summary))
-                sb.AppendLine($"{plan.Summary}\n");
+            // 方案摘要：不再重复渲染 Summary，因为 AI 的流式回复（即 Summary 内容）
+            // 已经在 WebView2 中显示过了。重复渲染会导致用户看到两段一模一样的文字。
 
             // 计算本轮新建的子流程名集合
             var newFlowSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -157,7 +181,7 @@ namespace TaskFlow.Services
                 var badge = newFlowSet.Contains(targetName) ? "*(新建子流程)*" : "*(已有子流程)*";
                 sb.AppendLine($"### 📁 {targetName} {badge}");
                 sb.AppendLine();
-                AppendStepsTable(sb, plan.Plan);
+                AppendStepsList(sb, plan.Plan);
                 sb.AppendLine();
                 // 其他新建但无卡片的子流程
                 foreach (var fn in newFlowSet)
@@ -180,7 +204,7 @@ namespace TaskFlow.Services
                     var tabIcon = (currentTab?.Type == FlowType.SubFlow) ? "📁" : "🔷";
                     sb.AppendLine($"### {tabIcon} {tabName}");
                     sb.AppendLine();
-                    AppendStepsTable(sb, plan.Plan);
+                    AppendStepsList(sb, plan.Plan);
                     sb.AppendLine();
                 }
             }

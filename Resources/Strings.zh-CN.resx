@@ -85,6 +85,8 @@
   <data name="TaskType_ImgPreprocess" xml:space="preserve"><value>图像预处理</value></data>
   <data name="TaskType_ImgBlobAnalysis" xml:space="preserve"><value>Blob分析</value></data>
   <data name="TaskType_ImgResize" xml:space="preserve"><value>图像缩放</value></data>
+  <data name="TaskType_ImgOnnxDetect" xml:space="preserve"><value>ONNX定位</value></data>
+  <data name="Main_VisionModels" xml:space="preserve"><value>视觉</value></data>
   <data name="TaskType_ExpressionEval" xml:space="preserve"><value>表达式赋值</value></data>
   <data name="TaskType_StringSubstring" xml:space="preserve"><value>字符串截取</value></data>
   <data name="TaskType_TypeConvert" xml:space="preserve"><value>类型转换</value></data>
@@ -150,6 +152,7 @@
   <data name="Menu_ImgProc" xml:space="preserve"><value>图像处理</value></data>
   <data name="Menu_DataProc" xml:space="preserve"><value>数据处理</value></data>
   <data name="Menu_AiOps" xml:space="preserve"><value>AI 操作</value></data>
+  <data name="Menu_BrowserOps" xml:space="preserve"><value>浏览器操作</value></data>
   <data name="Menu_ControlFlow" xml:space="preserve"><value>控制流</value></data>
   <data name="Menu_IfElseBranch" xml:space="preserve"><value>If-Else分支</value></data>
   <data name="Menu_ForLoop" xml:space="preserve"><value>For循环</value></data>
@@ -953,4 +956,7 @@
   <data name="Prop_SubFlowInputY" xml:space="preserve"><value>传入Y坐标</value></data>
   <data name="Prop_SubFlowOutputResult" xml:space="preserve"><value>返回结果</value></data>
   <data name="TaskType_CustomScript" xml:space="preserve"><value>自定义脚本</value></data>
+  <data name="TaskType_BrowserGetText" xml:space="preserve"><value>浏览器取文本</value></data>
+  <data name="TaskType_BrowserExecuteJs" xml:space="preserve"><value>浏览器执行脚本</value></data>
+  <data name="TaskType_BrowserWaitForElement" xml:space="preserve"><value>浏览器等待元素</value></data>
 </root>

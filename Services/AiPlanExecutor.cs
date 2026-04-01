@@ -235,13 +235,14 @@ namespace TaskFlow.Services
                     _mainViewModel.AddLog($"[AI] 已创建 {varCreated} 个变量");
             }
 
-            // 修改已有卡片属性
+            // 修改已有卡片属性（支持跨流程：优先在目标流程查找，回退到当前流程）
             if (plan.ModifyCards != null && plan.ModifyCards.Count > 0)
             {
                 int cardModified = 0;
                 foreach (var mod in plan.ModifyCards)
                 {
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == mod.Order);
+                    var card = targetCards.FirstOrDefault(c => c.Order == mod.Order)
+                            ?? _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == mod.Order);
                     if (card == null)
                     {
                         AiFlowLogger.Warn($"卡片 #{mod.Order} 不存在，跳过修改");
@@ -282,16 +283,22 @@ namespace TaskFlow.Services
                     _mainViewModel.AddLog($"[AI] 已修改 {cardModified} 个卡片属性");
             }
 
-            // 删除指定卡片
+            // 删除指定卡片（支持跨流程：优先在目标流程查找，回退到当前流程）
             if (plan.DeleteCards != null && plan.DeleteCards.Count > 0)
             {
                 int cardDeleted = 0;
                 foreach (var order in plan.DeleteCards.OrderByDescending(o => o))
                 {
-                    var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
+                    // 优先在目标流程查找，回退到当前流程
+                    var card = targetCards.FirstOrDefault(c => c.Order == order)
+                            ?? _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
                     if (card != null)
                     {
-                        _mainViewModel.TaskCards.Remove(card);
+                        // 从对应的卡片集合中删除
+                        if (targetCards.Contains(card))
+                            targetCards.Remove(card);
+                        else
+                            _mainViewModel.TaskCards.Remove(card);
                         cardDeleted++;
                         AiFlowLogger.Info($"删除卡片 #{order}: {card.Name}");
                     }
@@ -648,10 +655,6 @@ namespace TaskFlow.Services
             // 调用卡片自身的属性填充方法（多态替代 switch）
             var missingProps = newCard.FillFromAiPlan(step, stepToCard);
 
-            // 自主模式下：对 WinClick 卡片应用标定校正
-            if (mode == AiAssistantMode.Autonomous && newCard is WinClickTaskCard click)
-                ApplyCalibrationToClick(click, step, modelId);
-
             foreach (var missing in missingProps)
             {
                 reports.Add(new AiFlowReportItem
@@ -712,10 +715,6 @@ namespace TaskFlow.Services
             // 调用卡片自身的属性填充方法
             var missingProps = card.FillFromAiPlan(step, stepToCard);
 
-            // 自主模式下：对 WinClick 卡片应用标定校正
-            if (mode == AiAssistantMode.Autonomous && card is WinClickTaskCard click)
-                ApplyCalibrationToClick(click, step, modelId);
-
             foreach (var missing in missingProps)
             {
                 reports.Add(new AiFlowReportItem
@@ -728,30 +727,6 @@ namespace TaskFlow.Services
             }
 
             return card;
-        }
-
-        /// <summary>
-        /// 自主模式下，对 WinClick 卡片的 AI 估算坐标应用标定校正
-        /// </summary>
-        private void ApplyCalibrationToClick(WinClickTaskCard click, AiFlowPlanStep step, string modelId)
-        {
-            if (click.StartX == 0 && click.StartY == 0) return;
-            if (step.SourceStep.HasValue) return; // 有坐标来源的不校正
-
-            var screenshotCard = _mainViewModel.TaskCards
-                .LastOrDefault(c => c is WinScreenshotTaskCard && c.OutputImage != null && !c.OutputImage.Empty());
-            if (screenshotCard?.OutputImage == null) return;
-
-            int imgW = screenshotCard.OutputImage.Width;
-            int imgH = screenshotCard.OutputImage.Height;
-            var cal = CalibrationService.GetCalibration(modelId, imgW, imgH);
-            if (cal != null)
-            {
-                var (cx, cy) = CalibrationService.CalibrateCoordinates(cal, click.StartX, click.StartY);
-                AiFlowLogger.Info($"标定校正: ({click.StartX},{click.StartY}) → ({cx},{cy})");
-                click.StartX = cx;
-                click.StartY = cy;
-            }
         }
 
         /// <summary>

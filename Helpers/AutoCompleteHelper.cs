@@ -317,6 +317,24 @@ namespace TaskFlow.Helpers
                 outputs.Add(new TaskOutput(Strings.AC_FilePath, "查找路径"));
             }
 
+            // 浏览器取文本输出：文本
+            if (task.TaskType == TaskType.BrowserGetText)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_OutputText, "文本"));
+            }
+
+            // 浏览器执行脚本输出：执行结果
+            if (task.TaskType == TaskType.BrowserExecuteJs)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_ExecResult, "执行结果"));
+            }
+
+            // 浏览器等待元素输出：执行结果 (true/false)
+            if (task.TaskType == TaskType.BrowserWaitForElement)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_ExecResult, "等待结果"));
+            }
+
             return outputs;
         }
 

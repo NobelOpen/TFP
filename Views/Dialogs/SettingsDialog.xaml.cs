@@ -45,7 +45,6 @@ namespace TaskFlow.Views.Dialogs
             ChkAutoSaveLog.Content = Strings.Settings_AutoSaveLog;
             TxtOrchidSection.Text = Strings.Settings_OrchidSection;
             ChkSingleStage.Content = Strings.Settings_SingleStage;
-            BtnViewCalibration.Content = Strings.Settings_ViewCalibration;
             TxtOcrSection.Text = Strings.UI_WeChatOcr;
             TxtOcrExeLabel.Text = Strings.UI_OcrExePath + ":";
             TxtOcrDirLabel.Text = Strings.UI_OcrDirPath + ":";
@@ -194,15 +193,6 @@ namespace TaskFlow.Views.Dialogs
                 ShowStyledMessage(Strings.Dlg_AutoDetect, msg, 
                     "⚠️", System.Windows.Media.Color.FromRgb(217, 119, 87), System.Windows.Media.Color.FromRgb(224, 136, 104));
             }
-        }
-
-        /// <summary>
-        /// 查看 Vision 坐标标定结果
-        /// </summary>
-        private void ViewCalibration_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new CalibrationResultsDialog { Owner = this };
-            dialog.ShowDialog();
         }
 
         private async void TestOcr_Click(object sender, RoutedEventArgs e)

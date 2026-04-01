@@ -409,6 +409,9 @@ namespace TaskFlow
                     AddOutputRow(TaskFlow.Resources.Strings.TaskType_CustomScript, scriptCard.OutputLog);
             }
 
+            // BrowserGetText / BrowserExecuteJs：取文本结果已通过通用 OutputText 行显示，无需额外行
+            // BrowserWaitForElement：等待结果已通过通用 OutputResult 行显示，无需额外行
+
             // ErrorMessage
             if (!string.IsNullOrEmpty(task.ErrorMessage))
             {

@@ -732,4 +732,89 @@ namespace TaskFlow.Models.TaskCards
             return TryBindImageSource(step, stepToCard);
         }
     }
+
+    /// <summary>
+    /// ONNX 目标检测任务卡片（YOLO 定位）
+    /// </summary>
+    public partial class ImgOnnxDetectTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.ImgOnnxDetect;
+
+        /// <summary>图像来源任务 ID</summary>
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForImage;
+
+        /// <summary>是否使用其他任务的输出图像</summary>
+        [ObservableProperty]
+        private bool _useSourceTaskImage;
+
+        /// <summary>图像文件路径（不使用其他任务时）</summary>
+        [ObservableProperty]
+        private string? _imageFilePath;
+
+        /// <summary>选择的 ONNX 模型 ID</summary>
+        [ObservableProperty]
+        private string? _onnxModelId;
+
+        /// <summary>过滤类别名称（为空则不过滤，逗号分隔）</summary>
+        [ObservableProperty]
+        private string? _filterClassName;
+
+        /// <summary>覆盖置信度阈值（为 0 则使用模型默认值）</summary>
+        [ObservableProperty]
+        private double _confidenceOverride;
+
+        // ===== 输出属性 =====
+
+        /// <summary>检测到的目标数量</summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _outputDetectionCount;
+
+        /// <summary>最高置信度目标的类别名称</summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string? _outputTopClassName;
+
+        /// <summary>最高置信度</summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private double _outputTopConfidence;
+
+        /// <summary>所有检测结果的坐标数组字符串（格式：x1,y1;x2,y2;...）</summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string? _outputDetectionsArray;
+
+        public ImgOnnxDetectTaskCard()
+        {
+            Name = "ONNX 目标定位";
+        }
+
+        public override bool OutputsImage => true;
+        public override bool OutputsBoolResult => true;
+        public override bool OutputsCoordinates => true;
+        public override bool OutputsArray => true;
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputDetectionCount = 0;
+            OutputTopClassName = null;
+            OutputTopConfidence = 0;
+            OutputDetectionsArray = null;
+        }
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return TryBindImageSource(step, stepToCard);
+        }
+    }
 }

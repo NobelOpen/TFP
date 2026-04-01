@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
 using TaskFlow.Models;
 
 namespace TaskFlow.Helpers
@@ -26,16 +24,6 @@ namespace TaskFlow.Helpers
         {
             Models = models ?? new List<LlmModelConfig>();
             NotifyModelsChanged();
-        }
-
-        public static void Load()
-        {
-            // 旧版系统独立保存机制已废弃，预留此空方法兼容现有调用。
-        }
-
-        public static void Save()
-        {
-            // 旧版系统独立保存机制已废弃，预留此空方法兼容现有调用。
         }
 
         public static LlmModelConfig GetModelById(string id)

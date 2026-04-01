@@ -115,6 +115,7 @@ namespace TaskFlow.Helpers
             {
                 ["variables"] = JArray.FromObject(variables),
                 ["models"] = JArray.FromObject(TaskFlow.Helpers.LlmModelManager.Models),
+                ["onnxModels"] = JArray.FromObject(TaskFlow.Helpers.OnnxModelManager.Models),
                 ["tabs"] = tabsArray
             };
             File.WriteAllText(filePath, wrapper.ToString(Formatting.Indented));
@@ -149,6 +150,16 @@ namespace TaskFlow.Helpers
                 else
                 {
                     TaskFlow.Helpers.LlmModelManager.Initialize(new List<TaskFlow.Models.LlmModelConfig>());
+                }
+
+                if (obj.ContainsKey("onnxModels"))
+                {
+                    var loadedOnnxModels = obj["onnxModels"]!.ToObject<List<TaskFlow.Models.OnnxModelConfig>>();
+                    TaskFlow.Helpers.OnnxModelManager.Initialize(loadedOnnxModels);
+                }
+                else
+                {
+                    TaskFlow.Helpers.OnnxModelManager.Initialize(new List<TaskFlow.Models.OnnxModelConfig>());
                 }
 
                 foreach (var tabToken in obj["tabs"]!)
@@ -230,7 +241,9 @@ namespace TaskFlow.Helpers
             // ImgColorDetectTaskCard
             "OutputMeanH", "OutputMeanS", "OutputMeanV", "OutputMatchRatio",
             // ImgBlobAnalysisTaskCard
-            "OutputBlobCount", "OutputBlobResults"
+            "OutputBlobCount", "OutputBlobResults",
+            // ImgOnnxDetectTaskCard
+            "OutputDetectionCount", "OutputTopClassName", "OutputTopConfidence", "OutputDetectionsArray"
         };
         public override TaskCardBase? ReadJson(JsonReader reader, Type objectType, TaskCardBase? existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
@@ -277,6 +290,7 @@ namespace TaskFlow.Helpers
                 TaskType.ImgPreprocess => new ImgPreprocessTaskCard(),
                 TaskType.ImgBlobAnalysis => new ImgBlobAnalysisTaskCard(),
                 TaskType.ImgResize => new ImgResizeTaskCard(),
+                TaskType.ImgOnnxDetect => new ImgOnnxDetectTaskCard(),
                 TaskType.ExpressionEval => new ExpressionEvalTaskCard(),
                 TaskType.BreakLoop => new BreakLoopTaskCard(),
                 TaskType.StringSubstring => new StringSubstringTaskCard(),

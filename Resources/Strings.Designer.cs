@@ -112,6 +112,7 @@ namespace TaskFlow.Resources {
         public static string TaskType_LlmVision => ResourceManager.GetString("TaskType_LlmVision", resourceCulture) ?? "Multimodal Vision";
         public static string TaskType_ArrayBuilder => ResourceManager.GetString("TaskType_ArrayBuilder", resourceCulture) ?? "Array Builder";
         public static string TaskType_LlmFileTranslate => ResourceManager.GetString("TaskType_LlmFileTranslate", resourceCulture) ?? "LLM File Translate";
+        public static string TaskType_ImgOnnxDetect => ResourceManager.GetString("TaskType_ImgOnnxDetect", resourceCulture) ?? "ONNX Detect";
 
         // ========== MainWindow ==========
         public static string Main_Title => ResourceManager.GetString("Main_Title", resourceCulture) ?? "TaskFlow";
@@ -125,6 +126,7 @@ namespace TaskFlow.Resources {
         public static string Main_Variables => ResourceManager.GetString("Main_Variables", resourceCulture) ?? "Variables";
         public static string Main_Flows => ResourceManager.GetString("Main_Flows", resourceCulture) ?? "Flows";
         public static string Main_Models => ResourceManager.GetString("Main_Models", resourceCulture) ?? "Models";
+        public static string Main_VisionModels => ResourceManager.GetString("Main_VisionModels", resourceCulture) ?? "Vision";
         public static string Main_RunOnce => ResourceManager.GetString("Main_RunOnce", resourceCulture) ?? "Run Once";
         public static string Main_RunCurrent => ResourceManager.GetString("Main_RunCurrent", resourceCulture) ?? "Run Current";
         public static string Main_RunCurrentFlow => ResourceManager.GetString("Main_RunCurrentFlow", resourceCulture) ?? "Run Current Flow";
@@ -168,6 +170,7 @@ namespace TaskFlow.Resources {
         public static string Menu_ImgProc => ResourceManager.GetString("Menu_ImgProc", resourceCulture) ?? "Image Processing";
         public static string Menu_DataProc => ResourceManager.GetString("Menu_DataProc", resourceCulture) ?? "Data Processing";
         public static string Menu_AiOps => ResourceManager.GetString("Menu_AiOps", resourceCulture) ?? "AI Operations";
+        public static string Menu_BrowserOps => ResourceManager.GetString("Menu_BrowserOps", resourceCulture) ?? "Browser";
         public static string Menu_ControlFlow => ResourceManager.GetString("Menu_ControlFlow", resourceCulture) ?? "Control Flow";
         public static string Menu_IfElseBranch => ResourceManager.GetString("Menu_IfElseBranch", resourceCulture) ?? "If-Else Branch";
         public static string Menu_ForLoop => ResourceManager.GetString("Menu_ForLoop", resourceCulture) ?? "For Loop";
@@ -983,5 +986,8 @@ namespace TaskFlow.Resources {
         public static string Main_NoImageHint => ResourceManager.GetString("Main_NoImageHint", resourceCulture) ?? "Awaiting visual signal...";
         public static string Main_NoLogsHint => ResourceManager.GetString("Main_NoLogsHint", resourceCulture) ?? "System ready, awaiting execution traces...";
         public static string TaskType_CustomScript => ResourceManager.GetString("TaskType_CustomScript", resourceCulture) ?? "Custom Script";
+        public static string TaskType_BrowserGetText => ResourceManager.GetString("TaskType_BrowserGetText", resourceCulture) ?? "Browser Get Text";
+        public static string TaskType_BrowserExecuteJs => ResourceManager.GetString("TaskType_BrowserExecuteJs", resourceCulture) ?? "Browser Execute JS";
+        public static string TaskType_BrowserWaitForElement => ResourceManager.GetString("TaskType_BrowserWaitForElement", resourceCulture) ?? "Browser Wait Element";
     }
 }

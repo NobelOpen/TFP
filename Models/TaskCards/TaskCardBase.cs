@@ -68,6 +68,7 @@ namespace TaskFlow.Models.TaskCards
         ImgPreprocess,
         ImgBlobAnalysis,
         ImgResize,
+        ImgOnnxDetect,
 
         // 逻辑判断
         ExpressionEval,
@@ -106,7 +107,12 @@ namespace TaskFlow.Models.TaskCards
         InputCombo,
 
         // 自定义脚本
-        CustomScript
+        CustomScript,
+
+        // 浏览器操作（基于 CDP 附着 Chrome）
+        BrowserGetText,
+        BrowserExecuteJs,
+        BrowserWaitForElement
     }
 
     /// <summary>
@@ -340,6 +346,7 @@ namespace TaskFlow.Models.TaskCards
             TaskType.ImgPreprocess => TaskFlow.Resources.Strings.TaskType_ImgPreprocess,
             TaskType.ImgBlobAnalysis => TaskFlow.Resources.Strings.TaskType_ImgBlobAnalysis,
             TaskType.ImgResize => TaskFlow.Resources.Strings.TaskType_ImgResize,
+            TaskType.ImgOnnxDetect => TaskFlow.Resources.Strings.TaskType_ImgOnnxDetect,
             TaskType.ExpressionEval => TaskFlow.Resources.Strings.TaskType_ExpressionEval,
             TaskType.StringSubstring => TaskFlow.Resources.Strings.TaskType_StringSubstring,
             TaskType.TypeConvert => TaskFlow.Resources.Strings.TaskType_TypeConvert,
@@ -355,6 +362,9 @@ namespace TaskFlow.Models.TaskCards
             TaskType.WinTextInput => TaskFlow.Resources.Strings.TaskType_WinTextInput,
             TaskType.InputCombo => TaskFlow.Resources.Strings.TaskType_InputCombo,
             TaskType.CustomScript => TaskFlow.Resources.Strings.TaskType_CustomScript,
+            TaskType.BrowserGetText => TaskFlow.Resources.Strings.TaskType_BrowserGetText,
+            TaskType.BrowserExecuteJs => TaskFlow.Resources.Strings.TaskType_BrowserExecuteJs,
+            TaskType.BrowserWaitForElement => TaskFlow.Resources.Strings.TaskType_BrowserWaitForElement,
             _ => type.ToString()
         };
 

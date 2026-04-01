@@ -47,7 +47,8 @@ namespace TaskFlow.Models.AiFlow
             TaskType.FileRead => TaskRiskLevel.Low,
             TaskType.GetTimestamp => TaskRiskLevel.Low,
             TaskType.PauseTask => TaskRiskLevel.Low,
-            TaskType.CustomScript => TaskRiskLevel.Low,
+            // CustomScript 可执行任意 C# 代码，必须归为高风险
+            TaskType.CustomScript => TaskRiskLevel.High,
             TaskType.AdbScreenshot => TaskRiskLevel.Low,
 
             // === 🟡 中风险：启动/关闭/交互操作 ===
@@ -64,6 +65,7 @@ namespace TaskFlow.Models.AiFlow
             TaskType.AdbDisconnect => TaskRiskLevel.Medium,
             TaskType.EventListener => TaskRiskLevel.Medium,
             TaskType.InputCombo => TaskRiskLevel.Medium,
+            TaskType.WinTextInput => TaskRiskLevel.Medium,
 
             // === 🔴 高风险：AI 模型调用（消耗资源/费用） ===
             TaskType.LlmTranslate => TaskRiskLevel.High,
