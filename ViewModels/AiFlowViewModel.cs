@@ -154,10 +154,10 @@ namespace TaskFlow.ViewModels
         private string _selectedModelId = "";
 
         /// <summary>
-        /// 当前 AI 助手模式
+        /// 当前 AI 助手模式（统一模式：始终为 Autonomous，保留字段仅为序列化兼容）
         /// </summary>
         [ObservableProperty]
-        private AiAssistantMode _currentMode = AiAssistantMode.Design;
+        private AiAssistantMode _currentMode = AiAssistantMode.Autonomous;
 
         /// <summary>
         /// 附件文件路径（图片或文件）
@@ -625,7 +625,8 @@ namespace TaskFlow.ViewModels
                     && !plan.HasModifyVariables && !plan.HasModifyCards && !plan.HasDeleteCards && !plan.HasRunCards
                     && !plan.HasInsertCards && !plan.HasFlowOps;
 
-                if (isShellOnly && CurrentMode == AiAssistantMode.Autonomous)
+                // 纯 shellCommands 方案（无卡片/变量操作）：直接执行，无需"确认创建"
+                if (isShellOnly)
                 {
                     // 流式内容已由 WebView2 渲染
                     AiFlowLogger.Info("纯 PowerShell 命令方案，直接执行...");
@@ -633,8 +634,7 @@ namespace TaskFlow.ViewModels
                     return;
                 }
 
-                // ===== 自主模式：低风险方案自动确认（免交互） =====
-                if (CurrentMode == AiAssistantMode.Autonomous)
+                // ===== 统一模式：低风险方案自动确认，中/高风险方案等待用户审批 =====
                 {
                     // 评估方案中所有新建卡片的最高风险级别（递归包含嵌套步骤）
                     var maxRisk = TaskRiskLevel.Low;
@@ -655,26 +655,22 @@ namespace TaskFlow.ViewModels
 
                     if (maxRisk == TaskRiskLevel.Low)
                     {
-                        // 全部低风险：显示方案文本（无确认按钮）后直接创建+执行
+                        // 全部低风险：自动确认并执行
                         var autoMsg = _serializer.FormatPlanAsText(plan);
                         AddMessage(AiChatRole.Assistant, autoMsg + "\n✅ 低风险操作，已自动确认");
 
-                        AiFlowLogger.Info("自主模式：方案全部为低风险，自动确认并执行...");
+                        AiFlowLogger.Info("方案全部为低风险，自动确认并执行...");
 
-                        // 直接走创建逻辑
                         var (createdCount, _) = _planExecutor.CreateTaskCardsFromPlan(plan, CurrentMode, SelectedModelId);
                         _mainViewModel.RecalculateIndentLevels();
                         MessagesUpdated?.Invoke();
 
-                        // 自动运行
                         if (plan.HasRunCards)
                         {
                             await ExecuteAutonomousLoopAsync(plan);
                         }
                         else if (!plan.Done && plan.HasSteps && createdCount > 0 && string.IsNullOrWhiteSpace(plan.TargetFlow))
                         {
-                            // 流程尚未完成，且创建了新卡片但 AI 没指定 runCards，自动把新卡片加入运行
-                            // 注意：只有卡片创建在当前主流程时才自动运行，子流程卡片需要通过 CallSubFlow 触发
                             var newOrders = _mainViewModel.TaskCards
                                 .OrderByDescending(c => c.Order)
                                 .Take(createdCount)
@@ -682,25 +678,23 @@ namespace TaskFlow.ViewModels
                                 .OrderBy(o => o)
                                 .ToList();
                             plan.RunCards = newOrders;
-                            AiFlowLogger.Info($"自主模式：自动运行新创建的 {createdCount} 张卡片...");
+                            AiFlowLogger.Info($"自动运行新创建的 {createdCount} 张卡片...");
                             await ExecuteAutonomousLoopAsync(plan);
                         }
                         else if (!plan.Done && plan.HasSteps && createdCount > 0 && !string.IsNullOrWhiteSpace(plan.TargetFlow))
                         {
-                            // 流程尚未完成，且子流程卡片已创建，但不能直接运行。进入自主循环让 AI 继续决策后续步骤
-                            // （如在主流程创建 CallSubFlow、设置参数等）
-                            AiFlowLogger.Info($"自主模式：子流程卡片已创建到 {plan.TargetFlow}，继续自主循环处理后续步骤...");
+                            AiFlowLogger.Info($"子流程卡片已创建到 {plan.TargetFlow}，继续自主循环处理后续步骤...");
                             await ExecuteAutonomousLoopAsync(plan);
                         }
                         return;
                     }
                     else
                     {
-                        AiFlowLogger.Info($"自主模式：方案含 {maxRisk} 风险操作，需用户确认...");
+                        AiFlowLogger.Info($"方案含 {maxRisk} 风险操作，需用户确认...");
                     }
                 }
 
-                // 显示方案（含确认/拒绝按钮）— 设计模式或中/高风险的自主模式
+                // 显示方案（含确认/拒绝按钮）— 中/高风险操作需用户审批
                 PendingPlan = plan;
                 var planMsg = _serializer.FormatPlanAsText(plan);
                 AddMessage(AiChatRole.Assistant, planMsg, plan);
@@ -780,12 +774,8 @@ namespace TaskFlow.ViewModels
                 foreach (var item in reports)
                     ReportItems.Add(item);
 
-                // 自主模式下不显示待配置报告（避免打断自动执行流程）
-                if (reports.Count > 0 && CurrentMode != AiAssistantMode.Autonomous)
-                {
-                    var reportText = _serializer.FormatReportAsText(createdCount, reports);
-                    AddMessage(AiChatRole.System, reportText, reportItems: reports);
-                }
+                // 中/高风险方案经用户审批后，不再显示待配置报告（避免打断执行流程）
+                // 报告项已通过 ReportItems 集合暴露，用户可随时查看
 
                 var currentPlan = PendingPlan;
                 PendingPlan = null;
@@ -825,10 +815,9 @@ namespace TaskFlow.ViewModels
                 {
                     await ExecuteAutonomousLoopAsync(currentPlan);
                 }
-                // 自主模式下：如果流程尚未完成，创建了新卡片但没有 runCards 时，自动将新卡片加入执行循环
-                else if (CurrentMode == AiAssistantMode.Autonomous && !currentPlan.Done && currentPlan.HasSteps && createdCount > 0)
+                // 流程尚未完成，创建了新卡片但没有 runCards，自动将新卡片加入执行循环
+                else if (!currentPlan.Done && currentPlan.HasSteps && createdCount > 0)
                 {
-                    // 收集新创建卡片的 order
                     var newOrders = _mainViewModel.TaskCards
                         .OrderByDescending(c => c.Order)
                         .Take(createdCount)
@@ -837,13 +826,13 @@ namespace TaskFlow.ViewModels
                         .ToList();
 
                     currentPlan.RunCards = newOrders;
-                    AiFlowLogger.Info($"自主模式：自动运行新创建的 {createdCount} 张卡片...");
+                    AiFlowLogger.Info($"自动运行新创建的 {createdCount} 张卡片...");
                     await ExecuteAutonomousLoopAsync(currentPlan);
                 }
-                // 自主模式下：仅有 shellCommands 时，直接执行并进入自主循环
-                else if (CurrentMode == AiAssistantMode.Autonomous && currentPlan.HasShellCommands)
+                // 仅有 shellCommands 时，直接执行并进入自主循环
+                else if (currentPlan.HasShellCommands)
                 {
-                    AiFlowLogger.Info("自主模式：执行 PowerShell 命令...");
+                    AiFlowLogger.Info("执行 PowerShell 命令...");
                     await ExecuteAutonomousLoopAsync(currentPlan);
                 }
             }

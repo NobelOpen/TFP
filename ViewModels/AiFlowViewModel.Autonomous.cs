@@ -495,28 +495,9 @@ namespace TaskFlow.ViewModels
 
                 if (safety.NeedsApproval)
                 {
-                    // 自主模式下无需二次批准（用户已确认方案），设计模式下需要批准
-                    if (CurrentMode != AiAssistantMode.Autonomous)
-                    {
-                        AiFlowLogger.Info($"[PowerShell] 需要批准: {cmd.Command}");
-                        var approved = await WaitForApprovalAsync(
-                            $"💻 PowerShell 执行请求：\n{cmd.Command}\n用途: {cmd.Description}", ct);
-
-                        if (!approved)
-                        {
-                            AiFlowLogger.Info("[PowerShell] 用户拒绝执行");
-                            results.Add((cmd, new PowerShellExecutorService.ShellResult
-                            {
-                                Success = false,
-                                Error = "用户拒绝执行"
-                            }));
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        AiFlowLogger.Info($"[PowerShell] 🟡 自主模式自动批准: {cmd.Command}");
-                    }
+                    // 统一模式：方案已通过风险评估（低风险自动确认 / 中高风险用户已审批），
+                    // Shell 命令无需二次批准
+                    AiFlowLogger.Info($"[PowerShell] 🟡 自动批准: {cmd.Command}");
                 }
                 else
                 {

@@ -272,22 +272,13 @@ namespace TaskFlow.Views.Panels
         }
 
         /// <summary>
-        /// 从 AppSettings 恢复模式选择
+        /// 统一模式：始终设置为 Autonomous（保留方法仅为向后兼容）
         /// </summary>
         private void RestoreModeFromSettings()
         {
-            try
-            {
-                var settings = AppSettings.Load();
-                var mode = (AiAssistantMode)settings.AiAssistantMode;
-                ModeComboBox.SelectedIndex = (int)mode;
-                if (_vm != null)
-                    _vm.CurrentMode = mode;
-            }
-            catch
-            {
-                ModeComboBox.SelectedIndex = 0;
-            }
+            ModeComboBox.SelectedIndex = 1; // Autonomous
+            if (_vm != null)
+                _vm.CurrentMode = AiAssistantMode.Autonomous;
         }
 
         /// <summary>
@@ -344,25 +335,11 @@ namespace TaskFlow.Views.Panels
         }
 
         /// <summary>
-        /// 模式选择变化
+        /// 模式选择变化（统一模式下已禁用 UI 切换，保留方法避免 XAML 绑定报错）
         /// </summary>
         private void ModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_vm == null) return;
-            if (ModeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag)
-            {
-                var mode = (AiAssistantMode)int.Parse(tag);
-                _vm.CurrentMode = mode;
-
-                // 持久化到设置
-                try
-                {
-                    var settings = AppSettings.Load();
-                    settings.AiAssistantMode = (int)mode;
-                    settings.Save();
-                }
-                catch { }
-            }
+            // 统一模式：忽略 UI 切换，始终保持 Autonomous
         }
 
         /// <summary>

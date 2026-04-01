@@ -282,9 +282,9 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 构建 Tool Use 工具定义（analyze_flow + submit_plan）
+        /// 构建 Tool Use 工具定义（统一模式：所有工具始终可用，安全由 TaskRiskClassifier 运行时把关）
         /// </summary>
-        private static JArray BuildToolDefinitions(AiAssistantMode mode)
+        private static JArray BuildToolDefinitions()
         {
             var tools = new JArray();
 
@@ -338,14 +338,11 @@ namespace TaskFlow.Services
                 ["switchFlow"] = new JObject { ["type"] = "string", ["description"] = "[可选] 切换 UI 显示到的目标流程名，纯 UI 操作，不影响卡片创建位置。通常在工作完成后设置以让用户看到结果。" }
             };
 
-            // 自主模式额外参数（submit_plan 内）
-            if (mode == AiAssistantMode.Autonomous)
-            {
-                planProps["runCards"] = new JObject { ["type"] = "array", ["description"] = "要运行的卡片序号", ["items"] = new JObject { ["type"] = "integer" } };
-                planProps["done"] = new JObject { ["type"] = "boolean", ["description"] = "自主任务是否全部完成" };
-                planProps["failureStrategy"] = new JObject { ["type"] = "string", ["description"] = "失败策略: retry/fallback/abort" };
-                planProps["fallbackPlan"] = new JObject { ["type"] = "array", ["description"] = "回退备选方案", ["items"] = new JObject { ["type"] = "object" } };
-            }
+            // 执行控制参数（统一内含，AI 视需要使用）
+            planProps["runCards"] = new JObject { ["type"] = "array", ["description"] = "要运行的卡片序号", ["items"] = new JObject { ["type"] = "integer" } };
+            planProps["done"] = new JObject { ["type"] = "boolean", ["description"] = "自主任务是否全部完成" };
+            planProps["failureStrategy"] = new JObject { ["type"] = "string", ["description"] = "失败策略: retry/fallback/abort" };
+            planProps["fallbackPlan"] = new JObject { ["type"] = "array", ["description"] = "回退备选方案", ["items"] = new JObject { ["type"] = "object" } };
 
             tools.Add(new JObject
             {
@@ -362,67 +359,63 @@ namespace TaskFlow.Services
                 }
             });
 
-            // 自主模式独有工具
-            if (mode == AiAssistantMode.Autonomous)
+            // 工具: execute_shell —— 执行 PowerShell 命令
+            tools.Add(new JObject
             {
-                // 工具3: execute_shell —— 执行 PowerShell 命令
-                tools.Add(new JObject
+                ["type"] = "function",
+                ["function"] = new JObject
                 {
-                    ["type"] = "function",
-                    ["function"] = new JObject
+                    ["name"] = "execute_shell",
+                    ["description"] = "执行 PowerShell 命令。当任务卡片的功能无法满足需求时使用（如查询系统信息、文件操作、安装依赖等）。优先使用任务卡片，只有卡片无法实现时才调用此工具。每次最多 3 条命令。",
+                    ["parameters"] = new JObject
                     {
-                        ["name"] = "execute_shell",
-                        ["description"] = "执行 PowerShell 命令。当任务卡片的功能无法满足需求时使用（如查询系统信息、文件操作、安装依赖等）。优先使用任务卡片，只有卡片无法实现时才调用此工具。每次最多 3 条命令。",
-                        ["parameters"] = new JObject
+                        ["type"] = "object",
+                        ["properties"] = new JObject
                         {
-                            ["type"] = "object",
-                            ["properties"] = new JObject
+                            ["commands"] = new JObject
                             {
-                                ["commands"] = new JObject
+                                ["type"] = "array",
+                                ["description"] = "要执行的命令列表",
+                                ["items"] = new JObject
                                 {
-                                    ["type"] = "array",
-                                    ["description"] = "要执行的命令列表",
-                                    ["items"] = new JObject
+                                    ["type"] = "object",
+                                    ["properties"] = new JObject
                                     {
-                                        ["type"] = "object",
-                                        ["properties"] = new JObject
-                                        {
-                                            ["command"] = new JObject { ["type"] = "string", ["description"] = "PowerShell 命令" },
-                                            ["description"] = new JObject { ["type"] = "string", ["description"] = "命令用途说明" },
-                                            ["timeout"] = new JObject { ["type"] = "integer", ["description"] = "超时时间（秒），默认 10，最大 30" }
-                                        },
-                                        ["required"] = new JArray("command", "description")
-                                    }
+                                        ["command"] = new JObject { ["type"] = "string", ["description"] = "PowerShell 命令" },
+                                        ["description"] = new JObject { ["type"] = "string", ["description"] = "命令用途说明" },
+                                        ["timeout"] = new JObject { ["type"] = "integer", ["description"] = "超时时间（秒），默认 10，最大 30" }
+                                    },
+                                    ["required"] = new JArray("command", "description")
                                 }
-                            },
-                            ["required"] = new JArray("commands")
-                        }
+                            }
+                        },
+                        ["required"] = new JArray("commands")
                     }
-                });
+                }
+            });
 
-                // 工具4: request_screenshot —— 请求截取屏幕
-                tools.Add(new JObject
+            // 工具: request_screenshot —— 请求截取屏幕
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
                 {
-                    ["type"] = "function",
-                    ["function"] = new JObject
+                    ["name"] = "request_screenshot",
+                    ["description"] = "请求截取屏幕或指定窗口的截图。只在需要查看屏幕内容时使用（如估算坐标、分析界面状态）。不需要视觉信息时不要调用。",
+                    ["parameters"] = new JObject
                     {
-                        ["name"] = "request_screenshot",
-                        ["description"] = "请求截取屏幕或指定窗口的截图。只在需要查看屏幕内容时使用（如估算坐标、分析界面状态）。不需要视觉信息时不要调用。",
-                        ["parameters"] = new JObject
+                        ["type"] = "object",
+                        ["properties"] = new JObject
                         {
-                            ["type"] = "object",
-                            ["properties"] = new JObject
+                            ["target"] = new JObject
                             {
-                                ["target"] = new JObject
-                                {
-                                    ["type"] = "string",
-                                    ["description"] = "截图目标进程名（如 msedge、notepad），留空或省略则截全屏"
-                                }
+                                ["type"] = "string",
+                                ["description"] = "截图目标进程名（如 msedge、notepad），留空或省略则截全屏"
                             }
                         }
                     }
-                });
-            }
+                }
+            });
 
             // ===== 以下工具在所有模式下均可用（只读零风险操作） =====
 
@@ -565,10 +558,8 @@ namespace TaskFlow.Services
 如果用户在询问关于已有流程的问题（如分析、审查、解释），先调用 analyze_flow 获取详情再回答。
 如果用户想在已有流程基础上追加新步骤，请只生成新增的步骤（不要重复已有步骤），step 编号从已有流程之后继续。";
 
-            // 根据模式加载对应的模式指令模板
-            var modeTemplate = mode == AiAssistantMode.Autonomous
-                ? LoadPromptTemplate("ModeAutonomous.md")
-                : LoadPromptTemplate("ModeDesign.md");
+            // 统一模式：始终加载全功能模式指令（mode 参数已废弃，保留仅为 API 兼容）
+            var modeTemplate = LoadPromptTemplate("ModeAutonomous.md");
 
             // 从模板文件加载阶段2系统 Prompt，填充占位符
             var baseTemplate = LoadPromptTemplate("SystemBase.md");
@@ -632,8 +623,8 @@ namespace TaskFlow.Services
                 AiFlowLogger.Info("已附加 Assistant Prefill 断点续写内容进行引导");
             }
 
-            // 构建工具定义
-            var tools = BuildToolDefinitions(mode);
+            // 构建工具定义（统一模式，所有工具始终可用）
+            var tools = BuildToolDefinitions();
 
             // 使用 JObject 构建请求体以便注入 tools
             var requestObj = new JObject

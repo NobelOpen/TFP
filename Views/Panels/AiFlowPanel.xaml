@@ -680,11 +680,12 @@
                         <TextBlock Text="📎" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,2"/>
                     </Button>
 
-                    <!-- 模式选择 -->
+                    <!-- 模式选择（统一模式后已隐藏） -->
                     <ComboBox Grid.Column="1" x:Name="ModeComboBox"
                               SelectionChanged="ModeComboBox_SelectionChanged"
                               Style="{StaticResource FlatComboBoxStyle}"
                               Margin="0,0,8,0"
+                              Visibility="Collapsed"
                               ToolTip="切换 AI 工作模式">
                         <ComboBoxItem Content="Design" Tag="0"/>
                         <ComboBoxItem Content="Autonomous" Tag="1"/>
