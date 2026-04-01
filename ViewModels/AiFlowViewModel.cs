@@ -580,9 +580,9 @@ namespace TaskFlow.ViewModels
                 };
 
                 var (plan, tokens2In, tokens2Out, isTruncated) = await _service.GeneratePlanAsync(
-                    userInput, categories, SelectedModelId, _cts.Token, currentFlowContext, history, CurrentMode,
-                    imageBase64List.Count > 0 ? imageBase64List : null,
-                    onDelta, onThinking,
+                    userInput, categories, SelectedModelId, _cts.Token, currentFlowContext, history,
+                    imageBase64List: imageBase64List.Count > 0 ? imageBase64List : null,
+                    onDelta: onDelta, onThinking: onThinking,
                     onStatus: status => { LoadingText = status; },
                     getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                     captureScreenshot: async target => await CaptureScreenForAiAsync(

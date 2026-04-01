@@ -325,8 +325,8 @@ namespace TaskFlow.ViewModels
                         {
                             var result = await _service.GeneratePlanAsync(
                                 autonomousPrompt.ToString(),
-                                categories, SelectedModelId, _cts.Token, flowContext, history, AiAssistantMode.Autonomous,
-                                autoImageList,
+                                categories, SelectedModelId, _cts.Token, flowContext, history,
+                                imageBase64List: autoImageList,
                                 onDelta: delta =>
                                 {
                                     loopStreamBuilder.Append(delta);

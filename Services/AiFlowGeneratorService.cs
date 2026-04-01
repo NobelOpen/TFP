@@ -315,9 +315,14 @@ namespace TaskFlow.Services
                             {
                                 ["type"] = "integer",
                                 ["description"] = "最多返回多少个卡片（默认 2000，用于超大流程分页）"
+                            },
+                            ["thought"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "调用此工具前的思考过程（必须提供）"
                             }
                         },
-                        ["required"] = new JArray("flow_name")
+                        ["required"] = new JArray("flow_name", "thought")
                     }
                 }
             });
@@ -335,7 +340,8 @@ namespace TaskFlow.Services
                 ["createFlows"] = new JObject { ["type"] = "array", ["description"] = "创建新流程: [{name}]，系统会自动添加 SUB_ 前缀并标记为子流程类型", ["items"] = new JObject { ["type"] = "object" } },
                 ["deleteFlows"] = new JObject { ["type"] = "array", ["description"] = "删除的流程名列表", ["items"] = new JObject { ["type"] = "string" } },
                 ["targetFlow"] = new JObject { ["type"] = "string", ["description"] = "plan 步骤的目标流程名。指定后，plan 中的卡片将直接创建在该流程中，无需切换 UI 标签页。留空则创建在当前流程。" },
-                ["switchFlow"] = new JObject { ["type"] = "string", ["description"] = "[可选] 切换 UI 显示到的目标流程名，纯 UI 操作，不影响卡片创建位置。通常在工作完成后设置以让用户看到结果。" }
+                ["switchFlow"] = new JObject { ["type"] = "string", ["description"] = "[可选] 切换 UI 显示到的目标流程名，纯 UI 操作，不影响卡片创建位置。通常在工作完成后设置以让用户看到结果。" },
+                ["thought"] = new JObject { ["type"] = "string", ["description"] = "设计或执行前的思考决策过程（必须提供）" }
             };
 
             // 执行控制参数（统一内含，AI 视需要使用）
@@ -387,9 +393,10 @@ namespace TaskFlow.Services
                                     },
                                     ["required"] = new JArray("command", "description")
                                 }
-                            }
+                            },
+                            ["thought"] = new JObject { ["type"] = "string", ["description"] = "决定执行此 Shell 脚本的思考过程（必须提供）" }
                         },
-                        ["required"] = new JArray("commands")
+                        ["required"] = new JArray("commands", "thought")
                     }
                 }
             });
@@ -411,8 +418,14 @@ namespace TaskFlow.Services
                             {
                                 ["type"] = "string",
                                 ["description"] = "截图目标进程名（如 msedge、notepad），留空或省略则截全屏"
+                            },
+                            ["thought"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "为什么以及需要截图的哪个区域（思考过程必须提供）"
                             }
-                        }
+                        },
+                        ["required"] = new JArray("thought")
                     }
                 }
             });
@@ -446,9 +459,14 @@ namespace TaskFlow.Services
                             {
                                 ["type"] = "integer",
                                 ["description"] = "最多返回行数（默认 200，最大 500）"
+                            },
+                            ["thought"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "为什么需要读取此文件（思考过程必须提供）"
                             }
                         },
-                        ["required"] = new JArray("file_path")
+                        ["required"] = new JArray("file_path", "thought")
                     }
                 }
             });
@@ -475,9 +493,14 @@ namespace TaskFlow.Services
                             {
                                 ["type"] = "boolean",
                                 ["description"] = "是否递归列出子目录（默认 false，最深 3 层）"
+                            },
+                            ["thought"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "为什么需要列出此目录（思考过程必须提供）"
                             }
                         },
-                        ["required"] = new JArray("path")
+                        ["required"] = new JArray("path", "thought")
                     }
                 }
             });
@@ -514,9 +537,14 @@ namespace TaskFlow.Services
                             {
                                 ["type"] = "string",
                                 ["description"] = "文件名过滤模式（如 *.cs, *.json），默认搜索所有文本文件"
+                            },
+                            ["thought"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "搜索目的的思考过程（必须提供）"
                             }
                         },
-                        ["required"] = new JArray("path", "query")
+                        ["required"] = new JArray("path", "query", "thought")
                     }
                 }
             });
@@ -558,16 +586,12 @@ namespace TaskFlow.Services
 如果用户在询问关于已有流程的问题（如分析、审查、解释），先调用 analyze_flow 获取详情再回答。
 如果用户想在已有流程基础上追加新步骤，请只生成新增的步骤（不要重复已有步骤），step 编号从已有流程之后继续。";
 
-            // 统一模式：始终加载全功能模式指令（mode 参数已废弃，保留仅为 API 兼容）
-            var modeTemplate = LoadPromptTemplate("ModeAutonomous.md");
-
-            // 从模板文件加载阶段2系统 Prompt，填充占位符
+            // 从模板文件加载系统 Prompt（XML 标签化结构），填充占位符
             var baseTemplate = LoadPromptTemplate("SystemBase.md");
             var systemPrompt = RenderTemplate(baseTemplate, new Dictionary<string, string>
             {
                 ["卡片描述"] = detailedCards,
-                ["流程上下文"] = flowContextSection,
-                ["模式指令"] = modeTemplate
+                ["流程上下文"] = flowContextSection
             });
 
             // 构建消息数组（含历史对话）
