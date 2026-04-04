@@ -12,7 +12,7 @@ namespace TaskFlow.Services
 {
     public interface IScreenshotService
     {
-        Task<(bool Success, Mat? Image, string? Error)> CaptureWindowAsync(string processName, bool includeTitleBar = true, int cropTopHeight = 0);
+        Task<(bool Success, Mat? Image, int OffsetX, int OffsetY, string? Error)> CaptureWindowAsync(string processName, bool includeTitleBar = true, int cropTopHeight = 0);
     }
 
     public class ScreenshotService : IScreenshotService
@@ -68,9 +68,9 @@ namespace TaskFlow.Services
 
         #endregion
 
-        public async Task<(bool Success, Mat? Image, string? Error)> CaptureWindowAsync(string processName, bool includeTitleBar = true, int cropTopHeight = 0)
+        public async Task<(bool Success, Mat? Image, int OffsetX, int OffsetY, string? Error)> CaptureWindowAsync(string processName, bool includeTitleBar = true, int cropTopHeight = 0)
         {
-            return await Task.Run<(bool Success, Mat? Image, string? Error)>(() =>
+            return await Task.Run<(bool Success, Mat? Image, int OffsetX, int OffsetY, string? Error)>(() =>
             {
                 try
                 {
@@ -85,7 +85,7 @@ namespace TaskFlow.Services
 
                         if (deskWidth <= 0 || deskHeight <= 0)
                         {
-                            return (false, null, "无法获取屏幕尺寸");
+                            return (false, null, 0, 0, "无法获取屏幕尺寸");
                         }
 
                         using var deskBitmap = new Bitmap(deskWidth, deskHeight, PixelFormat.Format32bppArgb);
@@ -110,17 +110,17 @@ namespace TaskFlow.Services
 
                         if (deskMat.Empty())
                         {
-                            return (false, null, "图像转换失败");
+                            return (false, null, 0, 0, "图像转换失败");
                         }
 
-                        return (true, deskMat, (string?)null);
+                        return (true, deskMat, deskLeft, deskTop, (string?)null);
                     }
 
                     // 查找进程
                     var processes = Process.GetProcessesByName(processName);
                     if (processes.Length == 0)
                     {
-                        return (false, null, $"找不到进程: {processName}");
+                        return (false, null, 0, 0, $"找不到进程: {processName}");
                     }
 
                     var process = processes[0];
@@ -131,27 +131,30 @@ namespace TaskFlow.Services
 
                     if (hWnd == IntPtr.Zero)
                     {
-                        return (false, null, $"无法获取窗口句柄: {processName}");
+                        return (false, null, 0, 0, $"无法获取窗口句柄: {processName}");
                     }
 
                     // 检查窗口是否最小化
                     if (IsIconic(hWnd))
                     {
-                        return (false, null, $"窗口已最小化: {processName}");
+                        return (false, null, 0, 0, $"窗口已最小化: {processName}");
                     }
 
                     // 获取窗口尺寸
                     if (!GetWindowRect(hWnd, out RECT rect))
                     {
-                        return (false, null, "无法获取窗口尺寸");
+                        return (false, null, 0, 0, "无法获取窗口尺寸");
                     }
+
+                    int globalOffsetX = rect.Left;
+                    int globalOffsetY = rect.Top;
 
                     int width = rect.Right - rect.Left;
                     int height = rect.Bottom - rect.Top;
 
                     if (width <= 0 || height <= 0)
                     {
-                        return (false, null, "窗口尺寸无效");
+                        return (false, null, 0, 0, "窗口尺寸无效");
                     }
 
                     // 使用PrintWindow截图（可以截取被遮挡的窗口）
@@ -187,7 +190,7 @@ namespace TaskFlow.Services
 
                     if (mat.Empty())
                     {
-                        return (false, null, "图像转换失败");
+                        return (false, null, 0, 0, "图像转换失败");
                     }
 
                     // 如果不包含标题栏，裁剪出客户区域
@@ -215,6 +218,8 @@ namespace TaskFlow.Services
                                 var cropped = new Mat(mat, roi).Clone(); // Clone 获得独立内存，避免悬空引用
                                 mat.Dispose();
                                 mat = cropped;
+                                globalOffsetX += offsetX;
+                                globalOffsetY += offsetY;
                             }
                         }
                     }
@@ -226,13 +231,14 @@ namespace TaskFlow.Services
                         var cropped = new Mat(mat, roi).Clone(); // Clone 获得独立内存，避免悬空引用
                         mat.Dispose();
                         mat = cropped;
+                        globalOffsetY += cropTopHeight;
                     }
 
-                    return (true, mat, (string?)null);
+                    return (true, mat, globalOffsetX, globalOffsetY, (string?)null);
                 }
                 catch (Exception ex)
                 {
-                    return (false, null, ex.Message);
+                    return (false, null, 0, 0, ex.Message);
                 }
             });
         }

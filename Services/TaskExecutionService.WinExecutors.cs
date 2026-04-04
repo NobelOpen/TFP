@@ -95,6 +95,9 @@ namespace TaskFlow.Services
             {
                 x = markPos.X;
                 y = markPos.Y;
+                // 反写回 UI，避免在界面上始终显示为 0
+                task.StartX = x;
+                task.StartY = y;
                 Log($"[{DateTime.Now:HH:mm:ss}] [SoM] MarkId={task.MarkId} → 查表得精确桌面坐标: ({x}, {y})");
             }
             else if (task.MarkId > 0)

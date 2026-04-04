@@ -39,9 +39,13 @@ namespace TaskFlow.Models
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TaskFlow", "onnx_models");
 
+        /// <summary>强行指定绝对路径（优先级高于ModelsDir）</summary>
+        [JsonIgnore]
+        public string? AbsolutePath { get; set; }
+
         /// <summary>模型文件完整路径</summary>
         [JsonIgnore]
-        public string FilePath => Path.Combine(ModelsDir, FileName);
+        public string FilePath => !string.IsNullOrEmpty(AbsolutePath) ? AbsolutePath : Path.Combine(ModelsDir, FileName);
 
         /// <summary>类别标签数组</summary>
         [JsonIgnore]

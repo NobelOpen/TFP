@@ -700,7 +700,7 @@ namespace TaskFlow.Services
             Action<string>? onThinking = null,
             Action<string?>? onStatus = null,
             Func<string, int, int, string?>? getFlowDetail = null,
-            Func<string, Task<(string? Base64, int Width, int Height)>>? captureScreenshot = null,
+            Func<string, Task<(string? Base64, int Width, int Height, int OffsetX, int OffsetY)>>? captureScreenshot = null,
             Func<int, bool, bool, Task<(string? Base64, int Width, int Height, string? MarkMappingsText)>>? captureBrowserScreenshot = null,
             Func<int, Task<(string? Base64, int Width, int Height)>>? captureCardImage = null,
             string? prefillAssistantMessage = null)
@@ -1050,7 +1050,7 @@ namespace TaskFlow.Services
                             AiFlowLogger.Info($"[ToolUse] request_screenshot(target=\"{target}\", annotate={useAnnotate}) → 截图中...");
 
                             onStatus?.Invoke("正在截取屏幕...");
-                            var (base64, sw, sh) = await captureScreenshot(target);
+                            var (base64, sw, sh, offsetX, offsetY) = await captureScreenshot(target);
 
                             if (base64 == null)
                             {
@@ -1069,6 +1069,48 @@ namespace TaskFlow.Services
                                 {
                                     using var onnxSvc = new OnnxDetectionService();
                                     var uiModel = TaskFlow.Helpers.OnnxModelManager.Models.FirstOrDefault();
+                                    if (uiModel == null)
+                                    {
+                                        // 优先使用 OmniParser icon_detect 模型（专门训练于 UI 元素检测）
+                                        var omniParserPath = System.IO.Path.Combine(
+                                            TaskFlow.Models.OnnxModelConfig.ModelsDir, "OmniParser_icon_detect.onnx");
+                                        if (System.IO.File.Exists(omniParserPath))
+                                        {
+                                            uiModel = new TaskFlow.Models.OnnxModelConfig
+                                            {
+                                                Id = "built-in-omniparser",
+                                                AbsolutePath = omniParserPath,
+                                                InputWidth = 640,
+                                                InputHeight = 640,
+                                                ConfidenceThreshold = 0.15,
+                                                IouThreshold = 0.45,
+                                                ClassLabels = "interactable"
+                                            };
+                                            AiFlowLogger.Info("[SoM] 使用 OmniParser icon_detect 模型（UI 元素专项检测）");
+                                        }
+                                        else
+                                        {
+                                            // 降级：使用通用 YOLO 模型（COCO 80 类，对 UI 元素识别率低）
+                                            var defaultYolo = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "yolov8n.onnx");
+                                            if (!System.IO.File.Exists(defaultYolo)) {
+                                                defaultYolo = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "yolov8n.onnx");
+                                            }
+                                            if (System.IO.File.Exists(defaultYolo))
+                                            {
+                                                uiModel = new TaskFlow.Models.OnnxModelConfig
+                                                {
+                                                    Id = "built-in-yolo",
+                                                    AbsolutePath = defaultYolo,
+                                                    InputWidth = 640,
+                                                    InputHeight = 640,
+                                                    ConfidenceThreshold = 0.15,
+                                                    IouThreshold = 0.45
+                                                };
+                                                AiFlowLogger.Warn("[SoM] OmniParser 模型不存在，降级使用通用 YOLO（UI 元素识别率可能较低）");
+                                            }
+                                        }
+                                    }
+
                                     if (uiModel != null)
                                     {
                                         using var srcMat = OpenCvSharp.Cv2.ImDecode(Convert.FromBase64String(base64), OpenCvSharp.ImreadModes.Color);
@@ -1079,7 +1121,7 @@ namespace TaskFlow.Services
                                         using var markedMat = srcMat.Clone();
                                         foreach (var det in dets)
                                         {
-                                            map[markIdx] = (det.X, det.Y);
+                                            map[markIdx] = (det.X + offsetX, det.Y + offsetY);
                                             int x1 = det.X - det.Width / 2;
                                             int y1 = det.Y - det.Height / 2;
                                             OpenCvSharp.Cv2.Rectangle(markedMat, new OpenCvSharp.Point(x1, y1), new OpenCvSharp.Point(x1 + det.Width, y1 + det.Height), new OpenCvSharp.Scalar(0, 0, 255), 2);

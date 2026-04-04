@@ -87,6 +87,7 @@ plan 参数中每个卡片步骤格式：
 2. 收到截图后，画面上的各个可交互元素会被自动识别并贴上红色数字编号 [ID]。
 3. 仔细查看截图，找到你想要点击的目标元素对应的数字编号。
 4. 创建 WinClick 卡片，在其 properties 中设置 `markId` 为对应的数字（例如 `markId=4`）。执行引擎会自动为你换算并执行点击。严禁自己估算并设置 `startX`/`startY` 参数！
+5. **针对性截图与回退机制**：如果全屏标注未能覆盖目标元素（即找不到对应的数字标签），你应该尝试指定 `target` 为该目标程序的进程名，进行针对性窗口截图标注，以提高检测率。**如果即使针对性截图后，依然没有任何标签覆盖目标按钮（例如截图返回 0 个标签或全在无关区域），绝对严禁瞎猜 markId，更严禁创建没有 markId 的空 WinClick 卡片（这会导致错误的 (0,0) 原点点击）！**此时你必须中止当前操作（设置 `failureStrategy` = `"abort"` 或直接报告完成），在明确文字中向用户解释：模型未能识别该应用的 UI 控件。请等待用户通过更换更好的视觉检测模型来解决。
 不要使用 WinUiAutomation 来点击桌面图标或视觉元素。
 （注意：如果仅仅是为了查看屏幕内容分析当前状态，而不需要接下来的点击操作，可以不开启 annotate 参数，以节约性能。）
 
@@ -174,8 +175,7 @@ PowerShell 集成：
 4. 在已有 IfElse/ForLoop 中插入卡片通过 insertCards 参数（targetBlockOrder + branch: if/else/loop）
 5. runCards 指定要运行的卡片序号。每轮只运行一批，运行后分析结果再决定下一批。所有完成后才设 done: true
 6. 流程管理：通过 createFlows/deleteFlows 管理多个流程 Tab；targetFlow 指定 plan 步骤的目标流程；switchFlow 是可选 UI 操作，仅切换标签页显示
-7. 点击界面元素时，结合截图分辨率直接估算坐标，在 WinClick 的 startX/startY 中设置
-8. ImgCrop 支持 properties 设置裁剪区域：roiX、roiY、roiWidth、roiHeight
+7. ImgCrop 支持 properties 设置裁剪区域：roiX、roiY、roiWidth、roiHeight
 9. sourceStep 用于建立步骤间的数据传递关系（当某步骤需要使用前面步骤输出的图像时设置）
 10. 删除变量通过 deleteVariables 参数，修改变量值通过 modifyVariables 参数
 11. 流程摘要中的 [ID: ...] 供 CallSubFlow 的 targetSubFlowId 使用

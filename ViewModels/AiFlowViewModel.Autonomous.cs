@@ -21,7 +21,7 @@ namespace TaskFlow.ViewModels
         /// <summary>
         /// Orchid 直接截屏：截取全屏并返回 base64 编码和分辨率
         /// </summary>
-        private async Task<(string? Base64, int Width, int Height)> CaptureScreenForAiAsync(string processName = "windows")
+        private async Task<(string? Base64, int Width, int Height, int OffsetX, int OffsetY)> CaptureScreenForAiAsync(string processName = "windows")
         {
             try
             {
@@ -29,7 +29,7 @@ namespace TaskFlow.ViewModels
                 if (!result.Success || result.Image == null)
                 {
                     result.Image?.Dispose();
-                    return (null, 0, 0);
+                    return (null, 0, 0, 0, 0);
                 }
 
                 var mat = result.Image;
@@ -49,12 +49,12 @@ namespace TaskFlow.ViewModels
 
                 mat.Dispose();
                 AiFlowLogger.Info($"截图编码完成: {imgBytes.Length / 1024}KB ({w}x{h}, {mimeType})");
-                return (Convert.ToBase64String(imgBytes), w, h);
+                return (Convert.ToBase64String(imgBytes), w, h, result.OffsetX, result.OffsetY);
             }
             catch (Exception ex)
             {
                 AiFlowLogger.Warn($"Orchid 截屏失败: {ex.Message}");
-                return (null, 0, 0);
+                return (null, 0, 0, 0, 0);
             }
         }
 
@@ -496,7 +496,7 @@ namespace TaskFlow.ViewModels
                             ? "windows" : currentPlan.ScreenshotTarget.Trim();
                         var targetLabel = target == "windows" ? "全屏" : $"窗口:{target}";
                         AiFlowLogger.Info($"Orchid 按需截屏中（{targetLabel}）...");
-                        var (scrBase64, sw, sh) = await CaptureScreenForAiAsync(target);
+                        var (scrBase64, sw, sh, scrOffsetX, scrOffsetY) = await CaptureScreenForAiAsync(target);
                         if (scrBase64 != null)
                         {
                             autoImageList = new List<string> { scrBase64 };
