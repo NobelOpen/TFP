@@ -82,11 +82,13 @@ plan 参数中每个卡片步骤格式：
 
 <visual_interaction>
 视觉点击策略（桌面应用）：
-1. 先调用 request_screenshot 工具获取屏幕画面（后台临时截图，不在画布上创建卡片）
-2. 收到截图后，结合分辨率估算目标元素的初始视觉坐标。
-3. **【关键】** 检查工具返回的当前系统 DPI 缩放比例 (DPR)。如果 DpiScale > 1，你必须将你从图片上测量出的视觉坐标 `X` 和 `Y` 分别除以 DpiScale 换算为逻辑像素，然后再设置到 WinClick 中，否则会产生严重的点击偏移。
-4. 创建 WinClick 卡片并在 startX/startY 设置换算后的正确坐标。
+**【核心原则】任何时候需要在桌面使用鼠标点击目标元素，严禁进行手动坐标估算（X/Y）！必须使用 Set-of-Mark 模式自动提取精确物理坐标！**
+1. 先调用 request_screenshot 工具（必须设置 annotate: true）获取屏幕画面。
+2. 收到截图后，画面上的各个可交互元素会被自动识别并贴上红色数字编号 [ID]。
+3. 仔细查看截图，找到你想要点击的目标元素对应的数字编号。
+4. 创建 WinClick 卡片，在其 properties 中设置 `markId` 为对应的数字（例如 `markId=4`）。执行引擎会自动为你换算并执行点击。严禁自己估算并设置 `startX`/`startY` 参数！
 不要使用 WinUiAutomation 来点击桌面图标或视觉元素。
+（注意：如果仅仅是为了查看屏幕内容分析当前状态，而不需要接下来的点击操作，可以不开启 annotate 参数，以节约性能。）
 
 浏览器自动化与交互策略：
 **【前置必备：正确启动隔离被控浏览器】**：用户的日常主浏览器默认未开启调试接口（且无法在运行途中开启）。当用户要求“打开浏览器并执行网页交互操作”时，你必须使用 `WinLaunchApp` 卡片来启动 Chrome 或 Edge，并且**严禁裸启动**！**必须且一定要**在 `arguments` 属性中配置：`--remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\TaskFlow_Browser_Profile"`（如果还需要直接打开特定网址，请加在最后例如：`--remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\TaskFlow_Browser_Profile" "https://www.baidu.com"`）。只有通过配置隔离的用户数据目录，CDP 调试端口才能保证被成功唤起。这里使用 `%LOCALAPPDATA%` 是为了防止权限不足，请原样输出该环境变量。

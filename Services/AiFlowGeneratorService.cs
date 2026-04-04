@@ -482,6 +482,11 @@ namespace TaskFlow.Services
                                 ["type"] = "string",
                                 ["description"] = "截图目标进程名（如 msedge、notepad），留空或省略则截全屏"
                             },
+                            ["annotate"] = new JObject
+                            {
+                                ["type"] = "boolean",
+                                ["description"] = "启用桌面 Set-of-Mark 模式。当你需要精确点击某个按钮或图标但无法确定其桌面坐标时，强制设为 true。之后会在返回截图的各 UI 元素上标注红色 [数字ID]，你可在接下来的 WinClick 卡片中使用 markId 属性完成精确点击，无需自行估算 X/Y（默认 false）"
+                            },
                             ["thought"] = new JObject
                             {
                                 ["type"] = "string",
@@ -1033,6 +1038,8 @@ namespace TaskFlow.Services
                         {
                             var ssArg = JObject.Parse(ssArgs);
                             var target = ssArg["target"]?.ToString() ?? "";
+                            bool useAnnotate = ssArg["annotate"]?.ToObject<bool>() ?? false;
+
                             // 防御：AI 可能违反指令使用 explorer 作为截图目标，会导致 1x1 空图
                             if (target.Equals("explorer", StringComparison.OrdinalIgnoreCase) ||
                                 target.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase))
@@ -1040,7 +1047,7 @@ namespace TaskFlow.Services
                                 AiFlowLogger.Warn($"[ToolUse] AI 错误使用 explorer 作为截图目标，自动纠正为全屏截图");
                                 target = "";
                             }
-                            AiFlowLogger.Info($"[ToolUse] request_screenshot(target=\"{target}\") → 截图中...");
+                            AiFlowLogger.Info($"[ToolUse] request_screenshot(target=\"{target}\", annotate={useAnnotate}) → 截图中...");
 
                             onStatus?.Invoke("正在截取屏幕...");
                             var (base64, sw, sh) = await captureScreenshot(target);
@@ -1055,6 +1062,49 @@ namespace TaskFlow.Services
 
                             AiFlowLogger.Info($"[ToolUse] 截图成功 ({sw}x{sh})，注入截图发起下一轮对话...");
 
+                            string annotateNote = "";
+                            if (useAnnotate)
+                            {
+                                try
+                                {
+                                    using var onnxSvc = new OnnxDetectionService();
+                                    var uiModel = TaskFlow.Helpers.OnnxModelManager.Models.FirstOrDefault();
+                                    if (uiModel != null)
+                                    {
+                                        using var srcMat = OpenCvSharp.Cv2.ImDecode(Convert.FromBase64String(base64), OpenCvSharp.ImreadModes.Color);
+                                        var dets = onnxSvc.Detect(srcMat, uiModel);
+
+                                        var map = new Dictionary<int, (int X, int Y)>();
+                                        int markIdx = 1;
+                                        using var markedMat = srcMat.Clone();
+                                        foreach (var det in dets)
+                                        {
+                                            map[markIdx] = (det.X, det.Y);
+                                            int x1 = det.X - det.Width / 2;
+                                            int y1 = det.Y - det.Height / 2;
+                                            OpenCvSharp.Cv2.Rectangle(markedMat, new OpenCvSharp.Point(x1, y1), new OpenCvSharp.Point(x1 + det.Width, y1 + det.Height), new OpenCvSharp.Scalar(0, 0, 255), 2);
+                                            OpenCvSharp.Cv2.PutText(markedMat, $"[{markIdx}]", new OpenCvSharp.Point(x1, Math.Max(15, y1 - 5)), OpenCvSharp.HersheyFonts.HersheySimplex, 0.6, new OpenCvSharp.Scalar(0, 0, 255), 2);
+                                            markIdx++;
+                                        }
+
+                                        TaskExecutionService._desktopMarkMappings = map;
+                                        byte[] newBytes = markedMat.ImEncode(".jpg");
+                                        base64 = Convert.ToBase64String(newBytes);
+                                        annotateNote = $"\n\n【重要】截图启用了 SoM（Set-of-Mark）标注模式，画面上已识别出 {map.Count} 个可交互元素并打上了红色数字编号。你需要明确你要点击的编号，在 WinClick 卡片的属性中设置 markId=[对应编号]，严禁再用 startX/Y 自己估算坐标！";
+                                        AiFlowLogger.Info($"[ToolUse] 截图成功，附加了 {map.Count} 个目标检测框");
+                                    }
+                                    else
+                                    {
+                                        annotateNote = "\n\n【警告】你在请求截屏时指定了 annotate=true，但系统当前未安装/拉取有效的 ONNX 检测模型，因此未能在图上绘制标签图，请回滚为默认手动估算坐标方案。";
+                                    }
+                                }
+                                catch (Exception a_ex)
+                                {
+                                    AiFlowLogger.Warn($"[ToolUse] 标注截图生成失败: {a_ex.Message}");
+                                    annotateNote = "\n\n【警告】标注截图时发生异常，请退回手工估算坐标模式。";
+                                }
+                            }
+
                             // 将截图直接嵌入 user 消息（不使用 tool_calls/tool 历史格式，
                             // 因为部分第三方 API 代理商不支持 Responses API 的 function_call input 类型）
                             var mime = base64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
@@ -1063,7 +1113,7 @@ namespace TaskFlow.Services
                                 ["role"] = "user",
                                 ["content"] = new JArray
                                 {
-                                    new JObject { ["type"] = "text", ["text"] = $"[系统截图结果] 截图成功，分辨率 {sw}x{sh}。以下是截取的屏幕截图，请分析内容并继续完成任务。" },
+                                    new JObject { ["type"] = "text", ["text"] = $"[系统截图结果] 截图成功，分辨率 {sw}x{sh}。以下是截取的屏幕截图，请分析内容并继续完成任务。{annotateNote}" },
                                     new JObject
                                     {
                                         ["type"] = "image_url",

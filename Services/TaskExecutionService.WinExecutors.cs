@@ -17,6 +17,8 @@ namespace TaskFlow.Services
     // Windows 平台任务执行器（WinLaunchApp, WinClick, WinScreenshot 等）
     public partial class TaskExecutionService
     {
+        internal static Dictionary<int, (int X, int Y)>? _desktopMarkMappings;
+
         private bool ExecuteGetTimestamp(GetTimestampTaskCard task)
         {
             var now = DateTime.Now;
@@ -87,6 +89,19 @@ namespace TaskFlow.Services
         {
             int x = task.StartX;
             int y = task.StartY;
+
+            // 优先使用 MarkId 从桌面标注映射表查坐标（SoM 模式）
+            if (task.MarkId > 0 && _desktopMarkMappings != null && _desktopMarkMappings.TryGetValue(task.MarkId, out var markPos))
+            {
+                x = markPos.X;
+                y = markPos.Y;
+                Log($"[{DateTime.Now:HH:mm:ss}] [SoM] MarkId={task.MarkId} → 查表得精确桌面坐标: ({x}, {y})");
+            }
+            else if (task.MarkId > 0)
+            {
+                task.ErrorMessage = $"MarkId={task.MarkId} 不在桌面标注映射表中（映射表{(_desktopMarkMappings == null ? "为空" : $"有 {_desktopMarkMappings.Count} 项")}）。请重新执行带有 annotate=true 的截屏。";
+                return false;
+            }
 
             // 解析 X/Y 坐标表达式
             if (task.UseVariableCoordinates)
