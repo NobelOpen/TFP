@@ -17,7 +17,7 @@ namespace TaskFlow.Services
     // Windows 平台任务执行器（WinLaunchApp, WinClick, WinScreenshot 等）
     public partial class TaskExecutionService
     {
-        internal static Dictionary<int, (int X, int Y)>? _desktopMarkMappings;
+        internal static Models.GridZoomState? _gridZoomState;
 
         private bool ExecuteGetTimestamp(GetTimestampTaskCard task)
         {
@@ -90,20 +90,24 @@ namespace TaskFlow.Services
             int x = task.StartX;
             int y = task.StartY;
 
-            // 优先使用 MarkId 从桌面标注映射表查坐标（SoM 模式）
-            if (task.MarkId > 0 && _desktopMarkMappings != null && _desktopMarkMappings.TryGetValue(task.MarkId, out var markPos))
+            // 优先使用 GridCell 从递归网格布局中还原绝对坐标
+            if (!string.IsNullOrEmpty(task.GridCell) && _gridZoomState != null)
             {
-                x = markPos.X;
-                y = markPos.Y;
-                // 反写回 UI，避免在界面上始终显示为 0
-                task.StartX = x;
-                task.StartY = y;
-                Log($"[{DateTime.Now:HH:mm:ss}] [SoM] MarkId={task.MarkId} → 查表得精确桌面坐标: ({x}, {y})");
-            }
-            else if (task.MarkId > 0)
-            {
-                task.ErrorMessage = $"MarkId={task.MarkId} 不在桌面标注映射表中（映射表{(_desktopMarkMappings == null ? "为空" : $"有 {_desktopMarkMappings.Count} 项")}）。请重新执行带有 annotate=true 的截屏。";
-                return false;
+                var resolved = _gridZoomState.ResolveAbsoluteCenter(task.GridCell);
+                if (resolved.HasValue)
+                {
+                    x = resolved.Value.X;
+                    y = resolved.Value.Y;
+                    // 反写回 UI，让用户能看到实际点击坐标
+                    task.StartX = x;
+                    task.StartY = y;
+                    Log($"[{DateTime.Now:HH:mm:ss}] [Grid] GridCell=\"{task.GridCell}\" → 还原绝对桌面坐标: ({x}, {y})");
+                }
+                else
+                {
+                    task.ErrorMessage = $"GridCell=\"{task.GridCell}\" 不在当前网格布局中。请重新执行带有 grid=true 的截屏并选择有效的网格编号。";
+                    return false;
+                }
             }
 
             // 解析 X/Y 坐标表达式

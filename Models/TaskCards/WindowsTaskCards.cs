@@ -197,10 +197,10 @@ namespace TaskFlow.Models.TaskCards
         private string _processName = string.Empty;
 
         /// <summary>
-        /// 标注元素的ID（SoM 模式），大于 0 时自动读取标记映射表忽略手动坐标
+        /// 递归网格定位编号（如 "5" 或 "B3"），非空时自动从网格布局中还原绝对坐标
         /// </summary>
         [ObservableProperty]
-        private int _markId = 0;
+        private string _gridCell = string.Empty;
 
         public WinClickTaskCard()
         {
@@ -230,9 +230,9 @@ namespace TaskFlow.Models.TaskCards
                 && Enum.TryParse<ClickType>(clickTypeStr, true, out var clickType))
                 ClickType = clickType;
 
-            // 设置静态坐标或标注ID（如果 markId 存在，引擎将以此为准寻找坐标）
-            if (props.TryGetValue("markId", out var markStr) && int.TryParse(markStr, out int markInt) && markInt > 0)
-                MarkId = markInt;
+            // 设置网格定位编号（递归网格模式）
+            if (props.TryGetValue("gridCell", out var gridCellStr) && !string.IsNullOrWhiteSpace(gridCellStr))
+                GridCell = gridCellStr.Trim();
 
             // 设置静态坐标
             if (props.TryGetValue("startX", out var sxStr) && int.TryParse(sxStr, out var sx))

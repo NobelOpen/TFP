@@ -32,6 +32,9 @@ namespace TaskFlow.Services
         }
         private List<CardDescriptionDef>? _cardDescriptions;
 
+        /// <summary>递归网格缩放状态（跨多轮截图交互持久化）</summary>
+        private Models.GridZoomState? _gridZoomState;
+
         // ===== Prompt 模板缓存系统 =====
         // 缓存已加载的模板内容和文件最后修改时间
         private static readonly Dictionary<string, (string Content, DateTime LastModified)> _promptCache = new();
@@ -464,14 +467,14 @@ namespace TaskFlow.Services
                 }
             });
 
-            // 工具: request_screenshot —— 请求截取屏幕
+            // 工具: request_screenshot —— 请求截取屏幕（支持交互式网格定位）
             tools.Add(new JObject
             {
                 ["type"] = "function",
                 ["function"] = new JObject
                 {
                     ["name"] = "request_screenshot",
-                    ["description"] = "请求截取屏幕或指定窗口的截图。只在需要查看屏幕内容时使用（如估算坐标、分析界面状态）。不需要视觉信息时不要调用。",
+                    ["description"] = "请求截取屏幕或指定窗口的截图。可启用交互式网格模式，逐步精确定位点击目标。",
                     ["parameters"] = new JObject
                     {
                         ["type"] = "object",
@@ -482,15 +485,20 @@ namespace TaskFlow.Services
                                 ["type"] = "string",
                                 ["description"] = "截图目标进程名（如 msedge、notepad），留空或省略则截全屏"
                             },
-                            ["annotate"] = new JObject
+                            ["grid"] = new JObject
                             {
                                 ["type"] = "boolean",
-                                ["description"] = "启用桌面 Set-of-Mark 模式。当你需要精确点击某个按钮或图标但无法确定其桌面坐标时，强制设为 true。之后会在返回截图的各 UI 元素上标注红色 [数字ID]，你可在接下来的 WinClick 卡片中使用 markId 属性完成精确点击，无需自行估算 X/Y（默认 false）"
+                                ["description"] = "叠加宏观网格（4×4, 标签 A1~D4）用于粗定位目标区域。当你需要精确点击某个按钮或图标时设为 true（默认 false）"
+                            },
+                            ["zoom"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "放大指定宏观网格区域（如 B3），系统会裁切该区域并叠加 3×3 微观子网格（标签 1~9）。必须先用 grid=true 获取宏观网格后才能使用"
                             },
                             ["thought"] = new JObject
                             {
                                 ["type"] = "string",
-                                ["description"] = "为什么以及需要截图的哪个区域（思考过程必须提供）"
+                                ["description"] = "为什么需要截图以及需要截图的哪个区域（思考过程必须提供）"
                             }
                         },
                         ["required"] = new JArray("thought")
@@ -1038,7 +1046,8 @@ namespace TaskFlow.Services
                         {
                             var ssArg = JObject.Parse(ssArgs);
                             var target = ssArg["target"]?.ToString() ?? "";
-                            bool useAnnotate = ssArg["annotate"]?.ToObject<bool>() ?? false;
+                            bool useGrid = ssArg["grid"]?.ToObject<bool>() ?? false;
+                            var zoomCell = ssArg["zoom"]?.ToString() ?? "";
 
                             // 防御：AI 可能违反指令使用 explorer 作为截图目标，会导致 1x1 空图
                             if (target.Equals("explorer", StringComparison.OrdinalIgnoreCase) ||
@@ -1047,7 +1056,7 @@ namespace TaskFlow.Services
                                 AiFlowLogger.Warn($"[ToolUse] AI 错误使用 explorer 作为截图目标，自动纠正为全屏截图");
                                 target = "";
                             }
-                            AiFlowLogger.Info($"[ToolUse] request_screenshot(target=\"{target}\", annotate={useAnnotate}) → 截图中...");
+                            AiFlowLogger.Info($"[ToolUse] request_screenshot(target=\"{target}\", grid={useGrid}, zoom=\"{zoomCell}\") → 截图中...");
 
                             onStatus?.Invoke("正在截取屏幕...");
                             var (base64, sw, sh, offsetX, offsetY) = await captureScreenshot(target);
@@ -1062,88 +1071,98 @@ namespace TaskFlow.Services
 
                             AiFlowLogger.Info($"[ToolUse] 截图成功 ({sw}x{sh})，注入截图发起下一轮对话...");
 
-                            string annotateNote = "";
-                            if (useAnnotate)
-                            {
-                                try
-                                {
-                                    using var onnxSvc = new OnnxDetectionService();
-                                    var uiModel = TaskFlow.Helpers.OnnxModelManager.Models.FirstOrDefault();
-                                    if (uiModel == null)
-                                    {
-                                        // 优先使用 OmniParser icon_detect 模型（专门训练于 UI 元素检测）
-                                        var omniParserPath = System.IO.Path.Combine(
-                                            TaskFlow.Models.OnnxModelConfig.ModelsDir, "OmniParser_icon_detect.onnx");
-                                        if (System.IO.File.Exists(omniParserPath))
-                                        {
-                                            uiModel = new TaskFlow.Models.OnnxModelConfig
-                                            {
-                                                Id = "built-in-omniparser",
-                                                AbsolutePath = omniParserPath,
-                                                InputWidth = 640,
-                                                InputHeight = 640,
-                                                ConfidenceThreshold = 0.15,
-                                                IouThreshold = 0.45,
-                                                ClassLabels = "interactable"
-                                            };
-                                            AiFlowLogger.Info("[SoM] 使用 OmniParser icon_detect 模型（UI 元素专项检测）");
-                                        }
-                                        else
-                                        {
-                                            // 降级：使用通用 YOLO 模型（COCO 80 类，对 UI 元素识别率低）
-                                            var defaultYolo = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "yolov8n.onnx");
-                                            if (!System.IO.File.Exists(defaultYolo)) {
-                                                defaultYolo = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "yolov8n.onnx");
-                                            }
-                                            if (System.IO.File.Exists(defaultYolo))
-                                            {
-                                                uiModel = new TaskFlow.Models.OnnxModelConfig
-                                                {
-                                                    Id = "built-in-yolo",
-                                                    AbsolutePath = defaultYolo,
-                                                    InputWidth = 640,
-                                                    InputHeight = 640,
-                                                    ConfidenceThreshold = 0.15,
-                                                    IouThreshold = 0.45
-                                                };
-                                                AiFlowLogger.Warn("[SoM] OmniParser 模型不存在，降级使用通用 YOLO（UI 元素识别率可能较低）");
-                                            }
-                                        }
-                                    }
+                            string gridNote = "";
 
-                                    if (uiModel != null)
+                            // ---- 递归网格模式 ----
+                            if (!string.IsNullOrEmpty(zoomCell) && _gridZoomState?.MacroLayout != null)
+                            {
+                                // Zoom 模式：裁切宏观网格区域并叠加微观子网格
+                                var zoomKey = zoomCell.Trim().ToUpper();
+                                if (_gridZoomState.MacroLayout.TryGetValue(zoomKey, out var macroRect))
+                                {
+                                    try
                                     {
                                         using var srcMat = OpenCvSharp.Cv2.ImDecode(Convert.FromBase64String(base64), OpenCvSharp.ImreadModes.Color);
-                                        var dets = onnxSvc.Detect(srcMat, uiModel);
+                                        var cvRect = new OpenCvSharp.Rect(macroRect.X, macroRect.Y, macroRect.Width, macroRect.Height);
+                                        var (zoomedMat, subLayout) = GridOverlayService.DrawMicroGrid(srcMat, cvRect);
 
-                                        var map = new Dictionary<int, (int X, int Y)>();
-                                        int markIdx = 1;
-                                        using var markedMat = srcMat.Clone();
-                                        foreach (var det in dets)
+                                        _gridZoomState.ZoomLevel = 1;
+                                        _gridZoomState.SelectedRegion = macroRect;
+                                        _gridZoomState.MicroLayout = subLayout;
+
+                                        byte[] zoomedBytes = zoomedMat.ImEncode(".jpg");
+                                        base64 = Convert.ToBase64String(zoomedBytes);
+                                        sw = zoomedMat.Width;
+                                        sh = zoomedMat.Height;
+                                        zoomedMat.Dispose();
+
+                                        // [临时调试] 保存网格预览图到桌面
+                                        try
                                         {
-                                            map[markIdx] = (det.X + offsetX, det.Y + offsetY);
-                                            int x1 = det.X - det.Width / 2;
-                                            int y1 = det.Y - det.Height / 2;
-                                            OpenCvSharp.Cv2.Rectangle(markedMat, new OpenCvSharp.Point(x1, y1), new OpenCvSharp.Point(x1 + det.Width, y1 + det.Height), new OpenCvSharp.Scalar(0, 0, 255), 2);
-                                            OpenCvSharp.Cv2.PutText(markedMat, $"[{markIdx}]", new OpenCvSharp.Point(x1, Math.Max(15, y1 - 5)), OpenCvSharp.HersheyFonts.HersheySimplex, 0.6, new OpenCvSharp.Scalar(0, 0, 255), 2);
-                                            markIdx++;
+                                            var debugPath = System.IO.Path.Combine(
+                                                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                                                $"Grid_Zoom_{zoomKey}_{DateTime.Now:HHmmss}.jpg");
+                                            System.IO.File.WriteAllBytes(debugPath, zoomedBytes);
+                                            AiFlowLogger.Info($"[Grid-Debug] 微观网格预览图已保存: {debugPath}");
                                         }
+                                        catch { }
 
-                                        TaskExecutionService._desktopMarkMappings = map;
-                                        byte[] newBytes = markedMat.ImEncode(".jpg");
-                                        base64 = Convert.ToBase64String(newBytes);
-                                        annotateNote = $"\n\n【重要】截图启用了 SoM（Set-of-Mark）标注模式，画面上已识别出 {map.Count} 个可交互元素并打上了红色数字编号。你需要明确你要点击的编号，在 WinClick 卡片的属性中设置 markId=[对应编号]，严禁再用 startX/Y 自己估算坐标！";
-                                        AiFlowLogger.Info($"[ToolUse] 截图成功，附加了 {map.Count} 个目标检测框");
+                                        gridNote = $"\n\n【网格放大模式】已将区域 {zoomKey} 裁切放大并叠加 3×3 微观子网格（编号 1~9）。请仔细观察放大后的画面，找到目标元素精确落点对应的数字编号。然后在 WinClick 卡片中设置 gridCell=\"数字编号\"（如 gridCell=\"5\"），引擎会自动从网格布局中还原绝对屏幕坐标并执行点击。严禁自行估算 startX/startY！";
+                                        AiFlowLogger.Info($"[ToolUse] 区域 {zoomKey} 放大成功，生成 3×3 微观子网格（共 9 个子区域）");
                                     }
-                                    else
+                                    catch (Exception zoomEx)
                                     {
-                                        annotateNote = "\n\n【警告】你在请求截屏时指定了 annotate=true，但系统当前未安装/拉取有效的 ONNX 检测模型，因此未能在图上绘制标签图，请回滚为默认手动估算坐标方案。";
+                                        AiFlowLogger.Warn($"[ToolUse] 网格放大失败: {zoomEx.Message}");
+                                        gridNote = $"\n\n【警告】区域 {zoomKey} 放大处理失败: {zoomEx.Message}";
                                     }
                                 }
-                                catch (Exception a_ex)
+                                else
                                 {
-                                    AiFlowLogger.Warn($"[ToolUse] 标注截图生成失败: {a_ex.Message}");
-                                    annotateNote = "\n\n【警告】标注截图时发生异常，请退回手工估算坐标模式。";
+                                    gridNote = $"\n\n【错误】网格编号 \"{zoomCell}\" 不存在。有效的宏观网格编号为: {string.Join(", ", _gridZoomState.MacroLayout.Keys)}。请重新选择。";
+                                    AiFlowLogger.Warn($"[ToolUse] 无效的网格编号: {zoomCell}");
+                                }
+                            }
+                            else if (useGrid)
+                            {
+                                // 宏观网格模式：叠加 4×4 网格
+                                try
+                                {
+                                    using var srcMat = OpenCvSharp.Cv2.ImDecode(Convert.FromBase64String(base64), OpenCvSharp.ImreadModes.Color);
+                                    var (gridMat, layout) = GridOverlayService.DrawMacroGrid(srcMat);
+
+                                    // 初始化网格状态
+                                    _gridZoomState = new Models.GridZoomState
+                                    {
+                                        ZoomLevel = 0,
+                                        MacroLayout = layout,
+                                        OffsetX = offsetX,
+                                        OffsetY = offsetY
+                                    };
+                                    // 同步到执行引擎
+                                    TaskExecutionService._gridZoomState = _gridZoomState;
+
+                                    byte[] gridBytes = gridMat.ImEncode(".jpg");
+                                    base64 = Convert.ToBase64String(gridBytes);
+                                    gridMat.Dispose();
+
+                                    // [临时调试] 保存网格预览图到桌面
+                                    try
+                                    {
+                                        var debugPath = System.IO.Path.Combine(
+                                            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                                            $"Grid_Macro_{DateTime.Now:HHmmss}.jpg");
+                                        System.IO.File.WriteAllBytes(debugPath, gridBytes);
+                                        AiFlowLogger.Info($"[Grid-Debug] 宏观网格预览图已保存: {debugPath}");
+                                    }
+                                    catch { }
+
+                                    gridNote = $"\n\n【网格定位模式】截图已叠加 4×4 宏观网格（标签 A1~D4）。请仔细观察截图，找到目标元素所在的网格区域。然后调用 request_screenshot(zoom=\"网格编号\")（如 zoom=\"B3\"）来放大该区域，系统会叠加 3×3 微观子网格帮助你精确定位。";
+                                    AiFlowLogger.Info($"[ToolUse] 宏观网格绘制成功（4×4, 共 {layout.Count} 个区域），偏移量: ({offsetX}, {offsetY})");
+                                }
+                                catch (Exception gridEx)
+                                {
+                                    AiFlowLogger.Warn($"[ToolUse] 网格绘制失败: {gridEx.Message}");
+                                    gridNote = $"\n\n【警告】网格绘制失败: {gridEx.Message}，请在不使用网格的情况下继续。";
                                 }
                             }
 
@@ -1155,7 +1174,7 @@ namespace TaskFlow.Services
                                 ["role"] = "user",
                                 ["content"] = new JArray
                                 {
-                                    new JObject { ["type"] = "text", ["text"] = $"[系统截图结果] 截图成功，分辨率 {sw}x{sh}。以下是截取的屏幕截图，请分析内容并继续完成任务。{annotateNote}" },
+                                    new JObject { ["type"] = "text", ["text"] = $"[系统截图结果] 截图成功，分辨率 {sw}x{sh}。以下是截取的屏幕截图，请分析内容并继续完成任务。{gridNote}" },
                                     new JObject
                                     {
                                         ["type"] = "image_url",
