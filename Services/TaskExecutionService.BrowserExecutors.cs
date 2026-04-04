@@ -340,6 +340,13 @@ namespace TaskFlow.Services
         // 浏览器模拟点击 (视觉/绝对坐标)
         // ----------------------------------------------------------
 
+        /// <summary>
+        /// Set-of-Mark 标注映射表缓存（由截图管道填充）。
+        /// Key = markId, Value = (CssX, CssY) 全页面绝对 CSS 坐标。
+        /// 每次新的标注截图会覆盖旧缓存。
+        /// </summary>
+        internal static Dictionary<int, (float CssX, float CssY)>? _markMappings;
+
         private async Task<bool> ExecuteBrowserSimulatedClickAsync(
             BrowserSimulatedClickTaskCard task, IList<TaskCardBase> allTasks, CancellationToken ct)
         {
@@ -348,16 +355,41 @@ namespace TaskFlow.Services
                 ct.ThrowIfCancellationRequested();
                 var page = await WithCancellation(BrowserSessionManager.GetActivePageAsync(task.CdpPort), ct);
 
-                // -------------------------------------------------------
-                // 全景截图坐标 → CSS 视口坐标转换
-                // 截图是按 devicePixelRatio 倍率拍摄的，
-                // 图片像素坐标 ÷ DPR = CSS 坐标
-                // -------------------------------------------------------
-                var dpr = await page.EvaluateAsync<double>("window.devicePixelRatio");
-                if (dpr <= 0) dpr = 1.0;
+                float cssX, cssY;
 
-                float cssX = (float)(task.X / dpr);
-                float cssY = (float)(task.Y / dpr);
+                // -------------------------------------------------------
+                // 优先使用 MarkId 从标注映射表查询精确 CSS 坐标
+                // -------------------------------------------------------
+                if (task.MarkId > 0 && _markMappings != null && _markMappings.TryGetValue(task.MarkId, out var markPos))
+                {
+                    cssX = markPos.CssX;
+                    cssY = markPos.CssY;
+                    // 回写到卡片属性，让用户能在属性窗口看到实际使用的坐标
+                    task.X = (int)Math.Round(cssX);
+                    task.Y = (int)Math.Round(cssY);
+                    Log($"[{DateTime.Now:HH:mm:ss}] [SoM] MarkId={task.MarkId} → 查表得精确 CSS 坐标: ({cssX:F1}, {cssY:F1})");
+                }
+                else if (task.MarkId > 0)
+                {
+                    // markId 已设置但映射表中找不到（可能页面已变动）
+                    task.ErrorMessage = $"MarkId={task.MarkId} 不在标注映射表中（映射表{(_markMappings == null ? "为空" : $"有 {_markMappings.Count} 项")}）。请重新执行标注截图。";
+                    task.OutputResult = false;
+                    return false;
+                }
+                else
+                {
+                    // -------------------------------------------------------
+                    // 传统模式：全景截图坐标 → CSS 视口坐标转换
+                    // 截图是按 devicePixelRatio 倍率拍摄的，
+                    // 图片像素坐标 ÷ DPR = CSS 坐标
+                    // -------------------------------------------------------
+                    var dpr = await page.EvaluateAsync<double>("window.devicePixelRatio");
+                    if (dpr <= 0) dpr = 1.0;
+
+                    cssX = (float)(task.X / dpr);
+                    cssY = (float)(task.Y / dpr);
+                    Log($"[{DateTime.Now:HH:mm:ss}] 浏览器模拟点击: 图片({task.X},{task.Y}) DPR={dpr} CSS({cssX:F1},{cssY:F1})");
+                }
 
                 var viewportSize = page.ViewportSize;
                 int vpWidth = viewportSize?.Width ?? 1920;
@@ -389,7 +421,7 @@ namespace TaskFlow.Services
                     await page.Mouse.ClickAsync(viewportX, viewportY);
                 }
 
-                Log($"[{DateTime.Now:HH:mm:ss}] 浏览器模拟点击: 图片({task.X},{task.Y}) DPR={dpr} CSS({cssX:F1},{cssY:F1}) 视口({viewportX:F1},{viewportY:F1})");
+                Log($"[{DateTime.Now:HH:mm:ss}] 浏览器模拟点击成功: 视口({viewportX:F1},{viewportY:F1}){(task.MarkId > 0 ? $" [SoM #{task.MarkId}]" : "")}");
                 task.OutputResult = true;
                 return true;
             }

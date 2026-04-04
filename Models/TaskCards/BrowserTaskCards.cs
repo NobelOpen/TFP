@@ -369,6 +369,13 @@ namespace TaskFlow.Models.TaskCards
         [ObservableProperty]
         private int _cdpPort = 9222;
 
+        /// <summary>
+        /// Set-of-Mark 标注 ID。当大于 0 时，引擎从标注映射表中查询精确 CSS 坐标，
+        /// 自动覆盖 X/Y 值，无需手动输入坐标。
+        /// </summary>
+        [ObservableProperty]
+        private int _markId = 0;
+
         public BrowserSimulatedClickTaskCard()
         {
             Name = "浏览器模拟点击";
@@ -379,15 +386,28 @@ namespace TaskFlow.Models.TaskCards
             var missing = new List<AiFlowReportItem>();
             var props = step.Properties;
 
-            if (props.TryGetValue("x", out var xStr) && int.TryParse(xStr, out int xInt))
-                X = xInt;
+            // 优先使用 markId（指定后无需手动 X/Y）
+            if (props.TryGetValue("markId", out var markStr) && int.TryParse(markStr, out int markInt) && markInt > 0)
+            {
+                MarkId = markInt;
+                // markId 模式下 X/Y 可选（由引擎自动填充）
+                if (props.TryGetValue("x", out var xStr2) && int.TryParse(xStr2, out int xInt2))
+                    X = xInt2;
+                if (props.TryGetValue("y", out var yStr2) && int.TryParse(yStr2, out int yInt2))
+                    Y = yInt2;
+            }
             else
-                missing.Add(new AiFlowReportItem { PropertyName = "X", Hint = "X 坐标" });
+            {
+                if (props.TryGetValue("x", out var xStr) && int.TryParse(xStr, out int xInt))
+                    X = xInt;
+                else
+                    missing.Add(new AiFlowReportItem { PropertyName = "X", Hint = "X 坐标" });
 
-            if (props.TryGetValue("y", out var yStr) && int.TryParse(yStr, out int yInt))
-                Y = yInt;
-            else
-                missing.Add(new AiFlowReportItem { PropertyName = "Y", Hint = "Y 坐标" });
+                if (props.TryGetValue("y", out var yStr) && int.TryParse(yStr, out int yInt))
+                    Y = yInt;
+                else
+                    missing.Add(new AiFlowReportItem { PropertyName = "Y", Hint = "Y 坐标" });
+            }
 
             if (props.TryGetValue("cdpPort", out var port3) && int.TryParse(port3, out int parsedPort3))
                 CdpPort = parsedPort3;

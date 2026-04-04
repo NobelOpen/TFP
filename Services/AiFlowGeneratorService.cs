@@ -516,6 +516,11 @@ namespace TaskFlow.Services
                                 ["type"] = "boolean",
                                 ["description"] = "是否截取整页长截图（未指定时内部默认 true，以避免视口遗漏关键元素）"
                             },
+                            ["annotate"] = new JObject
+                            {
+                                ["type"] = "boolean",
+                                ["description"] = "启用 Set-of-Mark 标注模式（在截图上为每个可交互元素贴上红色数字编号，并返回元素映射表）。当你需要精确点击某个元素但无法确定其坐标时，设为 true。获取标注截图后，可在 BrowserSimulatedClick 的 markId 属性中填入目标编号，引擎会自动查表获取精确坐标（默认 false）"
+                            },
                             ["thought"] = new JObject
                             {
                                 ["type"] = "string",
@@ -691,7 +696,7 @@ namespace TaskFlow.Services
             Action<string?>? onStatus = null,
             Func<string, int, int, string?>? getFlowDetail = null,
             Func<string, Task<(string? Base64, int Width, int Height)>>? captureScreenshot = null,
-            Func<int, bool, Task<(string? Base64, int Width, int Height)>>? captureBrowserScreenshot = null,
+            Func<int, bool, bool, Task<(string? Base64, int Width, int Height, string? MarkMappingsText)>>? captureBrowserScreenshot = null,
             Func<int, Task<(string? Base64, int Width, int Height)>>? captureCardImage = null,
             string? prefillAssistantMessage = null)
         {
@@ -1125,10 +1130,11 @@ namespace TaskFlow.Services
                             var bssArg = JObject.Parse(bssArgs);
                             int port = bssArg["port"]?.Value<int>() ?? 9222;
                             bool fullPage = bssArg["fullPage"]?.Value<bool>() ?? true;
-                            AiFlowLogger.Info($"[ToolUse] request_browser_screenshot(port={port}, fullPage={fullPage}) → 截图中...");
+                            bool annotate = bssArg["annotate"]?.Value<bool>() ?? false;
+                            AiFlowLogger.Info($"[ToolUse] request_browser_screenshot(port={port}, fullPage={fullPage}, annotate={annotate}) → 截图中...");
 
-                            onStatus?.Invoke("正在截取浏览器页面...");
-                            var (base64, bw, bh) = await captureBrowserScreenshot(port, fullPage);
+                            onStatus?.Invoke(annotate ? "正在标注并截取浏览器页面..." : "正在截取浏览器页面...");
+                            var (base64, bw, bh, markText) = await captureBrowserScreenshot(port, fullPage, annotate);
 
                             if (base64 == null)
                             {
@@ -1138,7 +1144,18 @@ namespace TaskFlow.Services
                                 break;
                             }
 
-                            AiFlowLogger.Info($"[ToolUse] 浏览器截图成功 ({bw}x{bh})，注入截图发起下一轮对话...");
+                            AiFlowLogger.Info($"[ToolUse] 浏览器截图成功 ({bw}x{bh}{(annotate ? ", SoM标注" : "")})，注入截图发起下一轮对话...");
+
+                            // 构建截图描述文本（包含标注映射表）
+                            var screenshotDesc = $"[浏览器页面截图结果] 截图成功，页面分辨率 {bw}x{bh}（CDP端口 {port}）。";
+                            if (!string.IsNullOrEmpty(markText))
+                            {
+                                screenshotDesc += $"\n\n{markText}\n【重要】截图中每个红色数字对应上述元素。你可以在 BrowserSimulatedClick 卡片的 markId 属性中填入编号，系统将自动查表获取精确坐标进行点击。严禁手动估算 X/Y 坐标！";
+                            }
+                            else
+                            {
+                                screenshotDesc += "以下是浏览器当前页面截图，请分析内容并继续完成任务。";
+                            }
 
                             var bMime = base64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
                             messagesJson.Add(new JObject
@@ -1146,7 +1163,7 @@ namespace TaskFlow.Services
                                 ["role"] = "user",
                                 ["content"] = new JArray
                                 {
-                                    new JObject { ["type"] = "text", ["text"] = $"[浏览器页面截图结果] 截图成功，页面分辨率 {bw}x{bh}（CDP端口 {port}）。以下是浏览器当前页面截图，请分析内容并继续完成任务。" },
+                                    new JObject { ["type"] = "text", ["text"] = screenshotDesc },
                                     new JObject
                                     {
                                         ["type"] = "image_url",
@@ -1529,7 +1546,8 @@ namespace TaskFlow.Services
                             plan.NeedsBrowserScreenshot = true;
                             plan.BrowserScreenshotPort = bsArg["port"]?.Value<int>() ?? 9222;
                             plan.BrowserScreenshotFullPage = bsArg["fullPage"]?.Value<bool>() ?? true;
-                            AiFlowLogger.Info($"[ToolUse] request_browser_screenshot: port={plan.BrowserScreenshotPort}, fullPage={plan.BrowserScreenshotFullPage}");
+                            plan.BrowserScreenshotAnnotate = bsArg["annotate"]?.Value<bool>() ?? false;
+                            AiFlowLogger.Info($"[ToolUse] request_browser_screenshot: port={plan.BrowserScreenshotPort}, fullPage={plan.BrowserScreenshotFullPage}, annotate={plan.BrowserScreenshotAnnotate}");
                         }
                         catch (Exception ex)
                         {

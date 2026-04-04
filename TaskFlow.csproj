@@ -80,6 +80,13 @@
     </Content>
   </ItemGroup>
 
+  <!-- 浏览器自动化脚本 (Set-of-Mark 等) -->
+  <ItemGroup>
+    <Content Include="Resources\Scripts\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <!-- 语义路由 ONNX 模型文件 -->
   <ItemGroup>
     <Content Include="Resources\Models\**">

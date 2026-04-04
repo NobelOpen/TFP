@@ -138,6 +138,9 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>是否截取整页（长截图），默认 false 只截可视区域</summary>
         public bool BrowserScreenshotFullPage { get; set; }
 
+        /// <summary>是否启用 Set-of-Mark 标注模式（在截图上标注可交互元素编号）</summary>
+        public bool BrowserScreenshotAnnotate { get; set; }
+
 
         /// <summary>失败回退策略：retry / fallback / abort（自主模式卡片失败时使用）</summary>
         public string? FailureStrategy { get; set; }

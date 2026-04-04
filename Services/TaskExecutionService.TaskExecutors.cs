@@ -69,8 +69,11 @@ namespace TaskFlow.Services
             int y = task.StartY;
 
             // 解析 X/Y 坐标表达式
-            if (!ResolveCoordinateExpression(task.StartXExpression, "X", ref x, task, allTasks)) return false;
-            if (!ResolveCoordinateExpression(task.StartYExpression, "Y", ref y, task, allTasks)) return false;
+            if (task.UseVariableCoordinates)
+            {
+                if (!ResolveCoordinateExpression(task.StartXExpression, "X", ref x, task, allTasks)) return false;
+                if (!ResolveCoordinateExpression(task.StartYExpression, "Y", ref y, task, allTasks)) return false;
+            }
 
             if (task.UseSourceTaskCoordinates && task.SourceTaskIdForCoordinates.HasValue)
             {

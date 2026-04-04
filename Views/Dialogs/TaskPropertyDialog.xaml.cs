@@ -821,6 +821,160 @@ namespace TaskFlow.Views.Dialogs
                     UpdateVisibility(sb);
                 }
             };
+
+            // ===== 拾取控件按钮 =====
+            PropertyPanel.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 8), Background = new SolidColorBrush(Color.FromRgb(232, 230, 220)) });
+
+            var inspectButton = new Button
+            {
+                Content = new TextBlock 
+                { 
+                    Text = "拾取控件（右键点击目标控件）", 
+                    Margin = new Thickness(12, 6, 12, 6),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                },
+                Style = FindResource("SecondaryButton") as Style,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 4, 0, 8),
+                Cursor = Cursors.Hand
+            };
+
+            // 拾取结果展示区（初始隐藏）
+            var inspectResultPanel = new StackPanel { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 4, 0, 0) };
+            var inspectResultBox = new TextBox
+            {
+                IsReadOnly = true,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                MaxHeight = 160,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Style = FindResource("PropertyTextBox") as Style,
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(80, 80, 80))
+            };
+            inspectResultPanel.Children.Add(inspectResultBox);
+
+            inspectButton.Click += async (s, e) =>
+            {
+                // 记住窗口所有者，避免最小化后丢失
+                var ownerWindow = this.Owner;
+
+                // 最小化属性对话框，让出屏幕空间
+                this.WindowState = WindowState.Minimized;
+                // 同时最小化主窗口
+                ownerWindow?.Dispatcher.Invoke(() =>
+                {
+                    if (ownerWindow.WindowState != WindowState.Minimized)
+                        ownerWindow.WindowState = WindowState.Minimized;
+                });
+
+                // 等待一小段时间让窗口最小化动画完成
+                await System.Threading.Tasks.Task.Delay(400);
+
+                try
+                {
+                    // 等待右键按下
+                    while (!Win32Helper.IsMouseRightButtonDown())
+                    {
+                        await System.Threading.Tasks.Task.Delay(50);
+                    }
+
+                    // 获取鼠标坐标
+                    var (cursorX, cursorY) = Win32Helper.GetCurrentCursorPosition();
+
+                    // 等待右键释放，避免干扰目标程序
+                    while (Win32Helper.IsMouseRightButtonDown())
+                    {
+                        await System.Threading.Tasks.Task.Delay(30);
+                    }
+
+                    // 通过 UI Automation 获取该坐标处的控件信息
+                    var point = new System.Windows.Point(cursorX, cursorY);
+                    var element = System.Windows.Automation.AutomationElement.FromPoint(point);
+
+                    if (element != null)
+                    {
+                        string elName = element.Current.Name ?? "";
+                        string elAutoId = element.Current.AutomationId ?? "";
+                        string elClassName = element.Current.ClassName ?? "";
+                        string elControlType = element.Current.ControlType?.ProgrammaticName ?? "";
+                        int elProcessId = element.Current.ProcessId;
+
+                        // 获取进程名称
+                        string elProcessName = "";
+                        try
+                        {
+                            var proc = System.Diagnostics.Process.GetProcessById(elProcessId);
+                            elProcessName = proc.ProcessName;
+                        }
+                        catch { /* 进程可能已退出 */ }
+
+                        // 恢复窗口
+                        this.WindowState = WindowState.Normal;
+                        this.Activate();
+                        ownerWindow?.Dispatcher.Invoke(() =>
+                        {
+                            if (ownerWindow.WindowState == WindowState.Minimized)
+                                ownerWindow.WindowState = WindowState.Normal;
+                        });
+
+                        // 自动填入进程名
+                        if (!string.IsNullOrEmpty(elProcessName) &&
+                            _propertyControls.TryGetValue("ProcessName", out var procCtrl) &&
+                            procCtrl is TextBox procTextBox)
+                        {
+                            procTextBox.Text = elProcessName;
+                        }
+
+                        // 根据当前查找方式自动填入对应字段
+                        if (!string.IsNullOrEmpty(elAutoId))
+                        {
+                            // 如果有 AutomationId，优先切换到 AutomationId 模式并填入
+                            searchByCombo.SelectedIndex = (int)UiSearchBy.AutomationId;
+                            autoIdBox.Text = elAutoId;
+                        }
+                        else if (!string.IsNullOrEmpty(elName))
+                        {
+                            // 否则使用名称模式
+                            searchByCombo.SelectedIndex = (int)UiSearchBy.Name;
+                            btnNameBox.Text = elName;
+                        }
+
+                        // 显示完整的拾取结果
+                        inspectResultBox.Text =
+                            $"Name: {elName}\n" +
+                            $"AutomationId: {elAutoId}\n" +
+                            $"ClassName: {elClassName}\n" +
+                            $"ControlType: {elControlType}\n" +
+                            $"ProcessName: {elProcessName}\n" +
+                            $"ProcessId: {elProcessId}\n" +
+                            $"Position: ({cursorX}, {cursorY})";
+                        inspectResultPanel.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        // 恢复窗口
+                        this.WindowState = WindowState.Normal;
+                        this.Activate();
+                        MessageBox.Show("未能获取到控件信息", "", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 确保窗口恢复
+                    this.WindowState = WindowState.Normal;
+                    this.Activate();
+                    ownerWindow?.Dispatcher.Invoke(() =>
+                    {
+                        if (ownerWindow.WindowState == WindowState.Minimized)
+                            ownerWindow.WindowState = WindowState.Normal;
+                    });
+                    MessageBox.Show($"拾取失败: {ex.Message}", "", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            };
+
+            PropertyPanel.Children.Add(inspectButton);
+            PropertyPanel.Children.Add(inspectResultPanel);
         }
 
         private void AddSimulateInputProperties(WinSimulateInputTaskCard card)

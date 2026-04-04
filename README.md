@@ -15,7 +15,7 @@
 - **Screenshot** — Capture specific windows with options to crop the title bar or convert to grayscale
 - **Simulate Click** — Single click, double click, and swipe. Supports off-screen clicking (PostMessage)
 - **Simulate Input** — Keyboard strokes and mouse wheel scrolling, supporting modifier key combinations
-- **UI Automation** — Find and interact with UI elements based on AutomationId or Control Name
+- **UI Automation** — Find and interact with UI elements based on AutomationId or Control Name (features a built-in element inspector via right-click)
 - **Subtitle Overlay** — Overlay subtitles on target windows with support for frosted glass, solid color, transparent, or auto-color-sampling backgrounds
 - **Win Event Listener** — Pause execution and wait for specific mouse or keyboard events (e.g., Left Click, Enter)
 
@@ -124,7 +124,7 @@ This project is for educational and personal use only.
 - **屏幕截图** — 支持指定窗口截图，可裁剪标题栏、灰度转换
 - **模拟点击** — 单击、双击、滑动，支持离屏点击（PostMessage）
 - **模拟输入** — 键盘按键、鼠标滚轮，支持修饰键组合
-- **UI 自动化** — 基于 AutomationId 或控件名称查找并操作 UI 元素
+- **UI 自动化** — 基于 AutomationId 或控件名称查找并操作 UI 元素（内置交互式右键拾取控件功能）
 - **字幕叠层** — 在目标窗口上叠加字幕，支持毛玻璃/纯色/透明/自动吸色背景
 - **Win 事件监听** — 暂停流程，等待指定的鼠标或键盘事件触发（如左键单击、回车键等）
 

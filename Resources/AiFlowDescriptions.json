@@ -591,10 +591,11 @@
   {
     "TaskType": "BrowserSimulatedClick",
     "Category": "浏览器自动化",
-    "Description": "通过 CDP 连接浏览器，在页面的绝对坐标处进行鼠标模拟点击",
-    "Usage": "当没有DOM元素可选，但通过计算或视觉识别得到了元素确切的 XY 页面坐标时使用",
+    "Description": "通过 CDP 连接浏览器，在页面的绝对坐标处进行鼠标模拟点击。支持 Set-of-Mark 标注模式：当指定 markId 时，引擎自动从标注映射表查询精确坐标，无需手动输入 X/Y",
+    "Usage": "当没有DOM元素可选，但通过 Set-of-Mark 标注（request_browser_screenshot annotate=true）识别到了目标元素编号时，使用 markId 属性。也可直接指定 X/Y 绝对坐标",
     "KeyProperties": [
-      "startX/startY: 绝对点击坐标(关联页面左上角)",
+      "markId: Set-of-Mark 标注编号（优先级高于 X/Y，指定后引擎自动查表获取精确坐标）",
+      "startX/startY: 绝对点击坐标(关联页面左上角)，当未使用 markId 时必填",
       "debuggingPort: CDP调试端口"
     ],
     "Outputs": []

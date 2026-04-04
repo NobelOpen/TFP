@@ -602,7 +602,7 @@ namespace TaskFlow.ViewModels
                     getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                     captureScreenshot: async target => await CaptureScreenForAiAsync(
                         string.IsNullOrWhiteSpace(target) ? "windows" : target),
-                    captureBrowserScreenshot: async (port, fullPage) => await CaptureBrowserPageForAiAsync(port, fullPage),
+                    captureBrowserScreenshot: async (port, fullPage, annotate) => await CaptureBrowserPageForAiAsync(port, fullPage, annotate),
                     captureCardImage: async order => await GetCardOutputImageForAiAsync(order),
                     prefillAssistantMessage: prefill);
 

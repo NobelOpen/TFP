@@ -50,6 +50,7 @@ namespace TaskFlow.Services
 
                 string args = _variableStore.ResolveVariableReferences(task.Arguments);
                 args = ExpressionEvaluator.ResolveExpression(args, allTasks, _variableStore);
+                args = Environment.ExpandEnvironmentVariables(args ?? "");
 
                 var result = await Win32Helper.LaunchApplicationAsync(exePath, args);
                 if (!result.Success)
@@ -88,8 +89,11 @@ namespace TaskFlow.Services
             int y = task.StartY;
 
             // 解析 X/Y 坐标表达式
-            if (!ResolveCoordinateExpression(task.StartXExpression, "X", ref x, task, allTasks)) return false;
-            if (!ResolveCoordinateExpression(task.StartYExpression, "Y", ref y, task, allTasks)) return false;
+            if (task.UseVariableCoordinates)
+            {
+                if (!ResolveCoordinateExpression(task.StartXExpression, "X", ref x, task, allTasks)) return false;
+                if (!ResolveCoordinateExpression(task.StartYExpression, "Y", ref y, task, allTasks)) return false;
+            }
 
             if (task.UseSourceTaskCoordinates && task.SourceTaskIdForCoordinates.HasValue)
             {
@@ -109,9 +113,13 @@ namespace TaskFlow.Services
                 {
                 if (processes.Length > 0)
                 {
-                    // 获取主窗口句柄
-                    targetHwnd = processes.OrderByDescending(p => p.MainWindowHandle.ToInt64()).First().MainWindowHandle;
-                    if (targetHwnd == IntPtr.Zero)
+                    // 获取有效的主窗口句柄
+                    var validProcess = processes.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+                    if (validProcess != null)
+                    {
+                        targetHwnd = validProcess.MainWindowHandle;
+                    }
+                    else
                     {
                         task.ErrorMessage = $"进程 '{task.ProcessName}' 没有主窗口";
                         return false;
@@ -323,14 +331,14 @@ namespace TaskFlow.Services
                     return Task.FromResult(false);
                 }
 
-                proc = processes[0];
-                var mainWindowHandle = proc.MainWindowHandle;
-
-                if (mainWindowHandle == IntPtr.Zero)
+                proc = processes.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+                if (proc == null)
                 {
                     task.ErrorMessage = $"进程 {task.ProcessName} 没有主窗口";
                     return Task.FromResult(false);
                 }
+
+                var mainWindowHandle = proc.MainWindowHandle;
 
                 var windowElement = System.Windows.Automation.AutomationElement.FromHandle(mainWindowHandle);
                 System.Windows.Automation.AutomationElement? buttonElement = null;
@@ -338,13 +346,8 @@ namespace TaskFlow.Services
                 if (task.SearchBy == UiSearchBy.AutomationId)
                 {
                     // 按 AutomationId 精确查找
-                    var condition = new System.Windows.Automation.AndCondition(
-                        new System.Windows.Automation.PropertyCondition(
-                            System.Windows.Automation.AutomationElement.AutomationIdProperty, task.AutomationId),
-                        new System.Windows.Automation.PropertyCondition(
-                            System.Windows.Automation.AutomationElement.ControlTypeProperty,
-                            System.Windows.Automation.ControlType.Button)
-                    );
+                    var condition = new System.Windows.Automation.PropertyCondition(
+                            System.Windows.Automation.AutomationElement.AutomationIdProperty, task.AutomationId);
                     buttonElement = windowElement.FindFirst(
                         System.Windows.Automation.TreeScope.Descendants, condition);
 
@@ -366,21 +369,34 @@ namespace TaskFlow.Services
                     }
                 }
 
-                // 尝试使用 InvokePattern 点击按钮
+                // 尝试使用各种 Pattern 操作控件
                 if (buttonElement.TryGetCurrentPattern(
-                    System.Windows.Automation.InvokePattern.Pattern, out object? pattern))
+                    System.Windows.Automation.InvokePattern.Pattern, out object? invokePattern))
                 {
-                    ((System.Windows.Automation.InvokePattern)pattern).Invoke();
-                    string actualName = buttonElement.Current.Name ?? "";
-                    string identifier = task.SearchBy == UiSearchBy.AutomationId
-                        ? $"AutomationId='{task.AutomationId}'"
-                        : $"名称='{actualName}'";
-                    Log($"[{DateTime.Now:HH:mm:ss}] WinUI自动化: 已点击按钮 {identifier} ({task.ProcessName})");
-                    return Task.FromResult(true);
+                    ((System.Windows.Automation.InvokePattern)invokePattern).Invoke();
+                }
+                else if (buttonElement.TryGetCurrentPattern(
+                    System.Windows.Automation.SelectionItemPattern.Pattern, out object? selectionPattern))
+                {
+                    ((System.Windows.Automation.SelectionItemPattern)selectionPattern).Select();
+                }
+                else if (buttonElement.TryGetCurrentPattern(
+                    System.Windows.Automation.TogglePattern.Pattern, out object? togglePattern))
+                {
+                    ((System.Windows.Automation.TogglePattern)togglePattern).Toggle();
+                }
+                else
+                {
+                    task.ErrorMessage = $"控件(ControlType: {buttonElement.Current.ControlType.ProgrammaticName})不支持点击、选中或切换操作";
+                    return Task.FromResult(false);
                 }
 
-                task.ErrorMessage = $"按钮不支持点击操作";
-                return Task.FromResult(false);
+                string actualName = buttonElement.Current.Name ?? "";
+                string identifier = task.SearchBy == UiSearchBy.AutomationId
+                    ? $"AutomationId='{task.AutomationId}'"
+                    : $"名称='{actualName}'";
+                Log($"[{DateTime.Now:HH:mm:ss}] WinUI自动化: 已操作控件 {identifier} ({task.ProcessName})");
+                return Task.FromResult(true);
                 }
                 finally
                 {
@@ -437,22 +453,16 @@ namespace TaskFlow.Services
             if (matchMode == UiMatchMode.Exact)
             {
                 // 精确匹配：直接使用 PropertyCondition
-                var condition = new System.Windows.Automation.AndCondition(
-                    new System.Windows.Automation.PropertyCondition(
-                        System.Windows.Automation.AutomationElement.NameProperty, buttonName),
-                    new System.Windows.Automation.PropertyCondition(
-                        System.Windows.Automation.AutomationElement.ControlTypeProperty,
-                        System.Windows.Automation.ControlType.Button)
-                );
+                var condition = new System.Windows.Automation.PropertyCondition(
+                        System.Windows.Automation.AutomationElement.NameProperty, buttonName);
                 return window.FindFirst(System.Windows.Automation.TreeScope.Descendants, condition);
             }
 
-            // 包含 / 正则：遍历所有按钮
+            // 包含 / 正则：遍历所有控件
+            // 注意：遍历所有控件可能会较慢，但为了支持所有类型控件必须这么做
             var allButtons = window.FindAll(
                 System.Windows.Automation.TreeScope.Descendants,
-                new System.Windows.Automation.PropertyCondition(
-                    System.Windows.Automation.AutomationElement.ControlTypeProperty,
-                    System.Windows.Automation.ControlType.Button));
+                System.Windows.Automation.Condition.TrueCondition);
 
             foreach (System.Windows.Automation.AutomationElement btn in allButtons)
             {

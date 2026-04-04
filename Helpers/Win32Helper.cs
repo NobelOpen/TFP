@@ -59,6 +59,32 @@ namespace TaskFlow.Helpers
         private const byte VK_SHIFT = 0x10;
         private const byte VK_MENU = 0x12; // Alt键
 
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+
+        private const int VK_RBUTTON = 0x02; // 鼠标右键
+
+        #endregion
+
+        #region 公开的鼠标状态查询
+
+        /// <summary>
+        /// 获取当前全局鼠标光标坐标
+        /// </summary>
+        public static (int X, int Y) GetCurrentCursorPosition()
+        {
+            GetCursorPos(out POINT pt);
+            return (pt.X, pt.Y);
+        }
+
+        /// <summary>
+        /// 检测鼠标右键当前是否处于按下状态
+        /// </summary>
+        public static bool IsMouseRightButtonDown()
+        {
+            return (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
+        }
+
         #endregion
 
         #region 底层按键操作（供 InputCombo 使用）

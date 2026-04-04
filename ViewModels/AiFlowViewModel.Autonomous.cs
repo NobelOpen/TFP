@@ -95,19 +95,96 @@ namespace TaskFlow.ViewModels
         /// <summary>
         /// Orchid 静默截屏：获取当前屏幕或指定窗口的图像，返回 base64 编码和分辨率。
         /// 不创建任何画布卡片，供 AI 按需查看浏览器页面内容。
+        /// 当 annotate=true 时启用 Set-of-Mark 模式：注入标注脚本，为所有可交互元素
+        /// 贴上编号标签，返回标注后截图和元素映射表文本。
         /// </summary>
-        private async Task<(string? Base64, int Width, int Height)> CaptureBrowserPageForAiAsync(int port = 9222, bool fullPage = false)
+        private async Task<(string? Base64, int Width, int Height, string? MarkMappingsText)> CaptureBrowserPageForAiAsync(int port = 9222, bool fullPage = false, bool annotate = false)
         {
             try
             {
                 var page = await Services.BrowserSessionManager.GetActivePageAsync(port);
+
+                string? markMappingsText = null;
+
+                // Set-of-Mark 标注模式
+                if (annotate)
+                {
+                    try
+                    {
+                        // 加载标注注入脚本
+                        var assemblyDir = System.IO.Path.GetDirectoryName(
+                            System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "";
+                        var scriptPath = System.IO.Path.Combine(assemblyDir, "Resources", "Scripts", "SetOfMark.js");
+                        var cleanupPath = System.IO.Path.Combine(assemblyDir, "Resources", "Scripts", "SetOfMarkCleanup.js");
+
+                        if (!System.IO.File.Exists(scriptPath))
+                        {
+                            AiFlowLogger.Warn($"SetOfMark.js 脚本不存在: {scriptPath}");
+                        }
+                        else
+                        {
+                            var somScript = System.IO.File.ReadAllText(scriptPath, System.Text.Encoding.UTF8);
+
+                            // 注入标注脚本（包裹在匿名函数中执行并获取返回值）
+                            var wrappedScript = $"() => {{ {somScript} }}";
+                            var mappingsJson = await page.EvaluateAsync<string?>(wrappedScript);
+
+                            if (!string.IsNullOrEmpty(mappingsJson))
+                            {
+                                // 解析映射表并缓存到执行引擎
+                                try
+                                {
+                                    var mappings = System.Text.Json.JsonSerializer.Deserialize<List<SoMMapping>>(mappingsJson);
+                                    if (mappings != null && mappings.Count > 0)
+                                    {
+                                        // 缓存精确坐标到执行引擎（供后续 BrowserSimulatedClick 查表）
+                                        var cache = new Dictionary<int, (float CssX, float CssY)>();
+                                        var textBuilder = new System.Text.StringBuilder();
+                                        textBuilder.AppendLine($"[Set-of-Mark 标注结果] 共标注 {mappings.Count} 个可交互元素：");
+
+                                        foreach (var m in mappings)
+                                        {
+                                            cache[m.id] = (m.cx, m.cy);
+                                            var label = string.IsNullOrEmpty(m.text) ? "" : $" \"{m.text}\"";
+                                            textBuilder.AppendLine($"  [{m.id}] {m.role}{label}");
+                                        }
+
+                                        Services.TaskExecutionService._markMappings = cache;
+                                        markMappingsText = textBuilder.ToString();
+                                        AiFlowLogger.Info($"[SoM] 标注完成: {mappings.Count} 个元素，映射表已缓存");
+                                    }
+                                }
+                                catch (Exception parseEx)
+                                {
+                                    AiFlowLogger.Warn($"[SoM] 映射表解析失败: {parseEx.Message}");
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception somEx)
+                    {
+                        AiFlowLogger.Warn($"[SoM] 标注注入失败（不影响截图）: {somEx.Message}");
+                    }
+                }
+
+                // 截图（如果标注成功，截图会包含标注视觉标签）
                 byte[] bytes = await page.ScreenshotAsync(new Microsoft.Playwright.PageScreenshotOptions
                 {
                     FullPage = fullPage
                 });
 
+                // 清理标注叠加层（截图后立即清理，避免影响后续页面交互）
+                if (annotate)
+                {
+                    try
+                    {
+                        await page.EvaluateAsync("() => { const o = document.getElementById('__som_overlay__'); if (o) o.remove(); }");
+                    }
+                    catch { /* 清理失败不影响主流程 */ }
+                }
+
                 if (bytes == null || bytes.Length == 0)
-                    return (null, 0, 0);
+                    return (null, 0, 0, null);
 
                 // 解码图像获取分辨率
                 using var mat = OpenCvSharp.Mat.FromImageData(bytes, OpenCvSharp.ImreadModes.Color);
@@ -123,14 +200,27 @@ namespace TaskFlow.ViewModels
                     OpenCvSharp.Cv2.ImEncode(".jpg", mat, out imgBytes, encodeParams);
                 }
 
-                AiFlowLogger.Info($"浏览器截图编码完成: {imgBytes.Length / 1024}KB ({w}x{h}, 端口 {port})");
-                return (Convert.ToBase64String(imgBytes), w, h);
+                AiFlowLogger.Info($"浏览器截图编码完成: {imgBytes.Length / 1024}KB ({w}x{h}, 端口 {port}{(annotate ? ", SoM标注模式" : "")})");
+                return (Convert.ToBase64String(imgBytes), w, h, markMappingsText);
             }
             catch (Exception ex)
             {
                 AiFlowLogger.Warn($"Orchid 浏览器截图失败 (端口 {port}): {ex.Message}");
-                return (null, 0, 0);
+                return (null, 0, 0, null);
             }
+        }
+
+        /// <summary>
+        /// Set-of-Mark 映射条目（用于 JSON 反序列化）
+        /// </summary>
+        private class SoMMapping
+        {
+            public int id { get; set; }
+            public float cx { get; set; }
+            public float cy { get; set; }
+            public string text { get; set; } = "";
+            public string role { get; set; } = "";
+            public string tag { get; set; } = "";
         }
 
         /// <summary>
@@ -416,18 +506,22 @@ namespace TaskFlow.ViewModels
                     }
 
                     // Orchid 按需浏览器截屏：仅当 AI 请求时通过 CDP 截取浏览器页面
+                    string? somAnnotationText = null; // Set-of-Mark 标注结果文本
                     if (currentPlan.NeedsBrowserScreenshot)
                     {
                         int bsPort = currentPlan.BrowserScreenshotPort;
                         bool bsFullPage = currentPlan.BrowserScreenshotFullPage;
-                        AiFlowLogger.Info($"Orchid 按需浏览器截屏中（端口 {bsPort}，全页={bsFullPage}）...");
-                        var (bsBase64, bw, bh) = await CaptureBrowserPageForAiAsync(bsPort, bsFullPage);
+                        bool bsAnnotate = currentPlan.BrowserScreenshotAnnotate;
+                        AiFlowLogger.Info($"Orchid 按需浏览器截屏中（端口 {bsPort}，全页={bsFullPage}，标注={bsAnnotate}）...");
+                        var (bsBase64, bw, bh, bsMarkText) = await CaptureBrowserPageForAiAsync(bsPort, bsFullPage, bsAnnotate);
                         if (bsBase64 != null)
                         {
                             autoImageList ??= new List<string>();
                             autoImageList.Add(bsBase64);
-                            AiFlowLogger.Info($"已附加浏览器页面截图 ({bw}x{bh})");
-                            AddMessage(AiChatRole.System, $"🌐 已截取浏览器页面 ({bw}x{bh}，端口 {bsPort})");
+                            AiFlowLogger.Info($"已附加浏览器页面截图 ({bw}x{bh}{(bsAnnotate ? ", SoM标注" : "")})");
+                            AddMessage(AiChatRole.System, $"🌐 已截取浏览器页面 ({bw}x{bh}，端口 {bsPort}{(bsAnnotate ? "，已标注" : "")})");
+                            if (!string.IsNullOrEmpty(bsMarkText))
+                                somAnnotationText = bsMarkText;
                         }
                         else
                         {
@@ -470,7 +564,7 @@ namespace TaskFlow.ViewModels
                                 getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                                 captureScreenshot: async target => await CaptureScreenForAiAsync(
                                     string.IsNullOrWhiteSpace(target) ? "windows" : target),
-                                captureBrowserScreenshot: async (port, fullPage) => await CaptureBrowserPageForAiAsync(port, fullPage),
+                                captureBrowserScreenshot: async (port, fullPage, annotate) => await CaptureBrowserPageForAiAsync(port, fullPage, annotate),
                                 captureCardImage: async order => await GetCardOutputImageForAiAsync(order));
                             nextPlan = result.Item1;
                             tokensIn = result.Item2;
