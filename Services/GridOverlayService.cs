@@ -16,6 +16,9 @@ namespace TaskFlow.Services
         // 宏观网格行标签（字母）
         private static readonly string[] RowLabels = { "A", "B", "C", "D", "E", "F", "G", "H" };
 
+        /// <summary>获取最大网格标签（如 rows=4, cols=4 → "D4"）</summary>
+        public static string GetMaxLabel(int rows, int cols) =>
+            $"{RowLabels[Math.Min(rows - 1, RowLabels.Length - 1)]}{cols}";
         /// <summary>
         /// 在图像上绘制宏观网格（如 4×4，标签 A1~D4）
         /// </summary>

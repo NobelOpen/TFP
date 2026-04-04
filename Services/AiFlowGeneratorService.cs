@@ -1073,6 +1073,12 @@ namespace TaskFlow.Services
 
                             string gridNote = "";
 
+                            // 加载网格配置
+                            var gridSettings = Models.AppSettings.Load();
+                            int macroR = gridSettings.GridMacroRows, macroC = gridSettings.GridMacroCols;
+                            int microR = gridSettings.GridMicroRows, microC = gridSettings.GridMicroCols;
+                            bool debugPreview = gridSettings.GridDebugPreview;
+
                             // ---- 递归网格模式 ----
                             if (!string.IsNullOrEmpty(zoomCell) && _gridZoomState?.MacroLayout != null)
                             {
@@ -1084,7 +1090,7 @@ namespace TaskFlow.Services
                                     {
                                         using var srcMat = OpenCvSharp.Cv2.ImDecode(Convert.FromBase64String(base64), OpenCvSharp.ImreadModes.Color);
                                         var cvRect = new OpenCvSharp.Rect(macroRect.X, macroRect.Y, macroRect.Width, macroRect.Height);
-                                        var (zoomedMat, subLayout) = GridOverlayService.DrawMicroGrid(srcMat, cvRect);
+                                        var (zoomedMat, subLayout) = GridOverlayService.DrawMicroGrid(srcMat, cvRect, microR, microC);
 
                                         _gridZoomState.ZoomLevel = 1;
                                         _gridZoomState.SelectedRegion = macroRect;
@@ -1096,19 +1102,22 @@ namespace TaskFlow.Services
                                         sh = zoomedMat.Height;
                                         zoomedMat.Dispose();
 
-                                        // [临时调试] 保存网格预览图到桌面
-                                        try
+                                        // 调试：按设置决定是否保存预览图到桌面
+                                        if (debugPreview)
                                         {
-                                            var debugPath = System.IO.Path.Combine(
-                                                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                                                $"Grid_Zoom_{zoomKey}_{DateTime.Now:HHmmss}.jpg");
-                                            System.IO.File.WriteAllBytes(debugPath, zoomedBytes);
-                                            AiFlowLogger.Info($"[Grid-Debug] 微观网格预览图已保存: {debugPath}");
+                                            try
+                                            {
+                                                var debugPath = System.IO.Path.Combine(
+                                                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                                                    $"Grid_Zoom_{zoomKey}_{DateTime.Now:HHmmss}.jpg");
+                                                System.IO.File.WriteAllBytes(debugPath, zoomedBytes);
+                                                AiFlowLogger.Info($"[Grid-Debug] 微观网格预览图已保存: {debugPath}");
+                                            }
+                                            catch { }
                                         }
-                                        catch { }
 
-                                        gridNote = $"\n\n【网格放大模式】已将区域 {zoomKey} 裁切放大并叠加 3×3 微观子网格（编号 1~9）。请仔细观察放大后的画面，找到目标元素精确落点对应的数字编号。然后在 WinClick 卡片中设置 gridCell=\"数字编号\"（如 gridCell=\"5\"），引擎会自动从网格布局中还原绝对屏幕坐标并执行点击。严禁自行估算 startX/startY！";
-                                        AiFlowLogger.Info($"[ToolUse] 区域 {zoomKey} 放大成功，生成 3×3 微观子网格（共 9 个子区域）");
+                                        gridNote = $"\n\n【网格放大模式】已将区域 {zoomKey} 裁切放大并叠加 {microR}×{microC} 微观子网格（编号 1~{microR * microC}）。请仔细观察放大后的画面，找到目标元素精确落点对应的数字编号。然后在 WinClick 卡片中设置 gridCell=\"数字编号\"（如 gridCell=\"5\"），引擎会自动从网格布局中还原绝对屏幕坐标并执行点击。严禁自行估算 startX/startY！";
+                                        AiFlowLogger.Info($"[ToolUse] 区域 {zoomKey} 放大成功，生成 {microR}×{microC} 微观子网格（共 {microR * microC} 个子区域）");
                                     }
                                     catch (Exception zoomEx)
                                     {
@@ -1128,7 +1137,7 @@ namespace TaskFlow.Services
                                 try
                                 {
                                     using var srcMat = OpenCvSharp.Cv2.ImDecode(Convert.FromBase64String(base64), OpenCvSharp.ImreadModes.Color);
-                                    var (gridMat, layout) = GridOverlayService.DrawMacroGrid(srcMat);
+                                    var (gridMat, layout) = GridOverlayService.DrawMacroGrid(srcMat, macroR, macroC);
 
                                     // 初始化网格状态
                                     _gridZoomState = new Models.GridZoomState
@@ -1145,19 +1154,22 @@ namespace TaskFlow.Services
                                     base64 = Convert.ToBase64String(gridBytes);
                                     gridMat.Dispose();
 
-                                    // [临时调试] 保存网格预览图到桌面
-                                    try
+                                    // 调试：按设置决定是否保存预览图到桌面
+                                    if (debugPreview)
                                     {
-                                        var debugPath = System.IO.Path.Combine(
-                                            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                                            $"Grid_Macro_{DateTime.Now:HHmmss}.jpg");
-                                        System.IO.File.WriteAllBytes(debugPath, gridBytes);
-                                        AiFlowLogger.Info($"[Grid-Debug] 宏观网格预览图已保存: {debugPath}");
+                                        try
+                                        {
+                                            var debugPath = System.IO.Path.Combine(
+                                                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                                                $"Grid_Macro_{DateTime.Now:HHmmss}.jpg");
+                                            System.IO.File.WriteAllBytes(debugPath, gridBytes);
+                                            AiFlowLogger.Info($"[Grid-Debug] 宏观网格预览图已保存: {debugPath}");
+                                        }
+                                        catch { }
                                     }
-                                    catch { }
 
-                                    gridNote = $"\n\n【网格定位模式】截图已叠加 4×4 宏观网格（标签 A1~D4）。请仔细观察截图，找到目标元素所在的网格区域。然后调用 request_screenshot(zoom=\"网格编号\")（如 zoom=\"B3\"）来放大该区域，系统会叠加 3×3 微观子网格帮助你精确定位。";
-                                    AiFlowLogger.Info($"[ToolUse] 宏观网格绘制成功（4×4, 共 {layout.Count} 个区域），偏移量: ({offsetX}, {offsetY})");
+                                    gridNote = $"\n\n【网格定位模式】截图已叠加 {macroR}×{macroC} 宏观网格（标签 A1~{GridOverlayService.GetMaxLabel(macroR, macroC)}）。请仔细观察截图，找到目标元素所在的网格区域。然后调用 request_screenshot(zoom=\"网格编号\")（如 zoom=\"B3\"）来放大该区域，系统会叠加 {microR}×{microC} 微观子网格帮助你精确定位。";
+                                    AiFlowLogger.Info($"[ToolUse] 宏观网格绘制成功（{macroR}×{macroC}, 共 {layout.Count} 个区域），偏移量: ({offsetX}, {offsetY})");
                                 }
                                 catch (Exception gridEx)
                                 {

@@ -55,6 +55,23 @@ namespace TaskFlow.Models
         /// <summary>显式配置的轻量路由模型 ID（用于第一阶段意图分类）</summary>
         public string? RouterModelId { get; set; }
 
+        // ========== 递归网格设置 ==========
+
+        /// <summary>宏观网格行数（默认 4）</summary>
+        public int GridMacroRows { get; set; } = 4;
+
+        /// <summary>宏观网格列数（默认 4）</summary>
+        public int GridMacroCols { get; set; } = 4;
+
+        /// <summary>微观子网格行数（默认 3）</summary>
+        public int GridMicroRows { get; set; } = 3;
+
+        /// <summary>微观子网格列数（默认 3）</summary>
+        public int GridMicroCols { get; set; } = 3;
+
+        /// <summary>是否保存网格预览图到桌面（调试用）</summary>
+        public bool GridDebugPreview { get; set; } = false;
+
         // ========== 微信 OCR ==========
 
         /// <summary>微信 OCR 可执行文件路径（WeChatOCR.exe 或 wxocr.dll）</summary>

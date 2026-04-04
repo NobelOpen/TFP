@@ -334,6 +334,22 @@
                 </ComboBox>
             </DockPanel>
 
+            <!-- 递归网格设置 -->
+            <TextBlock x:Name="TxtGridSection" Text="🎯 递归网格定位" Style="{StaticResource SectionHeader}"/>
+            <DockPanel Margin="0,4">
+                <TextBlock x:Name="TxtGridMacroLabel" Text="宏观网格（行 × 列）:" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
+                <TextBox x:Name="TxtGridMacroRows" Style="{StaticResource SettingTextBox}" Width="50"/>
+                <TextBlock Text="×" Style="{StaticResource SettingLabel}" Margin="6,0"/>
+                <TextBox x:Name="TxtGridMacroCols" Style="{StaticResource SettingTextBox}" Width="50"/>
+            </DockPanel>
+            <DockPanel Margin="0,4">
+                <TextBlock x:Name="TxtGridMicroLabel" Text="微观子网格（行 × 列）:" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
+                <TextBox x:Name="TxtGridMicroRows" Style="{StaticResource SettingTextBox}" Width="50"/>
+                <TextBlock Text="×" Style="{StaticResource SettingLabel}" Margin="6,0"/>
+                <TextBox x:Name="TxtGridMicroCols" Style="{StaticResource SettingTextBox}" Width="50"/>
+            </DockPanel>
+            <CheckBox x:Name="ChkGridDebugPreview" Content="保存网格预览图到桌面（调试用）" Style="{StaticResource SettingCheckBox}"/>
+
             <!-- 语言设置 -->
             <TextBlock x:Name="TxtLangSection" Text="语言设置 / Language" Style="{StaticResource SectionHeader}"/>
             <DockPanel Margin="0,4">

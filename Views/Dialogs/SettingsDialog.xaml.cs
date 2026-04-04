@@ -125,6 +125,13 @@ namespace TaskFlow.Views.Dialogs
                 }
             }
 
+            // 递归网格设置
+            TxtGridMacroRows.Text = _settings.GridMacroRows.ToString();
+            TxtGridMacroCols.Text = _settings.GridMacroCols.ToString();
+            TxtGridMicroRows.Text = _settings.GridMicroRows.ToString();
+            TxtGridMicroCols.Text = _settings.GridMicroCols.ToString();
+            ChkGridDebugPreview.IsChecked = _settings.GridDebugPreview;
+
             // 微信 OCR
             TxtOcrExePath.Text = _settings.WeChatOcrExePath ?? string.Empty;
             TxtOcrDirPath.Text = _settings.WeChatOcrDirPath ?? string.Empty;
@@ -308,6 +315,17 @@ namespace TaskFlow.Views.Dialogs
             {
                 _settings.RouterModelId = string.IsNullOrEmpty(routerTag) ? null : routerTag;
             }
+
+            // 递归网格设置
+            if (int.TryParse(TxtGridMacroRows.Text.Trim(), out int macroRows) && macroRows >= 2 && macroRows <= 8)
+                _settings.GridMacroRows = macroRows;
+            if (int.TryParse(TxtGridMacroCols.Text.Trim(), out int macroCols) && macroCols >= 2 && macroCols <= 8)
+                _settings.GridMacroCols = macroCols;
+            if (int.TryParse(TxtGridMicroRows.Text.Trim(), out int microRows) && microRows >= 2 && microRows <= 5)
+                _settings.GridMicroRows = microRows;
+            if (int.TryParse(TxtGridMicroCols.Text.Trim(), out int microCols) && microCols >= 2 && microCols <= 5)
+                _settings.GridMicroCols = microCols;
+            _settings.GridDebugPreview = ChkGridDebugPreview.IsChecked == true;
 
             if (!int.TryParse(TxtRepeatInterval.Text.Trim(), out int repeatInterval) || repeatInterval < 0)
             {
