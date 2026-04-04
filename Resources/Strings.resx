@@ -2581,6 +2581,12 @@ Example: @A = 1; @B = @A + 1</value>
   <data name="Settings_SingleStage" xml:space="preserve">
     <value>Enable single-stage invocation (improves speed, increases token usage)</value>
   </data>
+  <data name="Settings_RouterModel" xml:space="preserve">
+    <value>Fast Router Model (For Stage 1 classification)</value>
+  </data>
+  <data name="Settings_RouterModelNone" xml:space="preserve">
+    <value>(None, will use local semantic router)</value>
+  </data>
   <data name="Settings_ViewCalibration" xml:space="preserve">
     <value>View Calibration Results</value>
   </data>

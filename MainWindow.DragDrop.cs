@@ -908,7 +908,12 @@ namespace TaskFlow
             foreach (var (type, tag) in new[] {
                 (TaskType.BrowserGetText, "BrowserGetText"),
                 (TaskType.BrowserExecuteJs, "BrowserExecuteJs"),
-                (TaskType.BrowserWaitForElement, "BrowserWaitForElement") })
+                (TaskType.BrowserWaitForElement, "BrowserWaitForElement"),
+                (TaskType.BrowserNativeClick, "BrowserNativeClick"),
+                (TaskType.BrowserNativeInput, "BrowserNativeInput"),
+                (TaskType.BrowserSimulatedClick, "BrowserSimulatedClick"),
+                (TaskType.BrowserCdpCommand, "BrowserCdpCommand"),
+                (TaskType.BrowserScreenshot, "BrowserScreenshot") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;

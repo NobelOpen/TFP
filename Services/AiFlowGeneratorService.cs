@@ -40,7 +40,7 @@ namespace TaskFlow.Services
         /// <summary>
         /// 加载 Prompt 模板文件（带文件时间戳缓存，文件修改后自动刷新）
         /// </summary>
-        private static string LoadPromptTemplate(string fileName)
+        internal static string LoadPromptTemplate(string fileName)
         {
             var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
             var filePath = Path.Combine(assemblyDir, "Resources", "Prompts", fileName);
@@ -76,7 +76,7 @@ namespace TaskFlow.Services
         /// <summary>
         /// 渲染模板：将 {{占位符}} 替换为实际值
         /// </summary>
-        private static string RenderTemplate(string template, Dictionary<string, string> variables)
+        internal static string RenderTemplate(string template, Dictionary<string, string> variables)
         {
             var result = template;
             foreach (var (key, value) in variables)
@@ -212,32 +212,96 @@ namespace TaskFlow.Services
         /// 优先使用本地语义路由（零 Token 消耗），若模型不可用则回退到 LLM 分类。
         /// </summary>
         public async Task<(List<string> Categories, int InputTokens, int OutputTokens)> DetermineCategoriesAsync(
-            string userPrompt, string modelId, CancellationToken cancellationToken)
+            string userPrompt, string modelId, string routerModelId, CancellationToken cancellationToken)
         {
             var allCategories = GetAllCategories();
 
-            // ===== 优先路径：本地语义路由（零 Token 消耗）=====
+            // ===== 优先路径 1：轻量级 LLM 路由 =====
+            if (!string.IsNullOrEmpty(routerModelId))
+            {
+                var routerConfig = LlmModelManager.GetModelById(routerModelId);
+                if (routerConfig != null)
+                {
+                    try
+                    {
+                        AiFlowLogger.Info($"[路由层] 使用轻量模型 {routerConfig.DisplayName} 分析意图...");
+                        var result = await FallbackLlmCategoryJudgeAsync(userPrompt, routerConfig, allCategories, cancellationToken);
+                        if (result.Categories.Count > 0)
+                        {
+                            EnsureEssentialCategories(result.Categories, allCategories);
+                            AiFlowLogger.Info($"[路由层] 轻量模型成功分类: [{string.Join(", ", result.Categories)}]（Token: {result.InputTokens}+{result.OutputTokens}）");
+                            return result;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AiFlowLogger.Warn($"[路由层] 轻量模型调用失败: {ex.Message}。降级到本地语义路由...");
+                    }
+                }
+            }
+
+            // ===== 优先路径 2：本地语义路由（零 Token 消耗）=====
             var router = SemanticRouter.GetInstance();
             if (router.IsReady)
             {
-                var categories = router.Route(userPrompt, threshold: 0.30f, minCategories: 2);
+                var categories = router.Route(userPrompt, threshold: 0.45f, minCategories: 1);
 
                 // 验证结果：确保返回的类别都是已知的
                 categories = categories.Where(c => allCategories.Contains(c)).ToList();
                 if (categories.Count == 0)
                     categories = allCategories;
 
+                EnsureEssentialCategories(categories, allCategories);
                 AiFlowLogger.Info($"[语义路由] 类别匹配结果: [{string.Join(", ", categories)}]（0 Token 消耗）");
                 return (categories, 0, 0);
             }
 
-            // ===== 兜底路径：LLM 分类（模型文件不存在时使用）=====
-            AiFlowLogger.Info("语义路由不可用，回退到 LLM 分类模式...");
-
-            var modelConfig = LlmModelManager.GetModelById(modelId);
-            if (modelConfig == null)
+            // ===== 兜底路径：主模型 LLM 分类 =====
+            AiFlowLogger.Info("无有效路由结果，回退到主模型分类模式...");
+            var mainConfig = LlmModelManager.GetModelById(modelId);
+            if (mainConfig == null)
                 throw new InvalidOperationException("未找到指定的模型配置");
 
+            var finalResult = await FallbackLlmCategoryJudgeAsync(userPrompt, mainConfig, allCategories, cancellationToken);
+            EnsureEssentialCategories(finalResult.Categories, allCategories);
+            AiFlowLogger.Info($"[LLM路由] 类别判断结果: [{string.Join(", ", finalResult.Categories)}]");
+            return finalResult;
+        }
+
+        private void EnsureEssentialCategories(List<string> categories, List<string> allCategories)
+        {
+            // 基础必选类别：桌面自动化的核心能力（启动应用、截图、点击等）
+            foreach (var essential in new[] { "通用", "控制流", "Windows操作" })
+            {
+                if (allCategories.Contains(essential) && !categories.Contains(essential))
+                    categories.Add(essential);
+            }
+
+            // 类别依赖规则：某些类别天然需要搭配其他类别才能完整工作
+            // 例如：浏览器自动化需要 WinLaunchApp 启动浏览器，图像处理需要截图源
+            var dependencyRules = new Dictionary<string, string[]>
+            {
+                ["浏览器自动化"] = new[] { "Windows操作" },
+                ["图像处理"] = new[] { "Windows操作" },
+                ["AI操作"] = new[] { "Windows操作" },
+            };
+
+            foreach (var rule in dependencyRules)
+            {
+                if (categories.Contains(rule.Key))
+                {
+                    foreach (var dep in rule.Value)
+                    {
+                        if (allCategories.Contains(dep) && !categories.Contains(dep))
+                            categories.Add(dep);
+                    }
+                }
+            }
+        }
+
+        private async Task<(List<string> Categories, int InputTokens, int OutputTokens)> FallbackLlmCategoryJudgeAsync(
+            string userPrompt, LlmModelConfig modelConfig, List<string> allCategories, CancellationToken cancellationToken)
+        {
             var categoryList = string.Join("、", allCategories);
             var categoryTemplate = LoadPromptTemplate("CategoryJudge.md");
             var systemPrompt = RenderTemplate(categoryTemplate, new Dictionary<string, string>
@@ -257,7 +321,7 @@ namespace TaskFlow.Services
             };
 
             var requestJson = JsonConvert.SerializeObject(requestBody, Formatting.Indented);
-            AiFlowLogger.LogLlmRequest("阶段1-LLM类别判断", modelId, modelConfig.ApiEndpoint, requestJson);
+            AiFlowLogger.LogLlmRequest("阶段1-LLM类别判断", modelConfig.Id, modelConfig.ApiEndpoint, requestJson);
 
             var (responseText, inputTokens, outputTokens, _) = await CallLlmAsync(modelConfig, requestBody, cancellationToken);
             AiFlowLogger.LogLlmResponse("阶段1-LLM类别判断", responseText, inputTokens, outputTokens);
@@ -277,7 +341,6 @@ namespace TaskFlow.Services
 
             if (llmCategories.Count == 0) llmCategories = allCategories;
 
-            AiFlowLogger.Info($"[LLM路由] 类别判断结果: [{string.Join(", ", llmCategories)}]");
             return (llmCategories, inputTokens, outputTokens);
         }
 
@@ -430,6 +493,69 @@ namespace TaskFlow.Services
                 }
             });
 
+            // 工具: request_browser_screenshot —— 静默截取浏览器页面（不创建画布卡片）
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
+                {
+                    ["name"] = "request_browser_screenshot",
+                    ["description"] = "通过 CDP 静默截取浏览器当前页面的截图。只在需要查看网页内容时使用（如判断页面是否加载完成、分析页面元素布局）。不会在画布上创建任何卡片。需要浏览器以 --remote-debugging-port 启动。",
+                    ["parameters"] = new JObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject
+                        {
+                            ["port"] = new JObject
+                            {
+                                ["type"] = "integer",
+                                ["description"] = "CDP 调试端口号（默认 9222）"
+                            },
+                            ["fullPage"] = new JObject
+                            {
+                                ["type"] = "boolean",
+                                ["description"] = "是否截取整页长截图（未指定时内部默认 true，以避免视口遗漏关键元素）"
+                            },
+                            ["thought"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "为什么需要截取浏览器页面（思考过程必须提供）"
+                            }
+                        },
+                        ["required"] = new JArray("thought")
+                    }
+                }
+            });
+
+            // 工具: request_card_image —— 读取卡片输出图像
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
+                {
+                    ["name"] = "request_card_image",
+                    ["description"] = "获取某个画布任务卡片的实际输出图像。只在需要查看某个步骤输出的图像时调用。",
+                    ["parameters"] = new JObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject
+                        {
+                            ["order"] = new JObject
+                            {
+                                ["type"] = "integer",
+                                ["description"] = "目标卡片的序号（如 1、2）"
+                            },
+                            ["thought"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "为什么需要获取此卡片的图像（思考过程必须提供）"
+                            }
+                        },
+                        ["required"] = new JArray("order", "thought")
+                    }
+                }
+            });
+
             // ===== 以下工具在所有模式下均可用（只读零风险操作） =====
 
             // 工具: read_file —— 读取文件内容（支持分页）
@@ -565,6 +691,8 @@ namespace TaskFlow.Services
             Action<string?>? onStatus = null,
             Func<string, int, int, string?>? getFlowDetail = null,
             Func<string, Task<(string? Base64, int Width, int Height)>>? captureScreenshot = null,
+            Func<int, bool, Task<(string? Base64, int Width, int Height)>>? captureBrowserScreenshot = null,
+            Func<int, Task<(string? Base64, int Width, int Height)>>? captureCardImage = null,
             string? prefillAssistantMessage = null)
         {
             var modelConfig = LlmModelManager.GetModelById(modelId);
@@ -727,12 +855,13 @@ namespace TaskFlow.Services
 
                 while (analyzeRound < maxAnalyzeRounds)
                 {
-                    // 找到本轮中所有需要多轮处理的工具调用
                     var analyzeCalls = currentToolCalls?.Where(t => t.Name == "analyze_flow").ToList();
                     var screenshotCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_screenshot");
+                    var browserScreenshotCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_browser_screenshot");
+                    var cardImageCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_card_image");
                     var fileToolCalls = currentToolCalls?.Where(t => t.Name is "read_file" or "list_directory" or "search_text").ToList();
 
-                    // 优先处理 analyze_flow（支持一次返回多个），其次 request_screenshot，再次文件工具
+                    // 优先处理 analyze_flow（支持一次返回多个），其次 request_screenshot / request_browser_screenshot，再次文件工具
                     if (analyzeCalls != null && analyzeCalls.Count > 0)
                     {
                         // ---- 处理所有 analyze_flow 调用 ----
@@ -986,6 +1115,179 @@ namespace TaskFlow.Services
                             break;
                         }
                     }
+                    else if (browserScreenshotCall != null && browserScreenshotCall.Value.Name == "request_browser_screenshot" && captureBrowserScreenshot != null)
+                    {
+                        // ---- 处理 request_browser_screenshot ----
+                        analyzeRound++;
+                        var (bssId, _, bssArgs) = browserScreenshotCall.Value;
+                        try
+                        {
+                            var bssArg = JObject.Parse(bssArgs);
+                            int port = bssArg["port"]?.Value<int>() ?? 9222;
+                            bool fullPage = bssArg["fullPage"]?.Value<bool>() ?? true;
+                            AiFlowLogger.Info($"[ToolUse] request_browser_screenshot(port={port}, fullPage={fullPage}) → 截图中...");
+
+                            onStatus?.Invoke("正在截取浏览器页面...");
+                            var (base64, bw, bh) = await captureBrowserScreenshot(port, fullPage);
+
+                            if (base64 == null)
+                            {
+                                AiFlowLogger.Warn("[ToolUse] 浏览器截图失败");
+                                onStatus?.Invoke(null);
+                                onDelta?.Invoke("⚠️ 浏览器截图失败，可能未通过 --remote-debugging-port 启动浏览器\n");
+                                break;
+                            }
+
+                            AiFlowLogger.Info($"[ToolUse] 浏览器截图成功 ({bw}x{bh})，注入截图发起下一轮对话...");
+
+                            var bMime = base64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
+                            messagesJson.Add(new JObject
+                            {
+                                ["role"] = "user",
+                                ["content"] = new JArray
+                                {
+                                    new JObject { ["type"] = "text", ["text"] = $"[浏览器页面截图结果] 截图成功，页面分辨率 {bw}x{bh}（CDP端口 {port}）。以下是浏览器当前页面截图，请分析内容并继续完成任务。" },
+                                    new JObject
+                                    {
+                                        ["type"] = "image_url",
+                                        ["image_url"] = new JObject
+                                        {
+                                            ["url"] = $"data:{bMime};base64,{base64}",
+                                            ["detail"] = "high"
+                                        }
+                                    }
+                                }
+                            });
+
+                            // 发起下一轮请求
+                            var requestBs = new JObject
+                            {
+                                ["model"] = modelConfig.ModelName,
+                                ["messages"] = messagesJson,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
+                            };
+
+                            string respBs;
+                            int inBs, outBs;
+                            List<(string Id, string Name, string Arguments)>? tcBs;
+
+                            if (onDelta != null)
+                            {
+                                (respBs, inBs, outBs, tcBs, _) =
+                                    await CallLlmStreamAsync(modelConfig, requestBs, onDelta, cancellationToken, onThinking);
+                            }
+                            else
+                            {
+                                (respBs, inBs, outBs, tcBs) =
+                                    await CallLlmAsync(modelConfig, requestBs, cancellationToken);
+                            }
+
+                            AiFlowLogger.LogLlmResponse($"阶段2-浏览器截图分析轮", respBs, inBs, outBs);
+
+                            inputTokens += inBs;
+                            outputTokens += outBs;
+                            responseText = respBs;
+                            currentToolCalls = tcBs;
+                            currentResponseText = respBs;
+                        }
+                        catch (Exception ex)
+                        {
+                            var errMsg = $"❌ 浏览器截图分析失败: {ex.Message}";
+                            AiFlowLogger.Warn($"[ToolUse] request_browser_screenshot 处理失败: {ex.Message}");
+                            onDelta?.Invoke($"\n\n{errMsg}\n");
+                            plan.Summary = errMsg;
+                            break;
+                        }
+                    }
+                    else if (cardImageCall != null && cardImageCall.Value.Name == "request_card_image" && captureCardImage != null)
+                    {
+                        // ---- 处理 request_card_image ----
+                        analyzeRound++;
+                        var (ciId, _, ciArgs) = cardImageCall.Value;
+                        try
+                        {
+                            var ciArg = JObject.Parse(ciArgs);
+                            int order = ciArg["order"]?.Value<int>() ?? 0;
+                            AiFlowLogger.Info($"[ToolUse] request_card_image(order={order}) → 获取卡片图像...");
+
+                            onStatus?.Invoke("正在获取卡片输出图像...");
+                            var (base64, iw, ih) = await captureCardImage(order);
+
+                            string userMessageContent;
+                            if (base64 == null)
+                            {
+                                AiFlowLogger.Warn($"[ToolUse] 卡片 #{order} 没有图像输出或获取失败");
+                                onStatus?.Invoke(null);
+                                userMessageContent = $"[系统提示] 获取失败，卡片 #{order} 不存在或没有输出图像。";
+                                messagesJson.Add(new JObject
+                                {
+                                    ["role"] = "user",
+                                    ["content"] = userMessageContent
+                                });
+                            }
+                            else
+                            {
+                                AiFlowLogger.Info($"[ToolUse] 卡片图像获取成功 ({iw}x{ih})，注入对话...");
+                                var iMime = base64.StartsWith("iVBOR") ? "image/png" : "image/jpeg";
+                                messagesJson.Add(new JObject
+                                {
+                                    ["role"] = "user",
+                                    ["content"] = new JArray
+                                    {
+                                        new JObject { ["type"] = "text", ["text"] = $"[卡片输出图像结果] 获取成功，分辨率 {iw}x{ih}。以下是卡片 #{order} 的输出图像，请分析内容。" },
+                                        new JObject
+                                        {
+                                            ["type"] = "image_url",
+                                            ["image_url"] = new JObject
+                                            {
+                                                ["url"] = $"data:{iMime};base64,{base64}",
+                                                ["detail"] = "high"
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+
+                            // 发起下一轮请求
+                            var requestCi = new JObject
+                            {
+                                ["model"] = modelConfig.ModelName,
+                                ["messages"] = messagesJson,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
+                            };
+
+                            string respCi;
+                            int inCi, outCi;
+                            List<(string Id, string Name, string Arguments)>? tcCi;
+
+                            if (onDelta != null)
+                            {
+                                (respCi, inCi, outCi, tcCi, _) =
+                                    await CallLlmStreamAsync(modelConfig, requestCi, onDelta, cancellationToken, onThinking);
+                            }
+                            else
+                            {
+                                (respCi, inCi, outCi, tcCi) =
+                                    await CallLlmAsync(modelConfig, requestCi, cancellationToken);
+                            }
+
+                            AiFlowLogger.LogLlmResponse($"阶段2-卡片图像析轮", respCi, inCi, outCi);
+
+                            inputTokens += inCi;
+                            outputTokens += outCi;
+                            responseText = respCi;
+                            currentToolCalls = tcCi;
+                            currentResponseText = respCi;
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[ToolUse] request_card_image 处理失败: {ex.Message}");
+                            onDelta?.Invoke($"\n\n❌ 卡片图像分析失败: {ex.Message}\n");
+                            break;
+                        }
+                    }
                     else if (fileToolCalls != null && fileToolCalls.Count > 0)
                     {
                         // ---- 处理文件系统工具调用（read_file / list_directory / search_text） ----
@@ -1123,7 +1425,7 @@ namespace TaskFlow.Services
                 var finalToolCalls = currentToolCalls ?? toolCalls;
                 foreach (var (tcId, tcName, tcArgs) in finalToolCalls)
                 {
-                    if (tcName == "analyze_flow" || tcName == "request_screenshot")
+                    if (tcName == "analyze_flow" || tcName == "request_screenshot" || tcName == "request_browser_screenshot")
                     {
                         // 已在上面多轮循环中处理过，跳过
                         continue;
@@ -1133,6 +1435,23 @@ namespace TaskFlow.Services
                         // AI 提交了操作方案（可能有多个 submit_plan，合并而非覆盖）
                         try
                         {
+                            // 提取 thought 字段并显示到流式输出（避免用户看到空白气泡）
+                            try
+                            {
+                                var rawArgs = JObject.Parse(tcArgs);
+                                var thought = rawArgs["thought"]?.ToString();
+                                if (!string.IsNullOrWhiteSpace(thought))
+                                {
+                                    AiFlowLogger.Info($"[ToolUse] submit_plan.thought: {thought}");
+                                    // 如果 AI 没有输出任何自然语言文本，将 thought 作为意图说明显示
+                                    if (string.IsNullOrWhiteSpace(responseText))
+                                    {
+                                        onDelta?.Invoke(thought + "\n\n");
+                                    }
+                                }
+                            }
+                            catch { /* thought 提取失败不影响主逻辑 */ }
+
                             var newPlan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(tcArgs) ?? new();
                             plan = MergeSubmitPlans(plan, newPlan);
                             AiFlowLogger.Info($"[ToolUse] submit_plan: {newPlan.Plan.Count} 个新步骤（合并后共 {plan.Plan.Count} 个步骤, {plan.ModifyCards.Count} 个修改）");
@@ -1151,6 +1470,18 @@ namespace TaskFlow.Services
                         try
                         {
                             var shellArg = JObject.Parse(tcArgs);
+
+                            // 提取 thought 字段并显示到流式输出
+                            var shellThought = shellArg["thought"]?.ToString();
+                            if (!string.IsNullOrWhiteSpace(shellThought))
+                            {
+                                AiFlowLogger.Info($"[ToolUse] execute_shell.thought: {shellThought}");
+                                if (string.IsNullOrWhiteSpace(responseText))
+                                {
+                                    onDelta?.Invoke(shellThought + "\n\n");
+                                }
+                            }
+
                             var cmds = shellArg["commands"] as JArray;
                             if (cmds != null)
                             {
@@ -1187,6 +1518,22 @@ namespace TaskFlow.Services
                         catch (Exception ex)
                         {
                             AiFlowLogger.Warn($"[ToolUse] request_screenshot 解析失败: {ex.Message}");
+                        }
+                    }
+                    else if (tcName == "request_browser_screenshot")
+                    {
+                        // AI 请求浏览器截屏 → 映射到 plan.NeedsBrowserScreenshot
+                        try
+                        {
+                            var bsArg = JObject.Parse(tcArgs);
+                            plan.NeedsBrowserScreenshot = true;
+                            plan.BrowserScreenshotPort = bsArg["port"]?.Value<int>() ?? 9222;
+                            plan.BrowserScreenshotFullPage = bsArg["fullPage"]?.Value<bool>() ?? true;
+                            AiFlowLogger.Info($"[ToolUse] request_browser_screenshot: port={plan.BrowserScreenshotPort}, fullPage={plan.BrowserScreenshotFullPage}");
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[ToolUse] request_browser_screenshot 解析失败: {ex.Message}");
                         }
                     }
                 }
@@ -1665,32 +2012,48 @@ ToolRetryDone:
                     AiFlowLogger.Warn($"[Proxy] 代理启动失败: {msg}，将直连 API");
             }
 
-            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, actualUrl);
+            // 带指数退避的重试机制（针对 502/503/429 等临时性服务端过载错误）
+            HttpResponseMessage response = null!;
+            int maxRetries = 2;
+            int[] retryDelaysMs = { 2000, 5000 }; // 第1次等2秒，第2次等5秒
 
-            if (isGemini)
+            for (int attempt = 0; attempt <= maxRetries; attempt++)
             {
-                requestMessage.Headers.Add("X-goog-api-key", modelConfig.ApiKey);
-            }
-            else
-            {
-                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelConfig.ApiKey);
-            }
 
-            requestMessage.Content = new StringContent(
-                JsonConvert.SerializeObject(actualBody),
-                Encoding.UTF8,
-                "application/json");
+                using var retryRequestMessage = new HttpRequestMessage(HttpMethod.Post, actualUrl);
+                if (isGemini)
+                    retryRequestMessage.Headers.Add("X-goog-api-key", modelConfig.ApiKey);
+                else
+                    retryRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelConfig.ApiKey);
 
-            // 注入自定义请求头
-            ApplyCustomHeaders(requestMessage, modelConfig);
+                retryRequestMessage.Content = new StringContent(
+                    JsonConvert.SerializeObject(actualBody),
+                    Encoding.UTF8,
+                    "application/json");
+                ApplyCustomHeaders(retryRequestMessage, modelConfig);
 
-            // 使用 ResponseHeadersRead 以便逐行读取流
-            var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+                response = await _httpClient.SendAsync(retryRequestMessage, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
 
-            if (!response.IsSuccessStatusCode)
-            {
+                if (response.IsSuccessStatusCode)
+                    break; // 成功，跳出重试循环
+
                 var errorBody = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
-                throw new HttpRequestException($"API 请求失败: {response.StatusCode} - {errorBody}");
+                var statusCode = (int)response.StatusCode;
+
+                // 仅对可重试的临时性错误进行重试（502 Bad Gateway / 503 Service Unavailable / 429 Too Many Requests / 408 Request Timeout）
+                bool isRetryable = statusCode is 502 or 503 or 429 or 408
+                    || errorBody.Contains("overloaded", StringComparison.OrdinalIgnoreCase)
+                    || errorBody.Contains("rate_limit", StringComparison.OrdinalIgnoreCase);
+
+                if (!isRetryable || attempt >= maxRetries)
+                {
+                    throw new HttpRequestException($"API 请求失败: {response.StatusCode} - {errorBody}");
+                }
+
+                int delayMs = retryDelaysMs[attempt];
+                AiFlowLogger.Warn($"[LLM] 请求失败 ({response.StatusCode})，{delayMs / 1000}秒后自动重试 (第{attempt + 1}/{maxRetries}次)...");
+                response.Dispose();
+                await Task.Delay(delayMs, cts.Token).ConfigureAwait(false);
             }
 
             var contentBuilder = new StringBuilder();
@@ -1720,10 +2083,9 @@ ToolRetryDone:
                 if (line == null) break;
                 line = line.Trim();
 
-                // 记录前 5 行原始数据（不过滤），用于诊断非标准 SSE 格式
-                rawLineCount++;
-                if (rawLineCount <= 5 && !string.IsNullOrEmpty(line))
-                    AiFlowLogger.Info($"[RAW #{rawLineCount}] {line.Substring(0, Math.Min(line.Length, 300))}");
+                // 记录前 5 行原始数据已经在开发完成后废弃，目前流式已稳定，无需将每个 chunk JSON 都输出到文件
+                // if (rawLineCount <= 5 && !string.IsNullOrEmpty(line))
+                //     AiFlowLogger.Info($"[RAW #{rawLineCount}] {line.Substring(0, Math.Min(line.Length, 300))}");
 
                 // SSE 格式：跳过空行和事件类型行
                 if (string.IsNullOrEmpty(line) || line.StartsWith("event:")) continue;
@@ -1733,7 +2095,7 @@ ToolRetryDone:
                 if (jsonPart == "[DONE]") break;
                 if (string.IsNullOrEmpty(jsonPart)) continue;
 
-                AiFlowLogger.Info($"[SSE RAW JSON] {jsonPart}");
+                // AiFlowLogger.Info($"[SSE RAW JSON] {jsonPart}"); // 流式测试调好之后，逐帧记录 JSON 完全没有意义且会将日志文件刷到几十MB，因此注释掉
 
                 sseLineCount++;
 
@@ -2100,6 +2462,12 @@ ToolRetryDone:
             // 布尔字段：任一为 true 则 true
             if (incoming.Done) existing.Done = true;
             if (incoming.NeedsScreenshot) existing.NeedsScreenshot = true;
+            if (incoming.NeedsBrowserScreenshot)
+            {
+                existing.NeedsBrowserScreenshot = true;
+                existing.BrowserScreenshotPort = incoming.BrowserScreenshotPort;
+                existing.BrowserScreenshotFullPage = incoming.BrowserScreenshotFullPage;
+            }
 
             return existing;
         }

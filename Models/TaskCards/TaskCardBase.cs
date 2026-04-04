@@ -112,7 +112,12 @@ namespace TaskFlow.Models.TaskCards
         // 浏览器操作（基于 CDP 附着 Chrome）
         BrowserGetText,
         BrowserExecuteJs,
-        BrowserWaitForElement
+        BrowserWaitForElement,
+        BrowserNativeClick,
+        BrowserNativeInput,
+        BrowserSimulatedClick,
+        BrowserCdpCommand,
+        BrowserScreenshot
     }
 
     /// <summary>
@@ -365,6 +370,11 @@ namespace TaskFlow.Models.TaskCards
             TaskType.BrowserGetText => TaskFlow.Resources.Strings.TaskType_BrowserGetText,
             TaskType.BrowserExecuteJs => TaskFlow.Resources.Strings.TaskType_BrowserExecuteJs,
             TaskType.BrowserWaitForElement => TaskFlow.Resources.Strings.TaskType_BrowserWaitForElement,
+            TaskType.BrowserNativeClick => "浏览器原生点击",
+            TaskType.BrowserNativeInput => "浏览器原生输入",
+            TaskType.BrowserSimulatedClick => "浏览器模拟点击",
+            TaskType.BrowserCdpCommand => "CDP 指令执行",
+            TaskType.BrowserScreenshot => "浏览器页面截图",
             _ => type.ToString()
         };
 
@@ -453,6 +463,20 @@ namespace TaskFlow.Models.TaskCards
             {
                 if (source.OutputsImage)
                     BindImageSource(source);
+            }
+            else if (step.Properties.TryGetValue("imageFilePath", out var path) && !string.IsNullOrEmpty(path))
+            {
+                var targetProp = this.GetType().GetProperty("ImageFilePath");
+                if (targetProp != null && targetProp.CanWrite)
+                {
+                    targetProp.SetValue(this, path);
+                    
+                    var useSourceProp = this.GetType().GetProperty("UseSourceTaskImage");
+                    if (useSourceProp != null && useSourceProp.CanWrite)
+                    {
+                        useSourceProp.SetValue(this, false);
+                    }
+                }
             }
             else
             {

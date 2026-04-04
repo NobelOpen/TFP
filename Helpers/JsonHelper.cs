@@ -307,6 +307,14 @@ namespace TaskFlow.Helpers
                 TaskType.SubFlowInput => new SubFlowInputTaskCard(),
                 TaskType.SubFlowOutput => new SubFlowOutputTaskCard(),
                 TaskType.CustomScript => new CustomScriptTaskCard(),
+                TaskType.BrowserGetText => new BrowserGetTextTaskCard(),
+                TaskType.BrowserExecuteJs => new BrowserExecuteJsTaskCard(),
+                TaskType.BrowserWaitForElement => new BrowserWaitForElementTaskCard(),
+                TaskType.BrowserNativeClick => new BrowserNativeClickTaskCard(),
+                TaskType.BrowserNativeInput => new BrowserNativeInputTaskCard(),
+                TaskType.BrowserSimulatedClick => new BrowserSimulatedClickTaskCard(),
+                TaskType.BrowserCdpCommand => new BrowserCdpCommandTaskCard(),
+                TaskType.BrowserScreenshot => new BrowserScreenshotTaskCard(),
                 _ => throw new NotSupportedException($"Unknown task type: {taskType}")
             };
 

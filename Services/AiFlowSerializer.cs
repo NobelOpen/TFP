@@ -172,14 +172,45 @@ namespace TaskFlow.Services
                 sb.AppendLine();
             }
 
-            // ===== 子流程卡片（targetFlow 分组）=====
+            // ===== 目标流程卡片（targetFlow 分组）=====
             if (!string.IsNullOrWhiteSpace(plan.TargetFlow) && plan.Plan.Count > 0)
             {
                 var rawTarget = plan.TargetFlow!;
-                var targetName = rawTarget.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase)
-                    ? rawTarget : "SUB_" + rawTarget;
-                var badge = newFlowSet.Contains(targetName) ? "*(新建子流程)*" : "*(已有子流程)*";
-                sb.AppendLine($"### 📁 {targetName} {badge}");
+
+                // 检查 targetFlow 是否匹配画布上已有的主流程名称
+                var existingTab = _mainViewModel.Tabs.FirstOrDefault(t =>
+                    t.Name.Equals(rawTarget, StringComparison.OrdinalIgnoreCase));
+
+                string targetName;
+                string badge;
+                string icon;
+
+                if (existingTab != null && existingTab.Type != FlowType.SubFlow)
+                {
+                    // 目标是已有的主流程 → 原名显示，不加 SUB_ 前缀
+                    targetName = existingTab.Name;
+                    badge = "*(当前主流程)*";
+                    icon = "🔷";
+                }
+                else if (newFlowSet.Any(fn => fn.Equals(rawTarget, StringComparison.OrdinalIgnoreCase)
+                    || fn.Equals("SUB_" + rawTarget, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // 目标是本轮新建的子流程
+                    targetName = rawTarget.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase)
+                        ? rawTarget : "SUB_" + rawTarget;
+                    badge = "*(新建子流程)*";
+                    icon = "📁";
+                }
+                else
+                {
+                    // 目标是已有的子流程
+                    targetName = rawTarget.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase)
+                        ? rawTarget : "SUB_" + rawTarget;
+                    badge = "*(已有子流程)*";
+                    icon = "📁";
+                }
+
+                sb.AppendLine($"### {icon} {targetName} {badge}");
                 sb.AppendLine();
                 AppendStepsList(sb, plan.Plan);
                 sb.AppendLine();
@@ -393,11 +424,8 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 从消息列表中提取最近的 User + Assistant 对话历史（梯度衰减策略）。
-        /// - 最近 4 条：保留全文（最长 500 字符）
-        /// - 5~10 条：压缩到 150 字符摘要
-        /// - 11~20 条：仅保留一句话意图概括
-        /// - 超过 20 条：丢弃
+        /// 从消息列表中提取最近的 User + Assistant 对话历史。
+        /// 现代高阶模型上下文充足，不再执行按字符数的摘要或截断，完整保留最近 30 条消息的全文语境。
         /// </summary>
         public List<(string Role, string Content)> BuildConversationHistory(ObservableCollection<AiChatMessage> messages)
         {
@@ -407,46 +435,32 @@ namespace TaskFlow.Services
                 .Where(m => m.Role != AiChatRole.System)
                 .ToList();
 
-            // 最多取最近 20 条
-            var recent = relevantMessages.Skip(Math.Max(0, relevantMessages.Count - 20)).ToList();
+            // 最多取最近 30 条（完整对白）
+            var recent = relevantMessages.Skip(Math.Max(0, relevantMessages.Count - 30)).ToList();
 
-            for (int i = 0; i < recent.Count; i++)
+            foreach (var msg in recent)
             {
-                var msg = recent[i];
                 var role = msg.Role == AiChatRole.User ? "user" : "assistant";
-                // 距离末尾的偏移量（0 = 最新的一条）
-                int distFromEnd = recent.Count - 1 - i;
-                string content;
+                // 不再截断，完整保留内容以维持高阶模型所需的长上下文推理能力
+                history.Add((role, msg.Content));
+            }
 
-                if (distFromEnd < 4)
+            // 合并连续相同角色的消息（某些模型不允许连续出现同角色消息，如 Claude）
+            var merged = new List<(string Role, string Content)>();
+            foreach (var item in history)
+            {
+                if (merged.Count > 0 && merged[^1].Role == item.Role)
                 {
-                    // 第一档：最近 4 条 → 保留全文（最长 500 字符）
-                    content = msg.Content.Length > 500
-                        ? msg.Content[..500] + "..."
-                        : msg.Content;
-                }
-                else if (distFromEnd < 10)
-                {
-                    // 第二档：5~10 条 → 压缩到 150 字符摘要
-                    var cleaned = msg.Content.Replace("\r\n", " ").Replace("\n", " ");
-                    content = cleaned.Length > 150
-                        ? cleaned[..150] + "…"
-                        : cleaned;
+                    var last = merged[^1];
+                    merged[^1] = (last.Role, last.Content + "\n" + item.Content);
                 }
                 else
                 {
-                    // 第三档：11~20 条 → 一句话意图概括
-                    var cleaned = msg.Content.Replace("\r\n", " ").Replace("\n", " ");
-                    var roleLabel = msg.Role == AiChatRole.User ? "用户" : "助手";
-                    // 取首句或前 60 字符作为摘要
-                    var firstSentence = cleaned.Length > 60 ? cleaned[..60] + "…" : cleaned;
-                    content = $"[{roleLabel}: {firstSentence}]";
+                    merged.Add(item);
                 }
-
-                history.Add((role, content));
             }
 
-            return history;
+            return merged;
         }
 
         /// <summary>

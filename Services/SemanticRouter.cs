@@ -6,15 +6,15 @@ using System.Reflection;
 using System.Text;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using Microsoft.ML.Tokenizers;
+using Newtonsoft.Json.Linq;
 using TaskFlow.Helpers;
 
 namespace TaskFlow.Services
 {
     /// <summary>
     /// 基于本地 Embedding 模型的语义路由服务。
-    /// 使用 all-MiniLM-L6-v2 ONNX 模型将文本转换为 384 维向量，
-    /// 通过余弦相似度在零 Token 消耗下完成意图到卡片类别的语义匹配。
+    /// 使用 paraphrase-multilingual-MiniLM-L12-v2 ONNX 模型将文本转换为 384 维向量，
+    /// 支持 50+ 语言（包括中文），通过余弦相似度在零 Token 消耗下完成意图到卡片类别的语义匹配。
     /// </summary>
     public class SemanticRouter : IDisposable
     {
@@ -34,8 +34,23 @@ namespace TaskFlow.Services
 
         // ====================[ ONNX 模型 ]====================
         private InferenceSession? _session;
-        private BertTokenizer? _tokenizer;
         private bool _isReady;
+
+        // ====================[ Unigram 分词器 ]====================
+        // 从 tokenizer.json 加载的 token→id 查找表（支持 250K+ 多语言 token）
+        private Dictionary<string, int>? _vocabMap;
+        // 按 token 长度降序排列的 token 列表，用于最长前缀匹配
+        private List<string>? _sortedTokens;
+        // SentencePiece 使用 ▁ (U+2581) 作为空格前缀标记
+        private const char SP_SPACE = '\u2581';
+
+        // ====================[ 特殊 Token ID ]====================
+        // paraphrase-multilingual-MiniLM-L12-v2 使用 XLM-RoBERTa 的 SentencePiece 词汇表
+        // <s> = 0（BOS/CLS），</s> = 2（EOS/SEP），<pad> = 1，<unk> = 3
+        private const int CLS_TOKEN_ID = 0;  // <s>
+        private const int SEP_TOKEN_ID = 2;  // </s>
+        private const int PAD_TOKEN_ID = 1;  // <pad>
+        private const int UNK_TOKEN_ID = 3;  // <unk>
 
         // ====================[ 卡片向量缓存 ]====================
         // 存储每张卡片的对应分类、卡片类型名称，以及 384 维归一化向量
@@ -54,8 +69,11 @@ namespace TaskFlow.Services
             try
             {
                 var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
-                var modelPath = Path.Combine(assemblyDir, "Resources", "Models", "all-MiniLM-L6-v2.onnx");
-                var vocabPath = Path.Combine(assemblyDir, "Resources", "Models", "vocab.txt");
+
+                // 加载多语言 ONNX 模型
+                var modelPath = Path.Combine(assemblyDir, "Resources", "Models", "paraphrase-multilingual-MiniLM-L12-v2.onnx");
+                // 加载 tokenizer.json（包含完整的 Unigram 词汇表）
+                var tokenizerPath = Path.Combine(assemblyDir, "Resources", "Models", "tokenizer.json");
 
                 if (!File.Exists(modelPath))
                 {
@@ -63,32 +81,84 @@ namespace TaskFlow.Services
                     return;
                 }
 
-                // 加载 ONNX 推理会话（禁用多余日志）
+                // 加载 ONNX 推理会话
                 var sessionOptions = new SessionOptions();
                 sessionOptions.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR;
-                // 启用 DirectML 硬件加速（如有 GPU/NPU 可用）
                 try { sessionOptions.AppendExecutionProvider_DML(0); } catch { /* CPU 回退 */ }
 
                 _session = new InferenceSession(modelPath, sessionOptions);
 
-                // 加载 BERT WordPiece 分词器
-                if (File.Exists(vocabPath))
+                // 加载 Unigram 分词器词汇表
+                if (File.Exists(tokenizerPath))
                 {
-                    _tokenizer = BertTokenizer.Create(vocabPath);
+                    LoadTokenizerVocab(tokenizerPath);
+                    AiFlowLogger.Info($"语义路由：Unigram 多语言分词器已加载（{_vocabMap?.Count ?? 0} 个 token）。");
                 }
                 else
                 {
-                    AiFlowLogger.Warn("语义路由：vocab.txt 不存在，将使用内置分词逻辑。");
+                    AiFlowLogger.Warn($"语义路由：tokenizer.json 不存在 ({tokenizerPath})，将使用字符级回退分词。");
                 }
 
                 _isReady = true;
-                AiFlowLogger.Info("语义路由：ONNX 模型已加载完成，语义路由已启用。");
+                AiFlowLogger.Info("语义路由：多语言 ONNX 模型 (paraphrase-multilingual-MiniLM-L12-v2) 已加载完成。");
             }
             catch (Exception ex)
             {
                 AiFlowLogger.Warn($"语义路由初始化失败，将回退到 LLM 分类模式: {ex.Message}");
                 _isReady = false;
             }
+        }
+
+        /// <summary>
+        /// 从 HuggingFace tokenizer.json 中加载 Unigram 词汇表。
+        /// vocab 格式：[ ["token_string", score], ... ]
+        /// </summary>
+        private void LoadTokenizerVocab(string tokenizerPath)
+        {
+            var json = File.ReadAllText(tokenizerPath, Encoding.UTF8);
+            var root = JObject.Parse(json);
+
+            var vocabArray = root["model"]?["vocab"] as JArray;
+            if (vocabArray == null || vocabArray.Count == 0)
+            {
+                AiFlowLogger.Warn("语义路由：tokenizer.json 中未找到 vocab 字段。");
+                return;
+            }
+
+            _vocabMap = new Dictionary<string, int>(vocabArray.Count);
+
+            for (int i = 0; i < vocabArray.Count; i++)
+            {
+                var entry = vocabArray[i] as JArray;
+                if (entry != null && entry.Count >= 1)
+                {
+                    var token = entry[0]?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(token) && !_vocabMap.ContainsKey(token))
+                    {
+                        _vocabMap[token] = i;
+                    }
+                }
+            }
+
+            // 补充 added_tokens（特殊 token）
+            var addedTokens = root["added_tokens"] as JArray;
+            if (addedTokens != null)
+            {
+                foreach (var at in addedTokens)
+                {
+                    var content = at["content"]?.ToString();
+                    var id = at["id"]?.Value<int>() ?? -1;
+                    if (!string.IsNullOrEmpty(content) && id >= 0)
+                        _vocabMap[content] = id;
+                }
+            }
+
+            // 构建按长度降序排列的 token 列表（用于贪心最长匹配）
+            // 只保留长度 > 0 且不是特殊 token 的普通 token
+            _sortedTokens = _vocabMap.Keys
+                .Where(t => t.Length > 0 && !t.StartsWith("<") && !t.EndsWith(">"))
+                .OrderByDescending(t => t.Length)
+                .ToList();
         }
 
         /// <summary>
@@ -127,10 +197,10 @@ namespace TaskFlow.Services
         /// 根据用户输入语义匹配最相关的卡片，提取对应的卡片类别。
         /// </summary>
         /// <param name="userPrompt">用户输入</param>
-        /// <param name="threshold">相似度阈值（≥此值才认为相关，默认 0.30）</param>
+        /// <param name="threshold">相似度阈值（≥此值才认为相关，默认 0.35）</param>
         /// <param name="minCategories">至少返回几个类别（防止阈值过高导致空结果）</param>
         /// <returns>匹配的类别名称列表</returns>
-        public List<string> Route(string userPrompt, float threshold = 0.30f, int minCategories = 1)
+        public List<string> Route(string userPrompt, float threshold = 0.45f, int minCategories = 1)
         {
             if (!_isReady || _cardVectors.Count == 0)
                 return new List<string>();
@@ -191,25 +261,32 @@ namespace TaskFlow.Services
         {
             if (_session == null) return null;
 
-            // 截断到最多 512 个 token（BERT 上限）
-            var (inputIds, attentionMask, tokenTypeIds) = Tokenize(text, maxLength: 512);
+            // 截断到最多 128 个 token（路由场景文本较短，减少计算量）
+            var (inputIds, attentionMask) = Tokenize(text, maxLength: 128);
 
             // 构建输入 Tensor
             var inputIdsTensor = new DenseTensor<long>(inputIds, new[] { 1, inputIds.Length });
             var attentionMaskTensor = new DenseTensor<long>(attentionMask, new[] { 1, attentionMask.Length });
-            var tokenTypeIdsTensor = new DenseTensor<long>(tokenTypeIds, new[] { 1, tokenTypeIds.Length });
 
             var inputs = new List<NamedOnnxValue>
             {
                 NamedOnnxValue.CreateFromTensor("input_ids", inputIdsTensor),
                 NamedOnnxValue.CreateFromTensor("attention_mask", attentionMaskTensor),
-                NamedOnnxValue.CreateFromTensor("token_type_ids", tokenTypeIdsTensor)
             };
+
+            // 检查模型是否需要 token_type_ids 输入
+            var inputNames = _session.InputMetadata.Keys.ToHashSet();
+            if (inputNames.Contains("token_type_ids"))
+            {
+                var tokenTypeIds = new long[inputIds.Length];
+                var tokenTypeIdsTensor = new DenseTensor<long>(tokenTypeIds, new[] { 1, tokenTypeIds.Length });
+                inputs.Add(NamedOnnxValue.CreateFromTensor("token_type_ids", tokenTypeIdsTensor));
+            }
 
             using var outputs = _session.Run(inputs);
 
             // last_hidden_state shape: [1, seq_len, 384]
-            // 取所有 token 向量的均值（Mean Pooling）
+            // Mean Pooling（只对 attention_mask=1 的 token 求均值）
             var lastHiddenState = outputs.First(o => o.Name == "last_hidden_state")
                                           .AsEnumerable<float>().ToArray();
 
@@ -238,49 +315,90 @@ namespace TaskFlow.Services
 
         // ====================[ 分词 ]====================
 
-        private (long[] InputIds, long[] AttentionMask, long[] TokenTypeIds) Tokenize(string text, int maxLength)
+        /// <summary>
+        /// 使用 Unigram 词汇表对文本进行贪心最长匹配分词，生成 ONNX 模型所需的输入张量。
+        /// 格式：[CLS] token1 token2 ... [SEP] [PAD] [PAD] ...
+        /// </summary>
+        private (long[] InputIds, long[] AttentionMask) Tokenize(string text, int maxLength)
         {
-            if (_tokenizer != null)
+            List<int> tokenIds;
+
+            if (_vocabMap != null && _sortedTokens != null)
             {
-                // 使用 BertTokenizer（WordPiece）
-                var encoding = _tokenizer.EncodeToIds(text);
-                var ids = encoding.Take(maxLength - 2).ToList();
-
-                // 添加 [CLS] 和 [SEP]
-                var inputIds = new long[] { 101 }.Concat(ids.Select(id => (long)id)).Concat(new long[] { 102 }).ToArray();
-                var attentionMask = Enumerable.Repeat(1L, inputIds.Length).ToArray();
-                var tokenTypeIds = new long[inputIds.Length];
-
-                // Padding 到 maxLength
-                if (inputIds.Length < maxLength)
-                {
-                    int padLen = maxLength - inputIds.Length;
-                    inputIds = inputIds.Concat(new long[padLen]).ToArray();
-                    attentionMask = attentionMask.Concat(new long[padLen]).ToArray();
-                    tokenTypeIds = new long[maxLength];
-                }
-
-                return (inputIds, attentionMask, tokenTypeIds);
+                // 使用 Unigram 词汇表分词
+                tokenIds = UnigramTokenize(text, maxLength - 2);
             }
             else
             {
-                // 最简单字符级分词回退（词汇表不存在时使用）
-                var bytes = Encoding.UTF8.GetBytes(text.ToLower());
-                int len = Math.Min(bytes.Length, maxLength - 2);
-                var inputIds = new long[maxLength];
-                var attentionMask = new long[maxLength];
-                var tokenTypeIds = new long[maxLength];
-
-                inputIds[0] = 101; // [CLS]
-                for (int i = 0; i < len; i++)
-                    inputIds[i + 1] = bytes[i] + 1000;
-                inputIds[len + 1] = 102; // [SEP]
-
-                for (int i = 0; i <= len + 1; i++)
-                    attentionMask[i] = 1;
-
-                return (inputIds, attentionMask, tokenTypeIds);
+                // 字符级分词回退
+                tokenIds = new List<int>();
+                foreach (char c in text)
+                {
+                    var charStr = c.ToString();
+                    tokenIds.Add(_vocabMap?.GetValueOrDefault(charStr, UNK_TOKEN_ID) ?? UNK_TOKEN_ID);
+                    if (tokenIds.Count >= maxLength - 2) break;
+                }
             }
+
+            // 构建完整序列：<s> + tokens + </s>
+            var inputIds = new List<long>(maxLength) { CLS_TOKEN_ID };
+            foreach (var id in tokenIds)
+                inputIds.Add(id);
+            inputIds.Add(SEP_TOKEN_ID);
+
+            var attentionMask = Enumerable.Repeat(1L, inputIds.Count).ToList();
+
+            // Padding 到 maxLength
+            while (inputIds.Count < maxLength)
+            {
+                inputIds.Add(PAD_TOKEN_ID);
+                attentionMask.Add(0L);
+            }
+
+            return (inputIds.ToArray(), attentionMask.ToArray());
+        }
+
+        /// <summary>
+        /// 基于 Unigram 词汇表的贪心最长前缀匹配分词。
+        /// SentencePiece 的文本预处理：将空格替换为 ▁ (U+2581)，并在文本开头添加 ▁。
+        /// </summary>
+        private List<int> UnigramTokenize(string text, int maxTokens)
+        {
+            var result = new List<int>();
+
+            // SentencePiece 预处理：小写化 + 空格替换为 ▁ + 开头添加 ▁
+            var processed = SP_SPACE + text.ToLowerInvariant().Replace(' ', SP_SPACE);
+
+            int pos = 0;
+            while (pos < processed.Length && result.Count < maxTokens)
+            {
+                bool found = false;
+
+                // 贪心最长匹配：从最长 token 开始尝试
+                int remaining = processed.Length - pos;
+                foreach (var token in _sortedTokens!)
+                {
+                    if (token.Length > remaining) continue;
+
+                    // 检查当前位置是否匹配此 token
+                    if (processed.AsSpan(pos, token.Length).SequenceEqual(token.AsSpan()))
+                    {
+                        result.Add(_vocabMap![token]);
+                        pos += token.Length;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    // 未找到匹配的 token，当前字符映射为 UNK 并跳过
+                    result.Add(UNK_TOKEN_ID);
+                    pos++;
+                }
+            }
+
+            return result;
         }
 
         // ====================[ 向量工具 ]====================

@@ -333,6 +333,25 @@ namespace TaskFlow.Views.Dialogs
                 case BrowserWaitForElementTaskCard browserWaitCard:
                     AddBrowserWaitForElementProperties(browserWaitCard);
                     break;
+
+                case BrowserNativeClickTaskCard browserNativeClickCard:
+                    AddBrowserNativeClickProperties(browserNativeClickCard);
+                    break;
+
+                case BrowserNativeInputTaskCard browserNativeInputCard:
+                    AddBrowserNativeInputProperties(browserNativeInputCard);
+                    break;
+
+                case BrowserSimulatedClickTaskCard browserSimulatedClickCard:
+                    AddBrowserSimulatedClickProperties(browserSimulatedClickCard);
+                    break;
+
+                case BrowserCdpCommandTaskCard browserCdpCommandCard:
+                    AddBrowserCdpCommandProperties(browserCdpCommandCard);
+                    break;
+                case BrowserScreenshotTaskCard browserScreenshotCard:
+                    AddBrowserScreenshotProperties(browserScreenshotCard);
+                    break;
             }
         }
 
@@ -2076,6 +2095,25 @@ namespace TaskFlow.Views.Dialogs
 
                     case BrowserWaitForElementTaskCard browserWaitCard:
                         SaveBrowserWaitForElementProperties(browserWaitCard);
+                        break;
+
+                    case BrowserNativeClickTaskCard browserNativeClickCard:
+                        SaveBrowserNativeClickProperties(browserNativeClickCard);
+                        break;
+
+                    case BrowserNativeInputTaskCard browserNativeInputCard:
+                        SaveBrowserNativeInputProperties(browserNativeInputCard);
+                        break;
+
+                    case BrowserSimulatedClickTaskCard browserSimulatedClickCard:
+                        SaveBrowserSimulatedClickProperties(browserSimulatedClickCard);
+                        break;
+
+                    case BrowserCdpCommandTaskCard browserCdpCommandCard:
+                        SaveBrowserCdpCommandProperties(browserCdpCommandCard);
+                        break;
+                    case BrowserScreenshotTaskCard browserScreenshotCard:
+                        SaveBrowserScreenshotProperties(browserScreenshotCard);
                         break;
 
                     case InputComboTaskCard comboCard:
@@ -4273,6 +4311,251 @@ namespace TaskFlow.Views.Dialogs
                 card.WaitMode = wm;
 
             if (GetIntValue("TimeoutMs", out int timeout)) card.TimeoutMs = timeout;
+            if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
+        }
+
+        #endregion
+
+        #region CDP 浏览器自动化高阶操作属性
+
+        private void AddBrowserNativeClickProperties(BrowserNativeClickTaskCard card)
+        {
+            var selectorTypeLabel = new TextBlock { Text = "起点选择器类型", Style = FindResource("PropertyLabel") as Style };
+            var selectorTypeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            selectorTypeCombo.Items.Add(new ComboBoxItem { Content = "CSS 选择器", Tag = BrowserSelectorType.Css });
+            selectorTypeCombo.Items.Add(new ComboBoxItem { Content = "XPath", Tag = BrowserSelectorType.XPath });
+            selectorTypeCombo.SelectedIndex = (int)card.SelectorType;
+            PropertyPanel.Children.Add(selectorTypeLabel);
+            PropertyPanel.Children.Add(selectorTypeCombo);
+            _propertyControls["SelectorType"] = selectorTypeCombo;
+
+            AddTextProperty("Selector", "起点选择器/坐标(如留空则需填写坐标)", card.Selector);
+            AddIntProperty("X", "起点X坐标(如果选择器为空则使用)", card.X);
+            AddIntProperty("Y", "起点Y坐标", card.Y);
+
+            var clickTypeLabel = new TextBlock { Text = "操作类型", Style = FindResource("PropertyLabel") as Style };
+            var clickTypeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = "单击", Tag = ClickType.Single });
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = "双击", Tag = ClickType.Double });
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = "拖动", Tag = ClickType.Swipe });
+            clickTypeCombo.SelectedIndex = (int)card.ClickType;
+            PropertyPanel.Children.Add(clickTypeLabel);
+            PropertyPanel.Children.Add(clickTypeCombo);
+            _propertyControls["ClickType"] = clickTypeCombo;
+
+            var swipePanel = new StackPanel();
+            var endSelLabel = new TextBlock { Text = "终点选择器", Style = FindResource("PropertyLabel") as Style };
+            var endSelBox = new TextBox { Text = card.EndSelector, Style = FindResource("PropertyTextBox") as Style };
+            swipePanel.Children.Add(endSelLabel);
+            swipePanel.Children.Add(endSelBox);
+            _propertyControls["EndSelector"] = endSelBox;
+
+            var endXLabel = new TextBlock { Text = "终点X坐标(如果选择器为空)", Style = FindResource("PropertyLabel") as Style };
+            var endXBox = new TextBox { Text = card.EndX.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            var endYLabel = new TextBlock { Text = "终点Y坐标", Style = FindResource("PropertyLabel") as Style };
+            var endYBox = new TextBox { Text = card.EndY.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            swipePanel.Children.Add(endXLabel);
+            swipePanel.Children.Add(endXBox);
+            swipePanel.Children.Add(endYLabel);
+            swipePanel.Children.Add(endYBox);
+            _propertyControls["EndX"] = endXBox;
+            _propertyControls["EndY"] = endYBox;
+            PropertyPanel.Children.Add(swipePanel);
+
+            var doubleClickPanel = new StackPanel();
+            var multiCountLabel = new TextBlock { Text = "连击次数", Style = FindResource("PropertyLabel") as Style };
+            var multiCountBox = new TextBox { Text = card.MultiClickCount.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            doubleClickPanel.Children.Add(multiCountLabel);
+            doubleClickPanel.Children.Add(multiCountBox);
+            var intervalLabel = new TextBlock { Text = "点击间隔(ms)", Style = FindResource("PropertyLabel") as Style };
+            var intervalBox = new TextBox { Text = card.ClickIntervalMs.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            doubleClickPanel.Children.Add(intervalLabel);
+            doubleClickPanel.Children.Add(intervalBox);
+            _propertyControls["MultiClickCount"] = multiCountBox;
+            _propertyControls["ClickIntervalMs"] = intervalBox;
+            PropertyPanel.Children.Add(doubleClickPanel);
+
+            swipePanel.Visibility = card.ClickType == ClickType.Swipe ? Visibility.Visible : Visibility.Collapsed;
+            doubleClickPanel.Visibility = card.ClickType == ClickType.Double ? Visibility.Visible : Visibility.Collapsed;
+            clickTypeCombo.SelectionChanged += (s, e) =>
+            {
+                if (clickTypeCombo.SelectedItem is ComboBoxItem item && item.Tag is ClickType ct)
+                {
+                    swipePanel.Visibility = ct == ClickType.Swipe ? Visibility.Visible : Visibility.Collapsed;
+                    doubleClickPanel.Visibility = ct == ClickType.Double ? Visibility.Visible : Visibility.Collapsed;
+                }
+            };
+
+            AddIntProperty("CdpPort", "CDP 端口（默认 9222）", card.CdpPort);
+        }
+
+        private void SaveBrowserNativeClickProperties(BrowserNativeClickTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("SelectorType", out var stCtrl) && stCtrl is ComboBox stCombo
+                && stCombo.SelectedItem is ComboBoxItem stItem && stItem.Tag is BrowserSelectorType st)
+                card.SelectorType = st;
+
+            if (GetStringValue("Selector", out string sel)) card.Selector = sel;
+            if (GetIntValue("X", out int x)) card.X = x;
+            if (GetIntValue("Y", out int y)) card.Y = y;
+            if (GetStringValue("EndSelector", out string esel)) card.EndSelector = esel;
+            if (GetIntValue("EndX", out int ex)) card.EndX = ex;
+            if (GetIntValue("EndY", out int ey)) card.EndY = ey;
+            if (GetIntValue("MultiClickCount", out int mCount)) card.MultiClickCount = mCount;
+            if (GetIntValue("ClickIntervalMs", out int mInterval)) card.ClickIntervalMs = mInterval;
+
+            if (_propertyControls.TryGetValue("ClickType", out var ctrl) && ctrl is ComboBox combo
+                && combo.SelectedItem is ComboBoxItem ci && ci.Tag is ClickType ct)
+                card.ClickType = ct;
+
+            if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
+        }
+
+        private void AddBrowserNativeInputProperties(BrowserNativeInputTaskCard card)
+        {
+            var selectorTypeLabel = new TextBlock { Text = "选择器类型", Style = FindResource("PropertyLabel") as Style };
+            var selectorTypeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            selectorTypeCombo.Items.Add(new ComboBoxItem { Content = "CSS 选择器", Tag = BrowserSelectorType.Css });
+            selectorTypeCombo.Items.Add(new ComboBoxItem { Content = "XPath", Tag = BrowserSelectorType.XPath });
+            selectorTypeCombo.SelectedIndex = (int)card.SelectorType;
+            PropertyPanel.Children.Add(selectorTypeLabel);
+            PropertyPanel.Children.Add(selectorTypeCombo);
+            _propertyControls["SelectorType"] = selectorTypeCombo;
+
+            AddTextProperty("Selector", "选择器表达式", card.Selector);
+            AddTextProperty("InputText", "输入文本", card.InputText);
+
+            var modeLabel = new TextBlock { Text = "输入方式", Style = FindResource("PropertyLabel") as Style };
+            var modeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            modeCombo.Items.Add(new ComboBoxItem { Content = "逐字符输入 (CharByChar)", Tag = TextInputMode.CharByChar });
+            modeCombo.Items.Add(new ComboBoxItem { Content = "剪贴板粘贴 (Clipboard)", Tag = TextInputMode.Clipboard });
+            modeCombo.SelectedIndex = (int)card.InputMode;
+            PropertyPanel.Children.Add(modeLabel);
+            PropertyPanel.Children.Add(modeCombo);
+            _propertyControls["InputMode"] = modeCombo;
+
+            AddIntProperty("CharIntervalMs", "字符间隔(ms)", card.CharIntervalMs);
+            AddIntProperty("CdpPort", "CDP 端口（默认 9222）", card.CdpPort);
+        }
+
+        private void SaveBrowserNativeInputProperties(BrowserNativeInputTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("SelectorType", out var stCtrl) && stCtrl is ComboBox stCombo
+                && stCombo.SelectedItem is ComboBoxItem stItem && stItem.Tag is BrowserSelectorType st)
+                card.SelectorType = st;
+
+            if (GetStringValue("Selector", out string sel)) card.Selector = sel;
+            if (GetStringValue("InputText", out string ipt)) card.InputText = ipt;
+
+            if (_propertyControls.TryGetValue("InputMode", out var mCtrl) && mCtrl is ComboBox mCombo
+                && mCombo.SelectedItem is ComboBoxItem mItem && mItem.Tag is TextInputMode tm)
+                card.InputMode = tm;
+
+            if (GetIntValue("CharIntervalMs", out int interval)) card.CharIntervalMs = interval;
+            if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
+        }
+
+        private void AddBrowserSimulatedClickProperties(BrowserSimulatedClickTaskCard card)
+        {
+            AddIntProperty("X", "页面全景 X坐标", card.X);
+            AddIntProperty("Y", "页面全景 Y坐标", card.Y);
+
+            var clickTypeLabel = new TextBlock { Text = "操作类型", Style = FindResource("PropertyLabel") as Style };
+            var clickTypeCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = "单击", Tag = ClickType.Single });
+            clickTypeCombo.Items.Add(new ComboBoxItem { Content = "双击", Tag = ClickType.Double });
+            clickTypeCombo.SelectedIndex = (int)card.ClickType;
+            PropertyPanel.Children.Add(clickTypeLabel);
+            PropertyPanel.Children.Add(clickTypeCombo);
+            _propertyControls["ClickType"] = clickTypeCombo;
+
+            var doubleClickPanel = new StackPanel();
+            var multiCountLabel = new TextBlock { Text = "连击次数", Style = FindResource("PropertyLabel") as Style };
+            var multiCountBox = new TextBox { Text = card.MultiClickCount.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            doubleClickPanel.Children.Add(multiCountLabel);
+            doubleClickPanel.Children.Add(multiCountBox);
+            var intervalLabel = new TextBlock { Text = "点击间隔(ms)", Style = FindResource("PropertyLabel") as Style };
+            var intervalBox = new TextBox { Text = card.ClickIntervalMs.ToString(), Style = FindResource("PropertyTextBox") as Style };
+            doubleClickPanel.Children.Add(intervalLabel);
+            doubleClickPanel.Children.Add(intervalBox);
+            _propertyControls["MultiClickCount"] = multiCountBox;
+            _propertyControls["ClickIntervalMs"] = intervalBox;
+            PropertyPanel.Children.Add(doubleClickPanel);
+
+            doubleClickPanel.Visibility = card.ClickType == ClickType.Double ? Visibility.Visible : Visibility.Collapsed;
+            clickTypeCombo.SelectionChanged += (s, e) =>
+            {
+                if (clickTypeCombo.SelectedItem is ComboBoxItem item && item.Tag is ClickType ct)
+                {
+                    doubleClickPanel.Visibility = ct == ClickType.Double ? Visibility.Visible : Visibility.Collapsed;
+                }
+            };
+
+            AddIntProperty("CdpPort", "CDP 端口（默认 9222）", card.CdpPort);
+        }
+
+        private void SaveBrowserSimulatedClickProperties(BrowserSimulatedClickTaskCard card)
+        {
+            if (GetIntValue("X", out int x)) card.X = x;
+            if (GetIntValue("Y", out int y)) card.Y = y;
+
+            if (_propertyControls.TryGetValue("ClickType", out var ctrl) && ctrl is ComboBox combo
+                && combo.SelectedItem is ComboBoxItem ci && ci.Tag is ClickType ct)
+                card.ClickType = ct;
+
+            if (GetIntValue("MultiClickCount", out int mCount)) card.MultiClickCount = mCount;
+            if (GetIntValue("ClickIntervalMs", out int mInterval)) card.ClickIntervalMs = mInterval;
+            if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
+        }
+
+        private void AddBrowserCdpCommandProperties(BrowserCdpCommandTaskCard card)
+        {
+            AddTextProperty("MethodName", "方法名 (如: Page.navigate, Runtime.evaluate)", card.MethodName);
+            
+            var argsLabel = new TextBlock { Text = "参数(JSON)", Style = FindResource("PropertyLabel") as Style };
+            var argsBox = new TextBox
+            {
+                Text = card.JsonArguments,
+                Style = FindResource("PropertyTextBox") as Style,
+                AcceptsReturn = true,
+                MinHeight = 80,
+                VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+                TextWrapping = TextWrapping.Wrap
+            };
+            PropertyPanel.Children.Add(argsLabel);
+            PropertyPanel.Children.Add(argsBox);
+            _propertyControls["JsonArguments"] = argsBox;
+
+            AddIntProperty("CdpPort", "CDP 端口（默认 9222）", card.CdpPort);
+        }
+
+        private void SaveBrowserCdpCommandProperties(BrowserCdpCommandTaskCard card)
+        {
+            if (GetStringValue("MethodName", out string md)) card.MethodName = md;
+            if (GetStringValue("JsonArguments", out string ja)) card.JsonArguments = ja;
+            if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
+        }
+
+        private void AddBrowserScreenshotProperties(BrowserScreenshotTaskCard card)
+        {
+            var fpLabel = new TextBlock { Text = "截图模式", Style = FindResource("PropertyLabel") as Style };
+            var fpCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            fpCombo.Items.Add(new ComboBoxItem { Content = "截取全部全景长图", Tag = true });
+            fpCombo.Items.Add(new ComboBoxItem { Content = "仅截取当前可视区域", Tag = false });
+            fpCombo.SelectedIndex = card.FullPage ? 0 : 1;
+            PropertyPanel.Children.Add(fpLabel);
+            PropertyPanel.Children.Add(fpCombo);
+            _propertyControls["FullPage"] = fpCombo;
+
+            AddIntProperty("CdpPort", "CDP 端口（默认 9222）", card.CdpPort);
+        }
+
+        private void SaveBrowserScreenshotProperties(BrowserScreenshotTaskCard card)
+        {
+            if (_propertyControls.TryGetValue("FullPage", out var ctrl) && ctrl is ComboBox combo
+                && combo.SelectedItem is ComboBoxItem ci && ci.Tag is bool fp)
+                card.FullPage = fp;
+
             if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
         }
 

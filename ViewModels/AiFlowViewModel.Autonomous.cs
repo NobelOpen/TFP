@@ -59,6 +59,81 @@ namespace TaskFlow.ViewModels
         }
 
         /// <summary>
+        /// 获取指定任务卡片的输出图像并转为 Base64（供 AI 动态读取使用）
+        /// </summary>
+        private async Task<(string? Base64, int Width, int Height)> GetCardOutputImageForAiAsync(int order)
+        {
+            try
+            {
+                var card = _mainViewModel.TaskCards.FirstOrDefault(c => c.Order == order);
+                if (card == null || card.OutputImage == null || card.OutputImage.Empty())
+                    return (null, 0, 0);
+
+                var mat = card.OutputImage;
+                int w = mat.Width, h = mat.Height;
+
+                // 异步执行图像编码
+                return await Task.Run(() =>
+                {
+                    OpenCvSharp.Cv2.ImEncode(".png", mat, out var imgBytes);
+                    if (imgBytes.Length > 1024 * 1024) // 超过 1MB 降级为 JPEG
+                    {
+                        var encodeParams = new[] { new OpenCvSharp.ImageEncodingParam(OpenCvSharp.ImwriteFlags.JpegQuality, 80) };
+                        OpenCvSharp.Cv2.ImEncode(".jpg", mat, out imgBytes, encodeParams);
+                    }
+                    AiFlowLogger.Info($"读取卡片 #{order} 输出图编码完成: {imgBytes.Length / 1024}KB ({w}x{h})");
+                    return (Convert.ToBase64String(imgBytes), w, h);
+                });
+            }
+            catch (Exception ex)
+            {
+                AiFlowLogger.Warn($"读取卡片 #{order} 输出图失败: {ex.Message}");
+                return (null, 0, 0);
+            }
+        }
+
+        /// <summary>
+        /// Orchid 静默截屏：获取当前屏幕或指定窗口的图像，返回 base64 编码和分辨率。
+        /// 不创建任何画布卡片，供 AI 按需查看浏览器页面内容。
+        /// </summary>
+        private async Task<(string? Base64, int Width, int Height)> CaptureBrowserPageForAiAsync(int port = 9222, bool fullPage = false)
+        {
+            try
+            {
+                var page = await Services.BrowserSessionManager.GetActivePageAsync(port);
+                byte[] bytes = await page.ScreenshotAsync(new Microsoft.Playwright.PageScreenshotOptions
+                {
+                    FullPage = fullPage
+                });
+
+                if (bytes == null || bytes.Length == 0)
+                    return (null, 0, 0);
+
+                // 解码图像获取分辨率
+                using var mat = OpenCvSharp.Mat.FromImageData(bytes, OpenCvSharp.ImreadModes.Color);
+                int w = mat.Width, h = mat.Height;
+
+                // 先尝试 PNG 编码
+                OpenCvSharp.Cv2.ImEncode(".png", mat, out var imgBytes);
+
+                // 超过 1MB 时降级为 JPEG 80% 压缩
+                if (imgBytes.Length > 1024 * 1024)
+                {
+                    var encodeParams = new[] { new OpenCvSharp.ImageEncodingParam(OpenCvSharp.ImwriteFlags.JpegQuality, 80) };
+                    OpenCvSharp.Cv2.ImEncode(".jpg", mat, out imgBytes, encodeParams);
+                }
+
+                AiFlowLogger.Info($"浏览器截图编码完成: {imgBytes.Length / 1024}KB ({w}x{h}, 端口 {port})");
+                return (Convert.ToBase64String(imgBytes), w, h);
+            }
+            catch (Exception ex)
+            {
+                AiFlowLogger.Warn($"Orchid 浏览器截图失败 (端口 {port}): {ex.Message}");
+                return (null, 0, 0);
+            }
+        }
+
+        /// <summary>
         /// 用户批准执行（自主模式中风险操作暂停时调用）
         /// </summary>
         public void ApproveExecution()
@@ -80,6 +155,7 @@ namespace TaskFlow.ViewModels
 
         /// <summary>
         /// 暂停等待用户批准，返回 true=批准，false=中止
+        /// 智能审批：TaskFlow 无焦点时通过 Win11 通知审批，有焦点时使用应用内按钮
         /// </summary>
         private async Task<bool> WaitForApprovalAsync(string description, CancellationToken ct)
         {
@@ -87,12 +163,54 @@ namespace TaskFlow.ViewModels
             ApprovalDescription = description;
             AwaitingApproval = true;
 
+            // 检测 TaskFlow 是否拥有前台焦点
+            bool isAppFocused = false;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                isAppFocused = Application.Current.MainWindow?.IsActive == true;
+            });
+
+            // TaskFlow 不在前台时，发送 Win11 Toast 通知进行无感审批
+            if (!isAppFocused)
+            {
+                try
+                {
+                    SendApprovalToast(description);
+                    AiFlowLogger.Info("TaskFlow 不在前台，已发送 Toast 通知等待审批");
+                }
+                catch (Exception ex)
+                {
+                    AiFlowLogger.Warn($"Toast 通知发送失败，回退到应用内审批: {ex.Message}");
+                }
+            }
+
             // 注册取消回调
             using var reg = ct.Register(() => _approvalTcs.TrySetResult(false));
 
             var result = await _approvalTcs.Task;
             _approvalTcs = null;
             return result;
+        }
+
+        /// <summary>
+        /// 发送 Win11 Toast 通知进行操作审批
+        /// </summary>
+        private void SendApprovalToast(string description)
+        {
+            // 清理描述文本中的 emoji 前缀（Toast 不支持部分特殊字符）
+            var cleanDesc = description
+                .Replace("⚠️", "").Replace("🔴", "").Replace("🟡", "").Trim();
+
+            new Microsoft.Toolkit.Uwp.Notifications.ToastContentBuilder()
+                .AddText("🌸 Orchid 操作授权")
+                .AddText(cleanDesc)
+                .AddButton(new Microsoft.Toolkit.Uwp.Notifications.ToastButton()
+                    .SetContent("✅ 批准执行")
+                    .AddArgument("action", "approve"))
+                .AddButton(new Microsoft.Toolkit.Uwp.Notifications.ToastButton()
+                    .SetContent("❌ 拒绝")
+                    .AddArgument("action", "reject"))
+                .Show();
         }
 
         /// <summary>
@@ -121,7 +239,7 @@ namespace TaskFlow.ViewModels
                     }
 
                     // 没有要运行的卡片且没有其他操作，退出循环
-                    if (!currentPlan.HasRunCards && !currentPlan.HasAnyAction && !currentPlan.NeedsScreenshot)
+                    if (!currentPlan.HasRunCards && !currentPlan.HasAnyAction && !currentPlan.NeedsScreenshot && !currentPlan.NeedsBrowserScreenshot)
                     {
                         AiFlowLogger.Info($"AI 自主执行结束: {currentPlan.Summary}");
                         break;
@@ -249,42 +367,33 @@ namespace TaskFlow.ViewModels
                         }
                     }
 
-                    // 构建详细的用户消息
-                    var autonomousPrompt = new System.Text.StringBuilder();
-                    autonomousPrompt.AppendLine($"用户的原始请求是: {originalRequest}");
-                    autonomousPrompt.AppendLine();
-                    autonomousPrompt.AppendLine(allCardsInfo.ToString());
+                    // 通过模板文件构建自主循环决策提示（支持热更新）
+                    var loopTemplate = AiFlowGeneratorService.LoadPromptTemplate("AutonomousLoop.md");
 
+                    // 构建运行结果段落
+                    var resultsSection = "";
                     if (!string.IsNullOrEmpty(resultsText))
-                    {
-                        autonomousPrompt.AppendLine($"=== 第 {round} 轮运行结果 ===");
-                        autonomousPrompt.AppendLine(resultsText);
-                    }
+                        resultsSection = $"## 第 {round} 轮运行结果\n{resultsText}";
 
+                    var shellSection = "";
                     if (!string.IsNullOrEmpty(shellResultsText))
-                    {
-                        autonomousPrompt.AppendLine(shellResultsText);
-                    }
+                        shellSection = $"## PowerShell 执行结果\n{shellResultsText}";
 
-                    autonomousPrompt.AppendLine("请根据以上信息决定下一步：");
-                    autonomousPrompt.AppendLine("- 如果还有状态为 Idle 的卡片需要运行，请在 runCards 中指定它们的 order");
-                    autonomousPrompt.AppendLine("- 如果需要先修改某个卡片的属性再运行，请同时使用 modifyCards 和 runCards");
-                    autonomousPrompt.AppendLine("- 【子流程多步操作】如果用户要求'在主流程调用子流程'，完成子流程的卡片创建后，" +
-                        "必须继续执行：switchFlow 切换回主流程 + plan 在主流程创建 CallSubFlow 卡片，此时绝对不能设置 done: true！");
-                    autonomousPrompt.AppendLine("- 当用户请求的操作已完成（所有相关卡片执行成功），必须立即设置 done: true，不要画蛇添足");
-                    autonomousPrompt.AppendLine("- 严禁自行添加验证/确认/二次检查步骤（如截图验证、LlmVision 分析结果等），除非用户明确要求验证");
-                    autonomousPrompt.AppendLine("- 你自己就是多模态 Vision 模型，不需要创建 LlmVision 卡片来分析图像，你已经能直接看到卡片输出的图像");
-
-                    // 失败回退指令
+                    // 失败时加载失败回退模板
+                    var failureSection = "";
                     if (hasFailedCards)
-                    {
-                        autonomousPrompt.AppendLine();
-                        autonomousPrompt.AppendLine("⚠️ 有卡片执行失败！请在响应中指定 failureStrategy：");
-                        autonomousPrompt.AppendLine("- \"retry\"：重试当前卡片（适用于临时错误，如网络超时）");
-                        autonomousPrompt.AppendLine("- \"fallback\"：删除失败卡片(deleteCards)，用替代方案(plan 或 fallbackPlan)代替");
-                        autonomousPrompt.AppendLine("  例如：WinUiAutomation 失败 → 改用 WinClick 坐标点击");
-                        autonomousPrompt.AppendLine("- \"abort\"：任务无法继续，在 summary 中说明原因，设置 done: true");
-                    }
+                        failureSection = AiFlowGeneratorService.LoadPromptTemplate("FailureRecovery.md");
+
+                    var autonomousPromptText = AiFlowGeneratorService.RenderTemplate(loopTemplate,
+                        new Dictionary<string, string>
+                        {
+                            ["轮次"] = round.ToString(),
+                            ["原始请求"] = originalRequest,
+                            ["卡片状态"] = allCardsInfo.ToString(),
+                            ["运行结果"] = resultsSection,
+                            ["Shell结果"] = shellSection,
+                            ["失败回退指令"] = failureSection
+                        });
 
                     // 自主模式下传入空 categories，GeneratePlanAsync 会使用所有类别
                     var categories = new List<string>();
@@ -306,6 +415,27 @@ namespace TaskFlow.ViewModels
                         }
                     }
 
+                    // Orchid 按需浏览器截屏：仅当 AI 请求时通过 CDP 截取浏览器页面
+                    if (currentPlan.NeedsBrowserScreenshot)
+                    {
+                        int bsPort = currentPlan.BrowserScreenshotPort;
+                        bool bsFullPage = currentPlan.BrowserScreenshotFullPage;
+                        AiFlowLogger.Info($"Orchid 按需浏览器截屏中（端口 {bsPort}，全页={bsFullPage}）...");
+                        var (bsBase64, bw, bh) = await CaptureBrowserPageForAiAsync(bsPort, bsFullPage);
+                        if (bsBase64 != null)
+                        {
+                            autoImageList ??= new List<string>();
+                            autoImageList.Add(bsBase64);
+                            AiFlowLogger.Info($"已附加浏览器页面截图 ({bw}x{bh})");
+                            AddMessage(AiChatRole.System, $"🌐 已截取浏览器页面 ({bw}x{bh}，端口 {bsPort})");
+                        }
+                        else
+                        {
+                            AiFlowLogger.Warn("浏览器页面截图失败，可能未通过 --remote-debugging-port 启动");
+                            AddMessage(AiChatRole.System, "⚠️ 浏览器页面截图失败");
+                        }
+                    }
+
                     // 再次调用 LLM 获取下一步决策（传入截图图像）
                     AiFlowLogger.Info("AI 正在分析结果并决策下一步...");
                     // LLM API 调用（带重试）
@@ -324,7 +454,7 @@ namespace TaskFlow.ViewModels
                         try
                         {
                             var result = await _service.GeneratePlanAsync(
-                                autonomousPrompt.ToString(),
+                                autonomousPromptText,
                                 categories, SelectedModelId, _cts.Token, flowContext, history,
                                 imageBase64List: autoImageList,
                                 onDelta: delta =>
@@ -339,7 +469,9 @@ namespace TaskFlow.ViewModels
                                 },
                                 getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                                 captureScreenshot: async target => await CaptureScreenForAiAsync(
-                                    string.IsNullOrWhiteSpace(target) ? "windows" : target));
+                                    string.IsNullOrWhiteSpace(target) ? "windows" : target),
+                                captureBrowserScreenshot: async (port, fullPage) => await CaptureBrowserPageForAiAsync(port, fullPage),
+                                captureCardImage: async order => await GetCardOutputImageForAiAsync(order));
                             nextPlan = result.Item1;
                             tokensIn = result.Item2;
                             tokensOut = result.Item3;
@@ -366,10 +498,12 @@ namespace TaskFlow.ViewModels
                     // 如果有流式文本，持久化为 Assistant 消息
                     var loopStreamedText = loopStreamBuilder.ToString();
                     var loopThinkingText = loopThinkingBuilder.Length > 0 ? loopThinkingBuilder.ToString() : null;
+                    bool streamAlreadyPersisted = false; // 防止后续 Summary 重复追加
                     if (!string.IsNullOrWhiteSpace(loopStreamedText))
                     {
                         var streamMsg = new AiChatMessage { Role = AiChatRole.Assistant, Content = loopStreamedText, ThinkingContent = loopThinkingText, IsStreamedToWebView = true };
                         Application.Current.Dispatcher.Invoke(() => Messages.Add(streamMsg));
+                        streamAlreadyPersisted = true;
                     }
                     else if (nextPlan.Done)
                     {
@@ -380,6 +514,7 @@ namespace TaskFlow.ViewModels
                             Messages.Add(fallbackMsg);
                             MessagesUpdated?.Invoke();
                         });
+                        streamAlreadyPersisted = true; // 兜底消息也算已持久化
                     }
 
                     AiFlowLogger.Info($"AI 决策完成（Token: {tokensIn}+{tokensOut}）");
@@ -401,10 +536,11 @@ namespace TaskFlow.ViewModels
                         var (count, reports) = _planExecutor.CreateTaskCardsFromPlan(nextPlan, CurrentMode, SelectedModelId);
                         _mainViewModel.RecalculateIndentLevels();
 
-                        if (!string.IsNullOrEmpty(nextPlan.Summary))
+                        // 仅当流式文本未被持久化时才追加 Summary（避免重复显示）
+                        if (!streamAlreadyPersisted && !string.IsNullOrEmpty(nextPlan.Summary))
                             AddMessage(AiChatRole.Assistant, nextPlan.Summary);
                     }
-                    else if (!string.IsNullOrEmpty(nextPlan.Summary))
+                    else if (!streamAlreadyPersisted && !string.IsNullOrEmpty(nextPlan.Summary))
                     {
                         AddMessage(AiChatRole.Assistant, nextPlan.Summary);
                     }

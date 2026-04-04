@@ -915,6 +915,8 @@
   <data name="UI_Confirm" xml:space="preserve"><value>确认</value></data>
   <data name="Settings_OrchidSection" xml:space="preserve"><value>✦ Orchid 设置</value></data>
   <data name="Settings_SingleStage" xml:space="preserve"><value>开启单层调用（提高输出速度，但会增加Token消耗）</value></data>
+  <data name="Settings_RouterModel" xml:space="preserve"><value>轻量路由模型 (第一阶段意图分类)</value></data>
+  <data name="Settings_RouterModelNone" xml:space="preserve"><value>（未配置，将使用本地模式）</value></data>
   <data name="Settings_ViewCalibration" xml:space="preserve"><value>查看标定结果</value></data>
   <data name="TaskType_RestartFlow" xml:space="preserve"><value>重开当前流程</value></data>
   <data name="TaskType_InputCombo" xml:space="preserve"><value>Win输入组合</value></data>

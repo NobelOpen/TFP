@@ -45,6 +45,7 @@ namespace TaskFlow.Views.Dialogs
             ChkAutoSaveLog.Content = Strings.Settings_AutoSaveLog;
             TxtOrchidSection.Text = Strings.Settings_OrchidSection;
             ChkSingleStage.Content = Strings.Settings_SingleStage;
+            TxtRouterModelLabel.Text = Strings.Settings_RouterModel + ":";
             TxtOcrSection.Text = Strings.UI_WeChatOcr;
             TxtOcrExeLabel.Text = Strings.UI_OcrExePath + ":";
             TxtOcrDirLabel.Text = Strings.UI_OcrDirPath + ":";
@@ -102,6 +103,27 @@ namespace TaskFlow.Views.Dialogs
 
             // Orchid 设置
             ChkSingleStage.IsChecked = _settings.OrchidSingleStage;
+            
+            // 路由模型
+            CmbRouterModel.Items.Clear();
+            var noneItem = new ComboBoxItem { Content = Strings.Settings_RouterModelNone, Tag = "" };
+            CmbRouterModel.Items.Add(noneItem);
+            foreach (var model in TaskFlow.Helpers.LlmModelManager.Models)
+            {
+                CmbRouterModel.Items.Add(new ComboBoxItem { Content = model.DisplayName, Tag = model.Id });
+            }
+            CmbRouterModel.SelectedIndex = 0;
+            if (!string.IsNullOrEmpty(_settings.RouterModelId))
+            {
+                foreach (ComboBoxItem item in CmbRouterModel.Items)
+                {
+                    if (item.Tag is string tag && tag == _settings.RouterModelId)
+                    {
+                        CmbRouterModel.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
 
             // 微信 OCR
             TxtOcrExePath.Text = _settings.WeChatOcrExePath ?? string.Empty;
@@ -281,6 +303,11 @@ namespace TaskFlow.Views.Dialogs
             _settings.RepeatRunAll = ChkRepeatRunAll.IsChecked == true;
             _settings.KeepScreenOn = ChkKeepScreenOn.IsChecked == true;
             _settings.OrchidSingleStage = ChkSingleStage.IsChecked == true;
+
+            if (CmbRouterModel.SelectedItem is ComboBoxItem routerItem && routerItem.Tag is string routerTag)
+            {
+                _settings.RouterModelId = string.IsNullOrEmpty(routerTag) ? null : routerTag;
+            }
 
             if (!int.TryParse(TxtRepeatInterval.Text.Trim(), out int repeatInterval) || repeatInterval < 0)
             {

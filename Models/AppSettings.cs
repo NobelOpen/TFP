@@ -52,6 +52,9 @@ namespace TaskFlow.Models
         /// <summary>Orchid 单次调用模式（跳过类别判断阶段，适合高级模型）</summary>
         public bool OrchidSingleStage { get; set; } = false;
 
+        /// <summary>显式配置的轻量路由模型 ID（用于第一阶段意图分类）</summary>
+        public string? RouterModelId { get; set; }
+
         // ========== 微信 OCR ==========
 
         /// <summary>微信 OCR 可执行文件路径（WeChatOCR.exe 或 wxocr.dll）</summary>

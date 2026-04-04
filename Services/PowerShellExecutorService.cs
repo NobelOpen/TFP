@@ -20,12 +20,13 @@ namespace TaskFlow.Services
         /// <summary>
         /// 单条命令输出最大字符数
         /// </summary>
-        private const int MaxOutputLength = 4000;
+        private const int MaxOutputLength = 20000;
 
         /// <summary>
         /// 命令最大长度限制（防止注入超长脚本）
+        /// 考虑到高阶模型常拼接复杂长命令，放宽限制
         /// </summary>
-        private const int MaxCommandLength = 500;
+        private const int MaxCommandLength = 8000;
 
         /// <summary>
         /// 最大超时秒数
@@ -317,8 +318,8 @@ namespace TaskFlow.Services
         /// 双极截断：保留头部上下文 + 尾部报错堆栈，中间省略。
         /// 确保 AI 既能看到命令输出开头的环境信息，也能看到末尾的异常堆栈。
         /// </summary>
-        private const int TruncateHeadLength = 500;
-        private const int TruncateTailLength = 1500;
+        private const int TruncateHeadLength = 8000;
+        private const int TruncateTailLength = 8000;
 
         private static string TruncateOutput(string output)
         {

@@ -23,6 +23,22 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
+        /// 在 UI 线程上向 ObservableCollection 添加元素（确保 CollectionChanged 通知正确触发）
+        /// </summary>
+        private void DispatchAdd(System.Collections.ObjectModel.ObservableCollection<TaskCardBase> collection, TaskCardBase item)
+        {
+            Application.Current.Dispatcher.Invoke(() => collection.Add(item));
+        }
+
+        /// <summary>
+        /// 在 UI 线程上从 ObservableCollection 移除元素
+        /// </summary>
+        private void DispatchRemove(System.Collections.ObjectModel.ObservableCollection<TaskCardBase> collection, TaskCardBase item)
+        {
+            Application.Current.Dispatcher.Invoke(() => collection.Remove(item));
+        }
+
+        /// <summary>
         /// 将 AI 方案转化为实际的任务卡片（支持嵌套控制流区块）
         /// </summary>
         public (int CreatedCount, List<AiFlowReportItem> Reports) CreateTaskCardsFromPlan(
@@ -251,7 +267,7 @@ namespace TaskFlow.Services
                     foreach (var kv in mod.Properties)
                     {
                         var prop = card.GetType().GetProperty(kv.Key,
-                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
                         if (prop != null && prop.CanWrite && prop.PropertyType == typeof(string))
                         {
                             prop.SetValue(card, kv.Value);
@@ -271,6 +287,19 @@ namespace TaskFlow.Services
                         {
                             prop.SetValue(card, boolVal);
                             AiFlowLogger.Info($"修改卡片 #{mod.Order} {card.Name}: {kv.Key} = {kv.Value}");
+                        }
+                        else if (prop != null && prop.CanWrite && prop.PropertyType.IsEnum)
+                        {
+                            try
+                            {
+                                var enumVal = Enum.Parse(prop.PropertyType, kv.Value, true);
+                                prop.SetValue(card, enumVal);
+                                AiFlowLogger.Info($"修改卡片 #{mod.Order} {card.Name}: {kv.Key} = {kv.Value}");
+                            }
+                            catch
+                            {
+                                AiFlowLogger.Warn($"卡片 #{mod.Order} 属性 {kv.Key} 无法将 '{kv.Value}' 解析为枚举 {prop.PropertyType.Name}");
+                            }
                         }
                         else
                         {
@@ -296,9 +325,9 @@ namespace TaskFlow.Services
                     {
                         // 从对应的卡片集合中删除
                         if (targetCards.Contains(card))
-                            targetCards.Remove(card);
+                            DispatchRemove(targetCards, card);
                         else
-                            _mainViewModel.TaskCards.Remove(card);
+                            DispatchRemove(_mainViewModel.TaskCards, card);
                         cardDeleted++;
                         AiFlowLogger.Info($"删除卡片 #{order}: {card.Name}");
                     }
@@ -374,7 +403,7 @@ namespace TaskFlow.Services
                         var card = CreateSingleCardFromStep(step, stepToCard, reports, mode, modelId);
                         if (card != null)
                         {
-                            _mainViewModel.TaskCards.Insert(insertIndex + insertedCount, card);
+                            Application.Current.Dispatcher.Invoke(() => _mainViewModel.TaskCards.Insert(insertIndex + insertedCount, card));
                             stepToCard[step.Step] = card;
                             insertedCount++;
                             createdCount++;
@@ -514,7 +543,7 @@ namespace TaskFlow.Services
             if (!string.IsNullOrEmpty(step.Name))
                 ifStart.Name = step.Name;
 
-            cards.Add(ifStart);
+            DispatchAdd(cards, ifStart);
             _mainViewModel.SelectedTask = null;
             stepToCard[step.Step] = ifStart;
             createdCount++;
@@ -542,7 +571,7 @@ namespace TaskFlow.Services
                 ifStart.IsElseHidden = false;
             }
 
-            cards.Add(elseStart);
+            DispatchAdd(cards, elseStart);
             _mainViewModel.SelectedTask = null;
             createdCount++;
 
@@ -558,7 +587,7 @@ namespace TaskFlow.Services
             if (!hasElseBody)
                 elseEnd.IsHiddenByCollapse = true;
 
-            cards.Add(elseEnd);
+            DispatchAdd(cards, elseEnd);
             _mainViewModel.SelectedTask = null;
             createdCount++;
         }
@@ -598,7 +627,7 @@ namespace TaskFlow.Services
             if (!string.IsNullOrEmpty(step.Name))
                 loopStart.Name = step.Name;
 
-            cards.Add(loopStart);
+            DispatchAdd(cards, loopStart);
             _mainViewModel.SelectedTask = null;
             stepToCard[step.Step] = loopStart;
             createdCount++;
@@ -614,7 +643,7 @@ namespace TaskFlow.Services
                 Order = GetAndIncrementOrder(targetTab)
             };
 
-            cards.Add(loopEnd);
+            DispatchAdd(cards, loopEnd);
             _mainViewModel.SelectedTask = null;
             createdCount++;
         }
@@ -642,7 +671,7 @@ namespace TaskFlow.Services
             if (newCard == null) return;
             newCard.Order = GetAndIncrementOrder(targetTab);
             var cards = GetTargetCards(targetTab);
-            cards.Add(newCard);
+            DispatchAdd(cards, newCard);
 
             if (!string.IsNullOrEmpty(step.Name))
                 newCard.Name = step.Name;

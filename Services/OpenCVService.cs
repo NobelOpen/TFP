@@ -103,9 +103,9 @@ namespace TaskFlow.Services
 
                 return (false, 0, 0, maxVal, null);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return (false, 0, 0, 0, null);
+                throw new InvalidOperationException($"模板匹配处理异常: {ex.Message}", ex);
             }
         }
 
@@ -180,9 +180,9 @@ namespace TaskFlow.Services
 
                 return results;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return results;
+                throw new InvalidOperationException($"多目标匹配处理异常: {ex.Message}", ex);
             }
         }
 
@@ -226,9 +226,9 @@ namespace TaskFlow.Services
 
                 return (Math.Round(meanH, 2), Math.Round(meanS, 2), Math.Round(meanV, 2), Math.Round(matchRatio, 4), resultImage);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return (0, 0, 0, 0, null);
+                throw new InvalidOperationException($"颜色识别处理异常: {ex.Message}", ex);
             }
         }
 
@@ -256,9 +256,9 @@ namespace TaskFlow.Services
 
                 return result;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return null;
+                throw new InvalidOperationException($"颜色分割处理异常: {ex.Message}", ex);
             }
         }
 
@@ -437,9 +437,9 @@ namespace TaskFlow.Services
 
                 return (blobs, resultImage);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return (new List<BlobResult>(), null);
+                throw new InvalidOperationException($"Blob分析处理异常: {ex.Message}", ex);
             }
         }
     }

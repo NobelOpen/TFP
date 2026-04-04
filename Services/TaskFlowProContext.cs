@@ -80,16 +80,30 @@ namespace TaskFlow.Services
             string strVal = value?.ToString() ?? "";
 
             // 通过反射设置配置属性（ObservableProperty 生成的公共属性）
-            var propInfo = task.GetType().GetProperty(property);
+            var propInfo = task.GetType().GetProperty(property, 
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
             if (propInfo != null && propInfo.CanWrite)
             {
-                try
+                if (propInfo.PropertyType.IsEnum)
                 {
-                    var converted = Convert.ChangeType(value, propInfo.PropertyType);
-                    propInfo.SetValue(task, converted);
-                    return;
+                    try
+                    {
+                        var enumVal = Enum.Parse(propInfo.PropertyType, strVal, true);
+                        propInfo.SetValue(task, enumVal);
+                        return;
+                    }
+                    catch { /* Enum 解析失败 */ }
                 }
-                catch { /* 如果类型转换失败，尝试字符串赋值 */ }
+                else
+                {
+                    try
+                    {
+                        var converted = Convert.ChangeType(value, propInfo.PropertyType);
+                        propInfo.SetValue(task, converted);
+                        return;
+                    }
+                    catch { /* 如果类型转换失败，尝试字符串赋值 */ }
+                }
 
                 if (propInfo.PropertyType == typeof(string))
                 {

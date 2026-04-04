@@ -327,6 +327,12 @@
             <TextBlock x:Name="TxtOrchidSection" Text="✦ Orchid 设置" Style="{StaticResource SectionHeader}"/>
             <CheckBox x:Name="ChkSingleStage" Content="开启单层调用（提高输出速度，但会增加Token消耗）"
                       Style="{StaticResource SettingCheckBox}"/>
+            <DockPanel Margin="0,4">
+                <TextBlock x:Name="TxtRouterModelLabel" Text="轻量路由模型 (第一阶段意图分类):" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
+                <ComboBox x:Name="CmbRouterModel" Width="220" HorizontalAlignment="Left"
+                          Style="{StaticResource SettingComboBox}">
+                </ComboBox>
+            </DockPanel>
 
             <!-- 语言设置 -->
             <TextBlock x:Name="TxtLangSection" Text="语言设置 / Language" Style="{StaticResource SectionHeader}"/>

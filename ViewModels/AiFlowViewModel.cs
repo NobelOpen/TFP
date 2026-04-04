@@ -142,6 +142,11 @@ namespace TaskFlow.ViewModels
         private string? _lastUserInput;
 
         /// <summary>
+        /// 缓存上次发送时的图片 base64 列表，用于重试时恢复图片附件
+        /// </summary>
+        private List<string>? _lastImageBase64List;
+
+        /// <summary>
         /// 当前显示的加载/思考提示文本，为空表示不显示
         /// </summary>
         [ObservableProperty]
@@ -495,7 +500,7 @@ namespace TaskFlow.ViewModels
                 {
                     AiFlowLogger.Info("正在分析需求，确定涉及的卡片类别...");
                     var (cats, tokens1In, tokens1Out) = await _service.DetermineCategoriesAsync(
-                        userInput, SelectedModelId, _cts.Token);
+                        userInput, SelectedModelId, _mainViewModel.Settings.RouterModelId, _cts.Token);
                     categories = cats;
                     AiFlowLogger.Info($"已确定涉及类别：{string.Join("、", categories)}（Token: {tokens1In}+{tokens1Out}）");
                 }
@@ -538,6 +543,16 @@ namespace TaskFlow.ViewModels
                         AiFlowLogger.Warn($"读取附件失败: {ex.Message}");
                     }
                 }
+
+                // 如果本次没有新附件，但有上次的缓存图片（用于重试场景），则恢复
+                if (imageBase64List.Count == 0 && _lastImageBase64List != null && _lastImageBase64List.Count > 0)
+                {
+                    imageBase64List.AddRange(_lastImageBase64List);
+                    AiFlowLogger.Info($"[重试] 已恢复上次附加的 {_lastImageBase64List.Count} 张图片");
+                }
+
+                // 缓存本次图片列表供后续重试使用
+                _lastImageBase64List = imageBase64List.Count > 0 ? new List<string>(imageBase64List) : null;
 
                 // 注意：卡片输出图像不再自动附加。
                 // 只有当 Orchid AI 通过工具调用（request_screenshot 等）明确请求图像时，
@@ -587,6 +602,8 @@ namespace TaskFlow.ViewModels
                     getFlowDetail: (flowName, startOrder, count) => _serializer.SerializeFlowDetail(flowName, startOrder, count),
                     captureScreenshot: async target => await CaptureScreenForAiAsync(
                         string.IsNullOrWhiteSpace(target) ? "windows" : target),
+                    captureBrowserScreenshot: async (port, fullPage) => await CaptureBrowserPageForAiAsync(port, fullPage),
+                    captureCardImage: async order => await GetCardOutputImageForAiAsync(order),
                     prefillAssistantMessage: prefill);
 
                 // 判断方案是否有效内容（卡片、变量、流程或删除操作）

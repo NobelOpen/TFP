@@ -18,7 +18,10 @@
 
   <ItemGroup>
     <Compile Include="..\..\Helpers\ExpressionEvaluator.cs" Link="Helpers\ExpressionEvaluator.cs" />
+    <Compile Include="..\..\Models\*.cs" Link="Models\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\..\Models\TaskCards\*.cs" Link="Models\TaskCards\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\Models\AiFlow\*.cs" Link="Models\AiFlow\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\Resources\*.cs" Link="Resources\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

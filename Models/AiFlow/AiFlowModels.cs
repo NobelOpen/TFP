@@ -129,6 +129,15 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>截图目标进程名（如 msedge、notepad），为空时截全屏</summary>
         public string? ScreenshotTarget { get; set; }
 
+        /// <summary>AI 请求截取浏览器页面（静默调用，不创建卡片）</summary>
+        public bool NeedsBrowserScreenshot { get; set; }
+
+        /// <summary>浏览器截图的 CDP 调试端口（默认 9222）</summary>
+        public int BrowserScreenshotPort { get; set; } = 9222;
+
+        /// <summary>是否截取整页（长截图），默认 false 只截可视区域</summary>
+        public bool BrowserScreenshotFullPage { get; set; }
+
 
         /// <summary>失败回退策略：retry / fallback / abort（自主模式卡片失败时使用）</summary>
         public string? FailureStrategy { get; set; }

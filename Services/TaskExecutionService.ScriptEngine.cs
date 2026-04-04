@@ -65,9 +65,24 @@ namespace TaskFlow.Services
                         )
                         .WithLanguageVersion(Microsoft.CodeAnalysis.CSharp.LanguageVersion.Latest);
 
+                    // 清理代码头部的 using 语句，因为随后代码会被包裹在 {} 中，局部代码块里出现 using 命名空间声明会导致致命的编译错误(CS0106/CS1529)。
+                    // 过滤掉行首的 "using [xxx];" 但保留 "using var xxx =" 和 "using (xxx)" 等合法用法。
+                    var codeLines = task.ScriptCode.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                    var cleanedCode = new StringBuilder();
+                    foreach (var line in codeLines)
+                    {
+                        var trimmed = line.Trim();
+                        // 如果是引入命名空间的 using 语句（末尾分号，且不包含 = 即非 using 别名或 using var，不包含左括号即将非 using(...)块）
+                        if (trimmed.StartsWith("using ") && trimmed.EndsWith(";") && !trimmed.Contains("=") && !trimmed.Contains("("))
+                        {
+                            continue;
+                        }
+                        cleanedCode.AppendLine(line);
+                    }
+
                     // 将用户代码包裹在 { } 块中，解决 Roslyn 脚本模式下
                     // using var 被误判为命名空间导入指令的歧义问题
-                    var wrappedCode = "{\n" + task.ScriptCode + "\n}";
+                    var wrappedCode = "{\n" + cleanedCode.ToString() + "\n}";
 
                     var script = CSharpScript.Create<object>(
                         wrappedCode,

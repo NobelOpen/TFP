@@ -59,10 +59,6 @@ namespace TaskFlow.Models.TaskCards
 
         // ===== 输出 =====
 
-        [JsonIgnore]
-        [ObservableProperty]
-        private string? _outputText;
-
         public override bool OutputsText => true;
 
         public BrowserGetTextTaskCard()
@@ -117,10 +113,6 @@ namespace TaskFlow.Models.TaskCards
 
         // ===== 输出 =====
 
-        [JsonIgnore]
-        [ObservableProperty]
-        private string? _outputText;
-
         public override bool OutputsText => true;
 
         public BrowserExecuteJsTaskCard()
@@ -139,12 +131,17 @@ namespace TaskFlow.Models.TaskCards
             var missing = new List<AiFlowReportItem>();
             var props = step.Properties;
 
-            if (props.TryGetValue("script", out var script) && !string.IsNullOrEmpty(script))
+            // 兼容 prompt 中的 scriptCode（AI 常用）和内部属性名 script
+            if (props.TryGetValue("scriptCode", out var scriptCode) && !string.IsNullOrEmpty(scriptCode))
+                Script = scriptCode;
+            else if (props.TryGetValue("script", out var script) && !string.IsNullOrEmpty(script))
                 Script = script;
             else
                 missing.Add(new AiFlowReportItem { PropertyName = "Script", Hint = "要执行的 JavaScript 代码" });
 
-            if (props.TryGetValue("cdpPort", out var port) && int.TryParse(port, out int p))
+            if (props.TryGetValue("debuggingPort", out var dp) && int.TryParse(dp, out int dpVal))
+                CdpPort = dpVal;
+            else if (props.TryGetValue("cdpPort", out var port) && int.TryParse(port, out int p))
                 CdpPort = p;
 
             return missing;
@@ -224,4 +221,277 @@ namespace TaskFlow.Models.TaskCards
             return missing;
         }
     }
+
+    // ============================================================
+    //  浏览器原生点击
+    // ============================================================
+
+    public partial class BrowserNativeClickTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.BrowserNativeClick;
+
+        [ObservableProperty]
+        private BrowserSelectorType _selectorType = BrowserSelectorType.Css;
+
+        [ObservableProperty]
+        private string _selector = string.Empty;
+        
+        [ObservableProperty]
+        private int _x = 0;
+
+        [ObservableProperty]
+        private int _y = 0;
+
+        [ObservableProperty]
+        private ClickType _clickType = ClickType.Single;
+
+        [ObservableProperty]
+        private string _endSelector = string.Empty;
+
+        [ObservableProperty]
+        private int _endX = 0;
+
+        [ObservableProperty]
+        private int _endY = 0;
+
+        [ObservableProperty]
+        private int _multiClickCount = 2;
+
+        [ObservableProperty]
+        private int _clickIntervalMs = 100;
+
+        [ObservableProperty]
+        private int _cdpPort = 9222;
+
+        public BrowserNativeClickTaskCard()
+        {
+            Name = "浏览器原生点击";
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("selector", out var sel) && !string.IsNullOrEmpty(sel))
+                Selector = sel;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "Selector", Hint = "CSS 选择器或 XPath" });
+
+            if (props.TryGetValue("cdpPort", out var port1) && int.TryParse(port1, out int parsedPort1))
+                CdpPort = parsedPort1;
+
+            return missing;
+        }
+    }
+
+    // ============================================================
+    //  浏览器原生输入
+    // ============================================================
+
+    public partial class BrowserNativeInputTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.BrowserNativeInput;
+
+        [ObservableProperty]
+        private BrowserSelectorType _selectorType = BrowserSelectorType.Css;
+
+        [ObservableProperty]
+        private string _selector = string.Empty;
+
+        [ObservableProperty]
+        private string _inputText = string.Empty;
+
+        [ObservableProperty]
+        private TextInputMode _inputMode = TextInputMode.CharByChar;
+        
+        [ObservableProperty]
+        private int _charIntervalMs = 10;
+
+        [ObservableProperty]
+        private int _cdpPort = 9222;
+
+        public BrowserNativeInputTaskCard()
+        {
+            Name = "浏览器原生输入";
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("selector", out var sel) && !string.IsNullOrEmpty(sel))
+                Selector = sel;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "Selector", Hint = "CSS 选择器或 XPath" });
+
+            // 兼容 prompt 中的 inputText（AI 常用）和内部属性名 text
+            if (props.TryGetValue("inputText", out var inputText) && !string.IsNullOrEmpty(inputText))
+                InputText = inputText;
+            else if (props.TryGetValue("text", out var text) && !string.IsNullOrEmpty(text))
+                InputText = text;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "InputText", Hint = "要输入的文本" });
+
+            if (props.TryGetValue("debuggingPort", out var dp) && int.TryParse(dp, out int dpVal))
+                CdpPort = dpVal;
+            else if (props.TryGetValue("cdpPort", out var port2) && int.TryParse(port2, out int parsedPort2))
+                CdpPort = parsedPort2;
+
+            return missing;
+        }
+    }
+
+    // ============================================================
+    //  浏览器模拟点击
+    // ============================================================
+
+    public partial class BrowserSimulatedClickTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.BrowserSimulatedClick;
+
+        [ObservableProperty]
+        private int _x = 0;
+
+        [ObservableProperty]
+        private int _y = 0;
+
+        [ObservableProperty]
+        private ClickType _clickType = ClickType.Single;
+
+        [ObservableProperty]
+        private int _multiClickCount = 2;
+
+        [ObservableProperty]
+        private int _clickIntervalMs = 100;
+
+        [ObservableProperty]
+        private int _cdpPort = 9222;
+
+        public BrowserSimulatedClickTaskCard()
+        {
+            Name = "浏览器模拟点击";
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("x", out var xStr) && int.TryParse(xStr, out int xInt))
+                X = xInt;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "X", Hint = "X 坐标" });
+
+            if (props.TryGetValue("y", out var yStr) && int.TryParse(yStr, out int yInt))
+                Y = yInt;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "Y", Hint = "Y 坐标" });
+
+            if (props.TryGetValue("cdpPort", out var port3) && int.TryParse(port3, out int parsedPort3))
+                CdpPort = parsedPort3;
+
+            return missing;
+        }
+    }
+
+    // ============================================================
+    //  CDP 指令执行
+    // ============================================================
+
+    public partial class BrowserCdpCommandTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.BrowserCdpCommand;
+
+        [ObservableProperty]
+        private string _methodName = string.Empty;
+
+        [ObservableProperty]
+        private string _jsonArguments = "{}";
+
+        [ObservableProperty]
+        private int _cdpPort = 9222;
+
+        [JsonIgnore]
+        [ObservableProperty]
+        private string? _outputText;
+
+        public override bool OutputsText => true;
+
+        public BrowserCdpCommandTaskCard()
+        {
+            Name = "CDP 指令执行";
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputText = null;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            // 兼容 prompt 中的 commandName（AI 常用）和内部属性名 methodName
+            if (props.TryGetValue("commandName", out var cmdName) && !string.IsNullOrEmpty(cmdName))
+                MethodName = cmdName;
+            else if (props.TryGetValue("methodName", out var method) && !string.IsNullOrEmpty(method))
+                MethodName = method;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "MethodName", Hint = "CDP 方法名" });
+
+            // 兼容 prompt 中的 commandParams 和内部属性名 jsonArguments
+            if (props.TryGetValue("commandParams", out var cmdParams) && !string.IsNullOrEmpty(cmdParams))
+                JsonArguments = cmdParams;
+            else if (props.TryGetValue("jsonArguments", out var jsonArgs) && !string.IsNullOrEmpty(jsonArgs))
+                JsonArguments = jsonArgs;
+
+            if (props.TryGetValue("debuggingPort", out var dp) && int.TryParse(dp, out int dpVal))
+                CdpPort = dpVal;
+            else if (props.TryGetValue("cdpPort", out var port4) && int.TryParse(port4, out int parsedPort4))
+                CdpPort = parsedPort4;
+
+            return missing;
+        }
+    }
+
+    // ============================================================
+    //  浏览器页面截图
+    // ============================================================
+
+    public partial class BrowserScreenshotTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.BrowserScreenshot;
+
+        [ObservableProperty]
+        private int _cdpPort = 9222;
+
+        [ObservableProperty]
+        private bool _fullPage = true;
+
+        public BrowserScreenshotTaskCard()
+        {
+            Name = "浏览器页面截图";
+        }
+
+        public override bool OutputsImage => true;
+
+        public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("fullPage", out var fp) && bool.TryParse(fp, out bool parsedFp))
+                FullPage = parsedFp;
+
+            if (props.TryGetValue("cdpPort", out var port1) && int.TryParse(port1, out int parsedPort))
+                CdpPort = parsedPort;
+
+            return missing;
+        }
+    }
 }
+

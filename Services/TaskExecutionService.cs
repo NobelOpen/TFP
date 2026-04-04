@@ -550,6 +550,11 @@ namespace TaskFlow.Services
                     TaskType.BrowserGetText => await ExecuteBrowserGetTextAsync((BrowserGetTextTaskCard)task, allTasks, cancellationToken),
                     TaskType.BrowserExecuteJs => await ExecuteBrowserExecuteJsAsync((BrowserExecuteJsTaskCard)task, allTasks, cancellationToken),
                     TaskType.BrowserWaitForElement => await ExecuteBrowserWaitForElementAsync((BrowserWaitForElementTaskCard)task, allTasks, cancellationToken),
+                    TaskType.BrowserNativeClick => await ExecuteBrowserNativeClickAsync((BrowserNativeClickTaskCard)task, allTasks, cancellationToken),
+                    TaskType.BrowserNativeInput => await ExecuteBrowserNativeInputAsync((BrowserNativeInputTaskCard)task, allTasks, cancellationToken),
+                    TaskType.BrowserSimulatedClick => await ExecuteBrowserSimulatedClickAsync((BrowserSimulatedClickTaskCard)task, allTasks, cancellationToken),
+                    TaskType.BrowserCdpCommand => await ExecuteBrowserCdpCommandAsync((BrowserCdpCommandTaskCard)task, allTasks, cancellationToken),
+                    TaskType.BrowserScreenshot => await ExecuteBrowserScreenshotAsync((BrowserScreenshotTaskCard)task, allTasks, cancellationToken),
 
                     _ => false
                 };

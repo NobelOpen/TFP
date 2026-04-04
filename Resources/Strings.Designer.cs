@@ -191,6 +191,8 @@ namespace TaskFlow.Resources {
         public static string Settings_Log => ResourceManager.GetString("Settings_Log", resourceCulture) ?? "Log Settings";
         public static string Settings_MaxLogLines => ResourceManager.GetString("Settings_MaxLogLines", resourceCulture) ?? "Max log lines:";
         public static string Settings_AutoSaveLog => ResourceManager.GetString("Settings_AutoSaveLog", resourceCulture) ?? "Auto save log to file";
+        public static string Settings_RouterModel => ResourceManager.GetString("Settings_RouterModel", resourceCulture) ?? "Fast Router Model";
+        public static string Settings_RouterModelNone => ResourceManager.GetString("Settings_RouterModelNone", resourceCulture) ?? "(None)";
         public static string Settings_Language => ResourceManager.GetString("Settings_Language", resourceCulture) ?? "Language";
         public static string Settings_LanguageLabel => ResourceManager.GetString("Settings_LanguageLabel", resourceCulture) ?? "Interface language:";
         public static string Settings_RestartRequired => ResourceManager.GetString("Settings_RestartRequired", resourceCulture) ?? "Language change requires restart to take effect.";

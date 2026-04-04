@@ -4,7 +4,10 @@
     "Category": "Windows操作",
     "Description": "启动 Windows 应用程序（.exe文件）",
     "Usage": "当需要打开一个桌面程序（如记事本、浏览器、游戏客户端）时使用",
-    "KeyProperties": ["exePath: 可执行文件的完整路径", "arguments: 启动参数（可选）"],
+    "KeyProperties": [
+      "exePath: 可执行文件的完整路径",
+      "arguments: 启动参数（可选）"
+    ],
     "Outputs": []
   },
   {
@@ -12,23 +15,38 @@
     "Category": "Windows操作",
     "Description": "截取指定进程窗口的截图，或截取整个桌面",
     "Usage": "当需要获取某个窗口的画面用于后续图像分析（OCR、模板匹配等）时使用",
-    "KeyProperties": ["processName: 目标进程名称（不含.exe），留空时截取整个桌面（包含所有显示器）。严禁使用 explorer 作为截屏整个桌面的进程名"],
-    "Outputs": ["outputImage: 截取的窗口图像", "outputResolution: 图像分辨率字符串（如 1920x1080）", "outputWidth: 宽度分辨率(int)", "outputHeight: 高度分辨率(int)"]
+    "KeyProperties": [
+      "processName: 目标进程名称（不含.exe），留空时截取整个桌面（包含所有显示器）。严禁使用 explorer 作为截屏整个桌面的进程名"
+    ],
+    "Outputs": [
+      "outputImage: 截取的窗口图像",
+      "outputResolution: 图像分辨率字符串（如 1920x1080）",
+      "outputWidth: 宽度分辨率(int)",
+      "outputHeight: 高度分辨率(int)"
+    ]
   },
   {
     "TaskType": "WinClick",
     "Category": "Windows操作",
     "Description": "在屏幕指定坐标执行鼠标点击（单击/双击/滑动）",
     "Usage": "当需要点击屏幕上某个位置（如按钮、链接）时使用。坐标可以手动设置或引用其他任务（如模板匹配）的坐标输出",
-    "KeyProperties": ["startX/startY: 点击坐标", "clickType: Single/Double/Swipe", "processName: 离屏点击时的目标进程名"],
-    "Outputs": ["outputX/outputY: 实际点击的坐标"]
+    "KeyProperties": [
+      "startX/startY: 点击坐标",
+      "clickType: Single/Double/Swipe",
+      "processName: 离屏点击时的目标进程名"
+    ],
+    "Outputs": [
+      "outputX/outputY: 实际点击的坐标"
+    ]
   },
   {
     "TaskType": "WinCloseApp",
     "Category": "Windows操作",
     "Description": "关闭指定进程的应用程序",
     "Usage": "当需要关闭一个正在运行的程序时使用",
-    "KeyProperties": ["processName: 目标进程名称（不含.exe）"],
+    "KeyProperties": [
+      "processName: 目标进程名称（不含.exe）"
+    ],
     "Outputs": []
   },
   {
@@ -36,7 +54,12 @@
     "Category": "Windows操作",
     "Description": "通过 Windows UI 自动化框架查找并点击窗口中的按钮或控件",
     "Usage": "当需要按名称或AutomationId点击应用程序中的按钮时使用，比模拟坐标点击更稳定",
-    "KeyProperties": ["processName: 目标进程名称", "buttonName: 按钮名称", "searchBy: Name/AutomationId", "matchMode: Exact/Contains/Regex"],
+    "KeyProperties": [
+      "processName: 目标进程名称",
+      "buttonName: 按钮名称",
+      "searchBy: Name/AutomationId",
+      "matchMode: Exact/Contains/Regex"
+    ],
     "Outputs": []
   },
   {
@@ -44,7 +67,11 @@
     "Category": "Windows操作",
     "Description": "模拟键盘按键或鼠标滚轮操作",
     "Usage": "当需要按下特定键盘按键（如回车、Tab）或滚动鼠标滚轮时使用",
-    "KeyProperties": ["actionType: ScrollUp/ScrollDown/KeyPress", "keyName: 按键名称（KeyPress时使用）", "repeatCount: 重复次数"],
+    "KeyProperties": [
+      "actionType: ScrollUp/ScrollDown/KeyPress",
+      "keyName: 按键名称（KeyPress时使用）",
+      "repeatCount: 重复次数"
+    ],
     "Outputs": []
   },
   {
@@ -52,7 +79,12 @@
     "Category": "Windows操作",
     "Description": "在指定窗口上显示浮动字幕文本",
     "Usage": "当需要在窗口上方显示提示文字、翻译结果等信息时使用",
-    "KeyProperties": ["processName: 目标进程名称", "displayText: 显示文本（支持变量引用）", "fontSize: 字体大小", "durationMs: 显示时长"],
+    "KeyProperties": [
+      "processName: 目标进程名称",
+      "displayText: 显示文本（支持变量引用）",
+      "fontSize: 字体大小",
+      "durationMs: 显示时长"
+    ],
     "Outputs": []
   },
   {
@@ -60,7 +92,10 @@
     "Category": "Windows操作",
     "Description": "监听 Windows 事件（如键盘热键），等待触发后继续执行",
     "Usage": "当需要等待用户按下某个快捷键后才继续执行流程时使用",
-    "KeyProperties": ["hotkeyModifier: 修饰键", "hotkeyKey: 按键"],
+    "KeyProperties": [
+      "hotkeyModifier: 修饰键",
+      "hotkeyKey: 按键"
+    ],
     "Outputs": []
   },
   {
@@ -68,15 +103,24 @@
     "Category": "Windows操作",
     "Description": "在指定目录或全盘搜索指定文件（按文件名匹配），返回第一个匹配到的文件的完整本地路径",
     "Usage": "当需要查找某个本地文件（如特定游戏启动器.exe、图片文件）的具体位置并在后续任务中使用时使用",
-    "KeyProperties": ["fileName: 查找文件名", "searchRootPath: 搜索根目录（留空为全盘搜索）", "maxDepth: 搜索最大深度（0为无限制）", "useWildcard: 是否启用通配符匹配"],
-    "Outputs": ["outputFilePath: 查找到的文件完整路径"]
+    "KeyProperties": [
+      "fileName: 查找文件名",
+      "searchRootPath: 搜索根目录（留空为全盘搜索）",
+      "maxDepth: 搜索最大深度（0为无限制）",
+      "useWildcard: 是否启用通配符匹配"
+    ],
+    "Outputs": [
+      "outputFilePath: 查找到的文件完整路径"
+    ]
   },
   {
     "TaskType": "AdbConnect",
     "Category": "ADB操作",
     "Description": "通过 ADB 连接到 Android 设备或模拟器",
     "Usage": "当需要操控安卓设备/模拟器之前，先建立 ADB 连接",
-    "KeyProperties": ["serialNumber: 设备序列号（如 127.0.0.1:5555 或 emulator-5554）"],
+    "KeyProperties": [
+      "serialNumber: 设备序列号（如 127.0.0.1:5555 或 emulator-5554）"
+    ],
     "Outputs": []
   },
   {
@@ -84,7 +128,10 @@
     "Category": "ADB操作",
     "Description": "通过 ADB 在安卓设备上启动应用",
     "Usage": "当需要在安卓设备上打开一个 APP 时使用",
-    "KeyProperties": ["serialNumber: 设备序列号", "packageName: 应用包名"],
+    "KeyProperties": [
+      "serialNumber: 设备序列号",
+      "packageName: 应用包名"
+    ],
     "Outputs": []
   },
   {
@@ -92,15 +139,22 @@
     "Category": "ADB操作",
     "Description": "通过 ADB 截取安卓设备的屏幕截图",
     "Usage": "当需要获取安卓设备画面用于后续图像分析时使用",
-    "KeyProperties": ["serialNumber: 设备序列号"],
-    "Outputs": ["outputImage: 设备截图"]
+    "KeyProperties": [
+      "serialNumber: 设备序列号"
+    ],
+    "Outputs": [
+      "outputImage: 设备截图"
+    ]
   },
   {
     "TaskType": "AdbClick",
     "Category": "ADB操作",
     "Description": "通过 ADB 在安卓设备屏幕上模拟点击或滑动",
     "Usage": "当需要点击安卓设备屏幕上某个位置时使用",
-    "KeyProperties": ["serialNumber: 设备序列号", "startX/startY: 点击坐标"],
+    "KeyProperties": [
+      "serialNumber: 设备序列号",
+      "startX/startY: 点击坐标"
+    ],
     "Outputs": []
   },
   {
@@ -108,7 +162,10 @@
     "Category": "ADB操作",
     "Description": "通过 ADB 强制关闭安卓设备上的应用",
     "Usage": "当需要关闭安卓设备上的某个 APP 时使用",
-    "KeyProperties": ["serialNumber: 设备序列号", "packageName: 应用包名"],
+    "KeyProperties": [
+      "serialNumber: 设备序列号",
+      "packageName: 应用包名"
+    ],
     "Outputs": []
   },
   {
@@ -116,7 +173,9 @@
     "Category": "ADB操作",
     "Description": "断开 ADB 连接",
     "Usage": "当完成安卓设备操作后，断开连接释放资源",
-    "KeyProperties": ["serialNumber: 设备序列号"],
+    "KeyProperties": [
+      "serialNumber: 设备序列号"
+    ],
     "Outputs": []
   },
   {
@@ -124,79 +183,140 @@
     "Category": "图像处理",
     "Description": "对图像执行 OCR 文字识别，提取图片中的文本内容",
     "Usage": "当需要从截图中提取文字（如读取按钮文字、检测状态文本）时使用。需要先有截图卡片作为图像来源",
-    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务（如截图卡片）", "ocrEngine: PaddleOCR/WeChatOCR", "roiX/roiY/roiWidth/roiHeight: 感兴趣区域（可选，限定识别范围）"],
-    "Outputs": ["outputText: 识别出的文本"]
+    "KeyProperties": [
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)(或使用 imageFilePath 指定绝对路径)",
+      "ocrEngine: PaddleOCR/WeChatOCR",
+      "roiX/roiY/roiWidth/roiHeight: 感兴趣区域（可选，限定识别范围）"
+    ],
+    "Outputs": [
+      "outputText: 识别出的文本"
+    ]
   },
   {
     "TaskType": "ImgTemplateMatch",
     "Category": "图像处理",
     "Description": "在源图像中查找与模板图像匹配的位置（模板匹配）",
     "Usage": "当需要在截图中查找特定图标、按钮图片的位置时使用",
-    "KeyProperties": ["sourceStep: 搜索图来源步骤", "templateSourceStep: 模板图来源步骤（如 ImgCrop 裁剪出的区域）", "templateImagePath: 模板图像路径（与 templateSourceStep 二选一）", "matchThreshold: 匹配阈值(0~1)"],
-    "Outputs": ["outputX/outputY: 匹配位置坐标", "outputResult: 是否匹配成功"]
+    "KeyProperties": [
+      "sourceStep: 搜索图来源步骤(或使用 imageFilePath 指定绝对路径)",
+      "templateSourceStep: 模板图来源步骤（如 ImgCrop 裁剪出的区域）",
+      "templateImagePath: 模板图像路径（与 templateSourceStep 二选一）",
+      "matchThreshold: 匹配阈值(0~1)"
+    ],
+    "Outputs": [
+      "outputX/outputY: 匹配位置坐标",
+      "outputResult: 是否匹配成功"
+    ]
   },
   {
     "TaskType": "ImgOnnxDetect",
     "Category": "图像处理",
     "Description": "使用 ONNX 视觉模型进行目标检测（YOLO 定位），返回最高置信度目标的坐标或所有目标的数组",
     "Usage": "当需要在屏幕画面中查找由 YOLO/ONNX 模型训练识别的目标（如玩家、怪物、特定的复杂图标）位置时使用。支持类别过滤和置信度调整。",
-    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务（如截图卡片）", "onnxModelId: ONNX视觉模型ID", "filterClassName: 过滤类别名称（逗号分隔）", "confidenceOverride: 覆盖置信度阈值（数字，0为使用模型默认）"],
-    "Outputs": ["outputX/outputY: 置信度最高的目标中心坐标", "outputResult: 是否检测到匹配目标", "outputDetectionCount: 检测到的目标数量(int)", "outputTopClassName: 最佳匹配的类别名", "outputTopConfidence: 最佳匹配的置信度(double)", "outputDetectionsArray: 所有目标的数组数据字符串"]
+    "KeyProperties": [
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)(或使用 imageFilePath 指定绝对路径)",
+      "onnxModelId: ONNX视觉模型ID",
+      "filterClassName: 过滤类别名称（逗号分隔）",
+      "confidenceOverride: 覆盖置信度阈值（数字，0为使用模型默认）"
+    ],
+    "Outputs": [
+      "outputX/outputY: 置信度最高的目标中心坐标",
+      "outputResult: 是否检测到匹配目标",
+      "outputDetectionCount: 检测到的目标数量(int)",
+      "outputTopClassName: 最佳匹配的类别名",
+      "outputTopConfidence: 最佳匹配的置信度(double)",
+      "outputDetectionsArray: 所有目标的数组数据字符串"
+    ]
   },
   {
     "TaskType": "ImgCrop",
     "Category": "图像处理",
     "Description": "裁剪图像的指定区域",
     "Usage": "当需要从截图中截取特定区域用于后续处理时使用",
-    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务", "roiX/roiY/roiWidth/roiHeight: 裁剪区域"],
-    "Outputs": ["outputImage: 裁剪后的图像"]
+    "KeyProperties": [
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)",
+      "roiX/roiY/roiWidth/roiHeight: 裁剪区域"
+    ],
+    "Outputs": [
+      "outputImage: 裁剪后的图像"
+    ]
   },
   {
     "TaskType": "ImgColorDetect",
     "Category": "图像处理",
     "Description": "在图像中检测指定颜色的占比",
     "Usage": "当需要判断画面中是否存在特定颜色（如红色警告、绿色成功图标）时使用",
-    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务", "targetH/targetS/targetV: 目标HSV颜色"],
-    "Outputs": ["outputResult: 是否检测到目标颜色", "outputMatchRatio: 颜色匹配占比"]
+    "KeyProperties": [
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)",
+      "targetH/targetS/targetV: 目标HSV颜色"
+    ],
+    "Outputs": [
+      "outputResult: 是否检测到目标颜色",
+      "outputMatchRatio: 颜色匹配占比"
+    ]
   },
   {
     "TaskType": "ImgPreprocess",
     "Category": "图像处理",
     "Description": "对图像进行预处理（灰度化、二值化、模糊、锐化等）",
     "Usage": "当OCR或模板匹配效果不好，需要预处理图像以提升识别率时使用",
-    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务"],
-    "Outputs": ["outputImage: 处理后的图像"]
+    "KeyProperties": [
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)"
+    ],
+    "Outputs": [
+      "outputImage: 处理后的图像"
+    ]
   },
   {
     "TaskType": "ImgResize",
     "Category": "图像处理",
     "Description": "调整图像大小",
     "Usage": "当图像尺寸不合适需要缩放时使用",
-    "KeyProperties": ["sourceTaskIdForImage: 图像来源任务", "targetWidth/targetHeight: 目标尺寸"],
-    "Outputs": ["outputImage: 缩放后的图像", "outputWidthScale: 宽度缩放倍率(double)", "outputHeightScale: 高度缩放倍率(double)"]
+    "KeyProperties": [
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)",
+      "targetWidth/targetHeight: 目标尺寸"
+    ],
+    "Outputs": [
+      "outputImage: 缩放后的图像",
+      "outputWidthScale: 宽度缩放倍率(double)",
+      "outputHeightScale: 高度缩放倍率(double)"
+    ]
   },
   {
     "TaskType": "ExpressionEval",
     "Category": "数据处理",
     "Description": "计算数学或逻辑表达式、变量赋值，处理运算逻辑与强类型比较",
     "Usage": "对变量进行数学运算、比较或赋值时使用。重要：字符串变量赋值必须用双引号包裹（如 @A = \"文本\"）；浮点数赋给Int会自动截断；比较判断严格区分带分号字符串和原生数字类型。",
-    "KeyProperties": ["expression: 表达式内容（支持变量引用和任务输出引用）"],
-    "Outputs": ["outputText: 计算结果文本", "outputResult: 布尔判断结果"]
+    "KeyProperties": [
+      "expression: 表达式内容（支持变量引用和任务输出引用）"
+    ],
+    "Outputs": [
+      "outputText: 计算结果文本",
+      "outputResult: 布尔判断结果"
+    ]
   },
   {
     "TaskType": "StringSubstring",
     "Category": "数据处理",
     "Description": "从文本中截取子串",
     "Usage": "当需要从OCR结果或其他文本中提取特定部分时使用",
-    "KeyProperties": ["sourceExpression: 源文本表达式", "startIndex: 起始位置", "length: 截取长度"],
-    "Outputs": ["outputText: 截取的子串"]
+    "KeyProperties": [
+      "sourceExpression: 源文本表达式",
+      "startIndex: 起始位置",
+      "length: 截取长度"
+    ],
+    "Outputs": [
+      "outputText: 截取的子串"
+    ]
   },
   {
     "TaskType": "PauseTask",
     "Category": "通用",
     "Description": "暂停流程执行指定的时长",
     "Usage": "当需要等待一段时间（如等待页面加载、等待动画结束）再继续时使用",
-    "KeyProperties": ["pauseMs: 暂停毫秒数"],
+    "KeyProperties": [
+      "pauseMs: 暂停毫秒数"
+    ],
     "Outputs": []
   },
   {
@@ -212,16 +332,29 @@
     "Category": "AI操作",
     "Description": "使用大语言模型翻译文本",
     "Usage": "当需要将文本翻译为其他语言时使用",
-    "KeyProperties": ["modelId: 模型ID", "sourceTextExpression: 待翻译文本", "targetLanguage: 目标语言"],
-    "Outputs": ["outputText: 翻译结果"]
+    "KeyProperties": [
+      "modelId: 模型ID",
+      "sourceTextExpression: 待翻译文本",
+      "targetLanguage: 目标语言"
+    ],
+    "Outputs": [
+      "outputText: 翻译结果"
+    ]
   },
   {
     "TaskType": "LlmVision",
     "Category": "AI操作",
     "Description": "使用多模态大模型分析图像内容",
     "Usage": "当需要让 AI 理解图像内容并返回文字描述或判断结果时使用",
-    "KeyProperties": ["modelId: 模型ID", "sourceTaskIdForImage: 图像来源任务", "promptExpression: 分析提示词"],
-    "Outputs": ["outputText: AI回复文本", "outputResult: 判断结果"]
+    "KeyProperties": [
+      "modelId: 模型ID",
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)",
+      "promptExpression: 分析提示词"
+    ],
+    "Outputs": [
+      "outputText: AI回复文本",
+      "outputResult: 判断结果"
+    ]
   },
   {
     "TaskType": "GetTimestamp",
@@ -229,38 +362,55 @@
     "Description": "获取当前时间戳",
     "Usage": "当需要记录时间或在文件名中使用时间戳时使用",
     "KeyProperties": [],
-    "Outputs": ["outputText: 时间戳字符串"]
+    "Outputs": [
+      "outputText: 时间戳字符串"
+    ]
   },
   {
     "TaskType": "FileRead",
     "Category": "数据处理",
     "Description": "从文件中读取内容（按行分割为数组）",
     "Usage": "当需要从文本文件中读取数据列表时使用",
-    "KeyProperties": ["filePath: 文件路径"],
-    "Outputs": ["outputText: 文件内容"]
+    "KeyProperties": [
+      "filePath: 文件路径"
+    ],
+    "Outputs": [
+      "outputText: 文件内容"
+    ]
   },
   {
     "TaskType": "ArrayParse",
     "Category": "数据处理",
     "Description": "从数组型数据源中按索引取值",
     "Usage": "当需要从文件读取或数组生成的结果中取出特定项时使用",
-    "KeyProperties": ["sourceTaskIdForArray: 数组来源任务", "parseIndex: 提取索引"],
-    "Outputs": ["outputText: 提取的值"]
+    "KeyProperties": [
+      "sourceTaskIdForArray: 数组来源任务",
+      "parseIndex: 提取索引"
+    ],
+    "Outputs": [
+      "outputText: 提取的值"
+    ]
   },
   {
     "TaskType": "TypeConvert",
     "Category": "数据处理",
     "Description": "将文本值转换为指定的数据类型（整数、浮点数）",
     "Usage": "当需要将文本转成数字用于后续计算或比较时使用",
-    "KeyProperties": ["sourceExpression: 源值表达式"],
-    "Outputs": ["outputText: 转换后的值"]
+    "KeyProperties": [
+      "sourceExpression: 源值表达式"
+    ],
+    "Outputs": [
+      "outputText: 转换后的值"
+    ]
   },
   {
     "TaskType": "IfElseBlock",
     "Category": "控制流",
     "Description": "条件分支结构 — 当条件为真时执行 IfBody 中的步骤，否则执行 ElseBody 中的步骤",
     "Usage": "当流程需要根据某个条件（如模板匹配是否成功、OCR结果是否包含关键字）决定不同执行路径时使用。IfBody 和 ElseBody 中可以放置任意步骤（包括嵌套的 IfElseBlock 或 ForLoopBlock）",
-    "KeyProperties": ["conditionExpression: 条件表达式，支持引用变量和任务输出，如 'true'、'#2 模板匹配.匹配结果==True'"],
+    "KeyProperties": [
+      "conditionExpression: 条件表达式，支持引用变量和任务输出，如 'true'、'#2 模板匹配.匹配结果==True'"
+    ],
     "Outputs": []
   },
   {
@@ -268,7 +418,9 @@
     "Category": "控制流",
     "Description": "循环结构 — 将 LoopBody 中的步骤重复执行指定次数",
     "Usage": "当需要重复执行某些操作（如循环截图检测、批量处理文件列表中的每一项）时使用。LoopBody 中可以放置任意步骤（包括嵌套的 IfElseBlock 或 ForLoopBlock）",
-    "KeyProperties": ["loopCount: 循环次数（整数）"],
+    "KeyProperties": [
+      "loopCount: 循环次数（整数）"
+    ],
     "Outputs": []
   },
   {
@@ -276,15 +428,26 @@
     "Category": "Windows操作",
     "Description": "执行多按键编排的输入组合（支持长按/单击混合），非阻塞后台执行",
     "Usage": "当需要模拟复杂的键盘/鼠标组合操作时使用，如游戏中同时按住W移动并按空格跳跃、Ctrl+C复制等。支持按键序列编排、长按模式和循环执行",
-    "KeyProperties": ["actions: 按键动作列表，每个动作包含 key(按键名)、mode(Tap单击/Hold长按)、delayAfterMs(动作后延迟)", "repeatCount: 动作序列重复次数（0=无限循环）", "stopExpression: 终止条件表达式", "totalDurationMs: 最大执行时长(毫秒，0=不限时)"],
-    "Outputs": ["outputText: 执行结果文本"]
+    "KeyProperties": [
+      "actions: 按键动作列表，每个动作包含 key(按键名)、mode(Tap单击/Hold长按)、delayAfterMs(动作后延迟)",
+      "repeatCount: 动作序列重复次数（0=无限循环）",
+      "stopExpression: 终止条件表达式",
+      "totalDurationMs: 最大执行时长(毫秒，0=不限时)"
+    ],
+    "Outputs": [
+      "outputText: 执行结果文本"
+    ]
   },
   {
     "TaskType": "WinTextInput",
     "Category": "Windows操作",
     "Description": "向当前聚焦的窗口输入文本内容",
     "Usage": "当需要在输入框中键入文字时使用（如搜索框、表单填写）。支持逐字符模拟和剪贴板粘贴两种模式",
-    "KeyProperties": ["inputText: 输入文本（支持变量引用）", "inputMode: CharByChar(逐字符)/Clipboard(剪贴板粘贴)", "charIntervalMs: 逐字符模式下的字符间隔(毫秒)"],
+    "KeyProperties": [
+      "inputText: 输入文本（支持变量引用）",
+      "inputMode: CharByChar(逐字符)/Clipboard(剪贴板粘贴)",
+      "charIntervalMs: 逐字符模式下的字符间隔(毫秒)"
+    ],
     "Outputs": []
   },
   {
@@ -300,8 +463,18 @@
     "Category": "控制流",
     "Description": "调用其他子流程并等待其执行完成，相当于编程中的函数调用。可向子流程传递图像、文本、坐标等参数，并接收子流程的返回值。",
     "Usage": "当需要复用已定义好的通用功能模块时使用。例如将'截图→OCR→判断'封装为子流程后，主流程中可多次调用。子流程执行完毕后，主流程会继续执行后续卡片。子流程中需要配合 SubFlowInput（接收参数）和 SubFlowOutput（返回结果）使用。",
-    "KeyProperties": ["targetSubFlowId: 要调用的目标子流程的ID（从已有流程中选择）", "inputImage: 传递给子流程的图像（引用前序卡片的图像输出，可选）", "inputText: 传递给子流程的文本内容（支持变量引用和表达式，可选）", "inputX/inputY: 传递给子流程的坐标值（可选）"],
-    "Outputs": ["outputText: 子流程通过 SubFlowOutput 返回的文本", "outputImage: 子流程返回的图像", "outputX/outputY: 子流程返回的坐标", "outputResult: 子流程返回的布尔结果"]
+    "KeyProperties": [
+      "targetSubFlowId: 要调用的目标子流程的ID（从已有流程中选择）",
+      "inputImage: 传递给子流程的图像（引用前序卡片的图像输出，可选）",
+      "inputText: 传递给子流程的文本内容（支持变量引用和表达式，可选）",
+      "inputX/inputY: 传递给子流程的坐标值（可选）"
+    ],
+    "Outputs": [
+      "outputText: 子流程通过 SubFlowOutput 返回的文本",
+      "outputImage: 子流程返回的图像",
+      "outputX/outputY: 子流程返回的坐标",
+      "outputResult: 子流程返回的布尔结果"
+    ]
   },
   {
     "TaskType": "SubFlowInput",
@@ -309,46 +482,241 @@
     "Description": "子流程入口卡片，用于接收主流程通过 CallSubFlow 传入的数据。通常放在子流程的第一个位置。",
     "Usage": "在子流程中使用。当子流程需要接收外部传入的图像、文本或坐标参数时，在子流程开头放置此卡片。后续卡片可通过 #N.image、#N.text、#N.x、#N.y 引用接收到的数据。",
     "KeyProperties": [],
-    "Outputs": ["outputImage: 主流程传入的图像数据", "outputText: 主流程传入的文本数据", "outputX/outputY: 主流程传入的坐标"]
+    "Outputs": [
+      "outputImage: 主流程传入的图像数据",
+      "outputText: 主流程传入的文本数据",
+      "outputX/outputY: 主流程传入的坐标"
+    ]
   },
   {
     "TaskType": "SubFlowOutput",
     "Category": "控制流",
     "Description": "子流程出口卡片，将处理结果返回给调用方的主流程，并终止当前子流程执行。相当于编程中的 return 语句。",
     "Usage": "仅在子流程中使用。当子流程完成功能处理后，需要将结果（图像、文本、坐标、布尔值）带回给调用它的 CallSubFlow 卡片时使用。放在子流程的末尾位置。",
-    "KeyProperties": ["returnImage: 返回给主流程的图像数据（引用子流程中某卡片的图像输出）", "returnText: 返回的文本数据（支持变量和表达式）", "returnX/returnY: 返回的坐标值", "returnResult: 返回的布尔判断结果"],
+    "KeyProperties": [
+      "returnImage: 返回给主流程的图像数据（引用子流程中某卡片的图像输出）",
+      "returnText: 返回的文本数据（支持变量和表达式）",
+      "returnX/returnY: 返回的坐标值",
+      "returnResult: 返回的布尔判断结果"
+    ],
     "Outputs": []
   },
   {
     "TaskType": "CustomScript",
-    "Category": "数据处理",
+    "Category": "通用",
     "Description": "使用原生 C# 代码编写自定义逻辑。通过内置全局对象 TaskFlowPro 与主流程双向通信，支持读写卡片输出、变量、图像处理等操作。引擎使用 Roslyn 动态编译，支持最新 C# 语法（using var、模式匹配、switch 表达式等），首次编译后自动缓存，脚本执行结束后自动释放所有通过 API 获取的可释放对象。",
     "Usage": "当现有任务卡片无法满足复杂逻辑需求时使用。适合执行复杂数学运算、字符串处理、条件循环、文件操作或自定义图像处理。脚本中已预导入 System、System.Linq、System.Collections.Generic、System.Text、OpenCvSharp 等命名空间。核心 API：TaskFlowPro.GetTool(\"#N 任务名.属性名\") 读取卡片输出、TaskFlowPro.SetVar(\"@变量名\", value) 读写变量、TaskFlowPro.GetImage(\"#N 任务名\") 获取图像(Mat)、TaskFlowPro.SetOutputText/SetOutputXY/SetOutputResult/SetOutputImage 设置脚本输出、Console.WriteLine 或 TaskFlowPro.Log 打印日志。",
-    "KeyProperties": ["scriptCode: C# 脚本代码"],
-    "Outputs": ["outputText: 通过 SetOutputText 设置的文本", "outputImage: 通过 SetOutputImage 设置的图像", "outputX/outputY: 通过 SetOutputXY 设置的坐标", "outputResult: 通过 SetOutputResult 设置的布尔结果"]
+    "KeyProperties": [
+      "scriptCode: C# 脚本代码"
+    ],
+    "Outputs": [
+      "outputText: 通过 SetOutputText 设置的文本",
+      "outputImage: 通过 SetOutputImage 设置的图像",
+      "outputX/outputY: 通过 SetOutputXY 设置的坐标",
+      "outputResult: 通过 SetOutputResult 设置的布尔结果"
+    ]
   },
   {
     "TaskType": "BrowserGetText",
     "Category": "浏览器自动化",
     "Description": "通过 CDP 连接浏览器，获取网页中指定元素的可视文本或 HTML 属性",
     "Usage": "当需要抓取网页上的文字（如价格、标题）或链接时使用。需要浏览器以 --remote-debugging-port 启动",
-    "KeyProperties": ["selectorType: 选择器类型(Css/XPath)", "selector: 元素选择器表达式", "attributeName: HTML属性名(可选，留空则获取innerText)", "debuggingPort: CDP调试端口(默认9222)"],
-    "Outputs": ["outputText: 抓取到的文本内容"]
+    "KeyProperties": [
+      "selectorType: 选择器类型(Css/XPath)",
+      "selector: 元素选择器表达式",
+      "attributeName: HTML属性名(可选，留空则获取innerText)",
+      "debuggingPort: CDP调试端口(默认9222)"
+    ],
+    "Outputs": [
+      "outputText: 抓取到的文本内容"
+    ]
   },
   {
     "TaskType": "BrowserExecuteJs",
     "Category": "浏览器自动化",
     "Description": "通过 CDP 连接浏览器，在当前页面执行自定义的 JavaScript 脚本",
     "Usage": "当普通的选择器或抓取无法满足需求，需要直接执行 JS 代码操作 DOM 或获取复杂数据结构时使用",
-    "KeyProperties": ["scriptCode: 要执行的 JavaScript 代码（支持 return 语句）", "debuggingPort: CDP调试端口(默认9222)"],
-    "Outputs": ["outputText: JS脚本通过 return 返回的字符串"]
+    "KeyProperties": [
+      "scriptCode: 要执行的 JavaScript 代码（支持 return 语句）",
+      "debuggingPort: CDP调试端口(默认9222)"
+    ],
+    "Outputs": [
+      "outputText: JS脚本通过 return 返回的字符串"
+    ]
   },
   {
     "TaskType": "BrowserWaitForElement",
     "Category": "浏览器自动化",
     "Description": "通过 CDP 连接浏览器，等待页面中特定的元素出现或消失",
     "Usage": "当流程需要等待页面异步加载完成，比如等待 Loading 圈消失，或者等待某个按钮出现后再继续后续操作时使用，充当同步锁",
-    "KeyProperties": ["selectorType: 选择器类型(Css/XPath)", "selector: 元素选择器表达式", "waitMode: 等待模式 出现(Visible)/消失(Hidden)", "timeoutMs: 超时时间(毫秒)", "debuggingPort: CDP调试端口(默认9222)"],
-    "Outputs": ["outputResult: 是否在超时前成功匹配(布尔值)"]
+    "KeyProperties": [
+      "selectorType: 选择器类型(Css/XPath)",
+      "selector: 元素选择器表达式",
+      "waitMode: 等待模式 出现(Visible)/消失(Hidden)",
+      "timeoutMs: 超时时间(毫秒)",
+      "debuggingPort: CDP调试端口(默认9222)"
+    ],
+    "Outputs": [
+      "outputResult: 是否在超时前成功匹配(布尔值)"
+    ]
+  },
+  {
+    "TaskType": "BrowserNativeClick",
+    "Category": "浏览器自动化",
+    "Description": "通过 CDP 连接浏览器，在当前页面执行原生点击操作或拖拽",
+    "Usage": "当需要模拟用户真实的鼠标点击、双击、连点或者拖拽元素时使用",
+    "KeyProperties": [
+      "selectorType: 选择器类型(Css/XPath/Absolute)",
+      "selector: 元素选择器或坐标跨度",
+      "clickType: 点按模式(单击/双击/拖拽)",
+      "button: 鼠标按键",
+      "debuggingPort: CDP调试端口"
+    ],
+    "Outputs": []
+  },
+  {
+    "TaskType": "BrowserNativeInput",
+    "Category": "浏览器自动化",
+    "Description": "通过 CDP 连接浏览器，在指定元素上执行原生键盘输入或系统粘贴",
+    "Usage": "当需要在文本框中模拟真实用户的敲击行为或一键填入长文本时使用",
+    "KeyProperties": [
+      "selectorType: 选择器类型",
+      "selector: 元素选择器表达式",
+      "inputText: 待输入的内容",
+      "inputMode: 逐字输入还是剪贴板模式",
+      "debuggingPort: CDP调试端口"
+    ],
+    "Outputs": []
+  },
+  {
+    "TaskType": "BrowserSimulatedClick",
+    "Category": "浏览器自动化",
+    "Description": "通过 CDP 连接浏览器，在页面的绝对坐标处进行鼠标模拟点击",
+    "Usage": "当没有DOM元素可选，但通过计算或视觉识别得到了元素确切的 XY 页面坐标时使用",
+    "KeyProperties": [
+      "startX/startY: 绝对点击坐标(关联页面左上角)",
+      "debuggingPort: CDP调试端口"
+    ],
+    "Outputs": []
+  },
+  {
+    "TaskType": "BrowserCdpCommand",
+    "Category": "浏览器自动化",
+    "Description": "发送底层的 Chrome DevTools Protocol 原始指令",
+    "Usage": "当内置接口无法覆盖高级功能（例如截取长截图、修改UserAgent、拦截请求）时直接发送CDP方法名和JSON参数",
+    "KeyProperties": [
+      "commandName: CDP方法(如 Network.enable)",
+      "commandParams: JSON格式的命令参数",
+      "debuggingPort: CDP调试端口"
+    ],
+    "Outputs": [
+      "outputText: CDP指令响应JSON"
+    ]
+  },
+  {
+    "TaskType": "BrowserScreenshot",
+    "Category": "浏览器自动化",
+    "Description": "通过 CDP 连接浏览器，获取当前页面的截图（支持仅可视区域或整页长截图）",
+    "Usage": "当需要获取网页当前画面的图像以便进行后续的模板匹配、OCR图像分析或存档时使用",
+    "KeyProperties": [
+      "fullPage: 布尔值，是否截取不受滚动条限制的网页全景长图(true)或仅可视区域(false)",
+      "debuggingPort: CDP调试端口"
+    ],
+    "Outputs": [
+      "outputImage: 截取的页面图像(Mat对象)"
+    ]
+  },
+  {
+    "TaskType": "ImgBlobAnalysis",
+    "Category": "图像处理",
+    "Description": "对图像进行连通域(Blob)分析，找出满足面积要求的斑块",
+    "Usage": "当需要查找画面中所有独立的色块或物体（配合二值化或颜色分割使用）时使用",
+    "KeyProperties": [
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)",
+      "minArea: 最小面积",
+      "maxArea: 最大面积",
+      "sortMode: 排序方式",
+      "maxBlobCount: 最大返回数量"
+    ],
+    "Outputs": [
+      "outputBlobCount: 找到的斑块数量",
+      "outputBlobResults: 斑块坐标和面积数据数组"
+    ]
+  },
+  {
+    "TaskType": "ImgColorSegment",
+    "Category": "图像处理",
+    "Description": "将图像中不符合给定 HSV 颜色范围的区域全部涂黑，只保留特定的颜色斑块",
+    "Usage": "当需要提取画面中特定颜色的物体（并去掉其他颜色干扰）以供后续 OCR 或 Blob 分析使用时使用",
+    "KeyProperties": [
+      "sourceTaskIdForImage: 图像来源任务(或使用 imageFilePath 指定绝对路径)",
+      "hsvLowerH/hsvLowerS/hsvLowerV: HSV下限(各通道)",
+      "hsvUpperH/hsvUpperS/hsvUpperV: HSV上限(各通道)"
+    ],
+    "Outputs": [
+      "outputImage: 处理后的图像(过滤掉无关颜色)"
+    ]
+  },
+  {
+    "TaskType": "BreakLoop",
+    "Category": "控制流",
+    "Description": "强制跳出指定的 For 循环，不再执行后续剩余次数",
+    "Usage": "当在循环内找到目标或满足退出条件需要提前结束循环时使用",
+    "KeyProperties": [
+      "targetLoopId: 要中止的循环任务节点ID"
+    ],
+    "Outputs": []
+  },
+  {
+    "TaskType": "EndAllFlows",
+    "Category": "通用",
+    "Description": "立即停止所有正在运行的流程和子流程",
+    "Usage": "当遇到致命错误或最终达成目标后，不需要任何流程再继续挂机执行时使用",
+    "KeyProperties": [],
+    "Outputs": []
+  },
+  {
+    "TaskType": "ArrayBuilder",
+    "Category": "数据处理",
+    "Description": "收集每次循环或其他节点的数据，拼装建立数组，并支持导出为 TXT 文件",
+    "Usage": "当需要收集抓取的多条数据、批量保存多个文本结果并在任务最后输出时使用",
+    "KeyProperties": [
+      "arrayDataType: 提取的数据类型",
+      "inputExpression: 待加入数组的内容",
+      "autoExportPath: 执行结束后自动保存文件的路径"
+    ],
+    "Outputs": [
+      "outputArrayCount: 数组目前的长度"
+    ]
+  },
+  {
+    "TaskType": "ArraySearch",
+    "Category": "数据处理",
+    "Description": "在指定数组(如FileRead或ArrayBuilder的输出)中搜索特定的文本",
+    "Usage": "当需要判断某个集合中是否存在指定元素（如排查黑名单、查找关键ID）时使用",
+    "KeyProperties": [
+      "sourceTaskIdForArray: 数组来源任务",
+      "searchExpression: 要搜索的文本",
+      "matchMode: Exact/Contains"
+    ],
+    "Outputs": [
+      "outputMatchIndex: 匹配的索引(未找到为-1)",
+      "outputMatchValue: 匹配到的文本"
+    ]
+  },
+  {
+    "TaskType": "LlmFileTranslate",
+    "Category": "AI操作",
+    "Description": "调用大模型翻译文本文档（如 TXT 或字幕文件）",
+    "Usage": "当需要整篇翻译长篇文本文件并保存为新文件时使用",
+    "KeyProperties": [
+      "modelId: 大模型ID",
+      "inputFilePath: 源文件路径",
+      "outputFilePath: 翻译后的保存路径",
+      "targetLanguage: 目标语言"
+    ],
+    "Outputs": [
+      "outputResult: 翻译是否成功完成(布尔值)"
+    ]
   }
 ]
