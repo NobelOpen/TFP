@@ -163,7 +163,7 @@ PowerShell 集成：
 2. 根据根因选择 failureStrategy/对应操作：
    - retry：最多重试1次，不要盲目重复相同的失败操作
    - 修改参数：严禁删除(deleteCards)再重建(plan)！如果是卡片本身选型正确但参数错误，直接使用 **modifyCards** 修改对应属性，并在 runCards 中重新运行该卡片。这样可以保持任务结构干净。
-   - fallback：只有连卡片类型都选错了，或者必须切换大方向（如 WinUiAutomation → WinClick 坐标点击）时，才触发 fallback 删除失败卡片(deleteCards) + 创建替代方案(plan/fallbackPlan)。**【防死磕警告①】如果 BrowserNativeClick 返回 Success 但页面"毫无反映"（截图没变化），首先不要以为选择器写错了！先 fallback 到 BrowserExecuteJs 用 element.click() 尝试（解决防抖问题）。如果 BrowserExecuteJs 也 Success 但仍没变化，说明选择器命中了错误元素，此时再 fallback 到 SoM 标注模式用 markId 精确点击。禁止跳过 BrowserExecuteJs 直接退化到 SoM！** **【防死磕警告②】如果 BrowserSimulatedClick（含 SoM markId）对模态弹窗/确认对话框点击返回 Success 但弹窗仍然存在，严禁继续创建新的 BrowserSimulatedClick 重试！这是 position:fixed 坐标偏移导致的，必须立即 fallback 到 BrowserExecuteJs 用 DOM 选择器（如 `button[data-action="ok"]` 或 XPath）点击。**
+   - fallback：只有连卡片类型都选错了，或者必须切换大方向（如 WinUiAutomation → WinClick 坐标点击）时，才触发 fallback 删除失败卡片(deleteCards) + 创建替代方案(plan/fallbackPlan)。**【防死磕警告①】如果 BrowserNativeClick 返回 Success 但页面"毫无反映"（截图没变化），首先不要以为选择器写错了！先 fallback 到 BrowserExecuteJs 用 element.click() 尝试（解决防抖问题）。如果 BrowserExecuteJs 也 Success 但仍没变化，说明选择器命中了错误元素，此时再 fallback 到 SoM 标注模式用 markId 精确点击。禁止跳过 BrowserExecuteJs 直接退化到 SoM！** **【防死磕警告②】如果 BrowserSimulatedClick（含 SoM markId）对模态弹窗/确认对话框点击返回 Success 但弹窗仍然存在，严禁继续创建新的 BrowserSimulatedClick 重试！这是 position:fixed 坐标偏移导致的，必须立即 fallback 到 BrowserExecuteJs 用 DOM 选择器（如 `button[data-action="ok"]` 或 XPath）点击。** **【防死磕警告③：状态丢失恢复】如果点击下拉菜单/瞬态界面的选项失败，导致该菜单消失（状态倒退）。严禁创建新的卡片去试图“重新展开菜单”！你必须复用之前成功展开该菜单的那张卡片（将其序号放入 runCards 重新运行），同时修改失败卡片的策略或追加新卡片并一同放在 runCards 中。必须利用已验证的步骤强制恢复前置状态！**
    - abort：向用户说明具体原因，设置 done: true
 </failure_recovery>
 
