@@ -844,7 +844,7 @@ namespace TaskFlow
             }
             addBelow.Items.Add(general);
 
-            // Windows 操作
+            // Win操作
             var windows = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_WinOps };
             foreach (var (type, tag) in new[] {
                 (TaskType.WinLaunchApp, "WinLaunchApp"), (TaskType.WinScreenshot, "WinScreenshot"),
@@ -877,7 +877,7 @@ namespace TaskFlow
             var imgProc = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_ImgProc };
             foreach (var (type, tag) in new[] {
                 (TaskType.ImgCrop, "ImgCrop"), (TaskType.ImgTemplateMatch, "ImgTemplateMatch"),
-                (TaskType.ImgOnnxDetect, "ImgOnnxDetect"),
+                (TaskType.ImgOnnxDetect, "ImgOnnxDetect"), (TaskType.ImgCaliperMeasure, "ImgCaliperMeasure"),
                 (TaskType.ImgOcr, "ImgOcr"), (TaskType.ImgColorDetect, "ImgColorDetect"),
                 (TaskType.ImgColorSegment, "ImgColorSegment"),
                 (TaskType.ImgPreprocess, "ImgPreprocess"), (TaskType.ImgBlobAnalysis, "ImgBlobAnalysis"),

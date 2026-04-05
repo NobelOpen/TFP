@@ -478,7 +478,7 @@ namespace TaskFlow.Services
 
                     // Windows操作
                     TaskType.WinLaunchApp => await ExecuteWinLaunchAppAsync((WinLaunchAppTaskCard)task, allTasks),
-                    TaskType.WinScreenshot => await ExecuteWinScreenshotAsync((WinScreenshotTaskCard)task),
+                    TaskType.WinScreenshot => await ExecuteWinScreenshotAsync((WinScreenshotTaskCard)task, allTasks),
                     TaskType.WinClick => await ExecuteWinClickAsync((WinClickTaskCard)task, allTasks),
                     TaskType.WinCloseApp => ExecuteWinCloseApp((WinCloseAppTaskCard)task),
                     TaskType.WinUiAutomation => await ExecuteWinUiAutomationAsync((WinUiAutomationTaskCard)task),
@@ -504,6 +504,7 @@ namespace TaskFlow.Services
                     TaskType.ImgBlobAnalysis => ExecuteImgBlobAnalysis((ImgBlobAnalysisTaskCard)task, allTasks),
                     TaskType.ImgResize => ExecuteImgResize((ImgResizeTaskCard)task, allTasks),
                     TaskType.ImgOnnxDetect => await ExecuteImgOnnxDetectAsync((ImgOnnxDetectTaskCard)task, allTasks),
+                    TaskType.ImgCaliperMeasure => await ExecuteImgCaliperMeasureAsync((ImgCaliperMeasureTaskCard)task, allTasks),
 
                     // 逻辑判断
                     TaskType.ExpressionEval => ExecuteExpressionEval((ExpressionEvalTaskCard)task, allTasks),

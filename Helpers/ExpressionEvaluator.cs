@@ -130,6 +130,9 @@ namespace TaskFlow.Helpers
                     "查找路径" or "outputFilePath" or "filePath" => referencedTask is WinFindFileTaskCard ffCard
                         ? $"\"{ffCard.OutputFilePath ?? ""}\""
                         : "\"\"",
+                    "测量边距" => referencedTask is ImgCaliperMeasureTaskCard caliperCard
+                        ? caliperCard.OutputDistance.ToString()
+                        : "0",
                     _ => throw new InvalidOperationException($"不支持的输出属性: {property}")
                 };
             });

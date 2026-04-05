@@ -745,6 +745,57 @@ namespace TaskFlow.Services
             }
         }
 
+        private Task<bool> ExecuteImgCaliperMeasureAsync(ImgCaliperMeasureTaskCard task, IList<TaskCardBase> allTasks)
+        {
+            Mat? sourceImage = GetSourceImage(task.UseSourceTaskImage, task.SourceTaskIdForImage, task.ImageFilePath, allTasks, out bool shouldDispose);
+
+            if (sourceImage == null)
+            {
+                task.ErrorMessage = "无法获取源图像";
+                return Task.FromResult(false);
+            }
+
+            try
+            {
+                // ROI 参数不支持表达式，直接使用
+                var result = _openCVService.MeasureCaliperWidth(
+                    sourceImage,
+                    task.RoiX, task.RoiY, task.RoiWidth, task.RoiHeight,
+                    task.SearchDirection,
+                    task.Edge1Polarity, task.Edge2Polarity, task.Edge1Selection, task.Edge2Selection);
+
+                if (!result.Success)
+                {
+                    task.OutputDistance = 0;
+                    task.OutputResult = false;
+                    task.ErrorMessage = "测量失败或未找到符合极性的双边缘";
+                    Log($"[{DateTime.Now:HH:mm:ss}] 卡尺测量未找到符合条件的双边。");
+                    return Task.FromResult(false);
+                }
+
+                task.OutputDistance = result.Distance;
+                task.OutputResult = true;
+
+                task.OutputImage?.Dispose();
+                if (result.ResultImage != null)
+                {
+                    task.OutputImage = result.ResultImage;
+                }
+
+                Log($"[{DateTime.Now:HH:mm:ss}] 卡尺测量成功: 测量距离 {result.Distance:F2} 像素");
+                return Task.FromResult(true);
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = $"测量失败: {ex.Message}";
+                return Task.FromResult(false);
+            }
+            finally
+            {
+                if (shouldDispose) sourceImage.Dispose();
+            }
+        }
+
         #endregion
 
         #region String Substring

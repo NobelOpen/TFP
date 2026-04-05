@@ -243,7 +243,9 @@ namespace TaskFlow.Helpers
             // ImgBlobAnalysisTaskCard
             "OutputBlobCount", "OutputBlobResults",
             // ImgOnnxDetectTaskCard
-            "OutputDetectionCount", "OutputTopClassName", "OutputTopConfidence", "OutputDetectionsArray"
+            "OutputDetectionCount", "OutputTopClassName", "OutputTopConfidence", "OutputDetectionsArray",
+            // ImgCaliperMeasureTaskCard
+            "OutputDistance"
         };
         public override TaskCardBase? ReadJson(JsonReader reader, Type objectType, TaskCardBase? existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
@@ -291,6 +293,7 @@ namespace TaskFlow.Helpers
                 TaskType.ImgBlobAnalysis => new ImgBlobAnalysisTaskCard(),
                 TaskType.ImgResize => new ImgResizeTaskCard(),
                 TaskType.ImgOnnxDetect => new ImgOnnxDetectTaskCard(),
+                TaskType.ImgCaliperMeasure => new ImgCaliperMeasureTaskCard(),
                 TaskType.ExpressionEval => new ExpressionEvalTaskCard(),
                 TaskType.BreakLoop => new BreakLoopTaskCard(),
                 TaskType.StringSubstring => new StringSubstringTaskCard(),

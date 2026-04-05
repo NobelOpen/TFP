@@ -113,6 +113,7 @@ namespace TaskFlow.Resources {
         public static string TaskType_ArrayBuilder => ResourceManager.GetString("TaskType_ArrayBuilder", resourceCulture) ?? "Array Builder";
         public static string TaskType_LlmFileTranslate => ResourceManager.GetString("TaskType_LlmFileTranslate", resourceCulture) ?? "LLM File Translate";
         public static string TaskType_ImgOnnxDetect => ResourceManager.GetString("TaskType_ImgOnnxDetect", resourceCulture) ?? "ONNX Detect";
+        public static string TaskType_ImgCaliperMeasure => ResourceManager.GetString("TaskType_ImgCaliperMeasure", resourceCulture) ?? "Caliper Measure";
 
         // ========== MainWindow ==========
         public static string Main_Title => ResourceManager.GetString("Main_Title", resourceCulture) ?? "TaskFlow";

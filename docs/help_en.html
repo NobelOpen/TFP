@@ -347,6 +347,7 @@
     <li><a href="#ImgCrop">Image Crop</a></li>
     <li><a href="#ImgTemplateMatch">Template Match</a></li>
     <li><a href="#ImgOnnxDetect">ONNX Detect</a></li>
+    <li><a href="#ImgCaliperMeasure">Caliper Measure</a></li>
     <li><a href="#ImgOcr">OCR Recognition</a></li>
     <li><a href="#ImgColorDetect">Color Detection</a></li>
     <li><a href="#ImgColorSegment">Color Segmentation</a></li>
@@ -1042,6 +1043,29 @@
     <div class="output-item"><code>OutputMatchScore</code> — The actual confidence score of the aforementioned "highest-confidence" target.</div>
     <div class="output-item"><code>OutputMatchCount</code> — The total number of valid targets successfully detected during this inference pass.</div>
     <div class="output-item"><code>OutputMatchResults</code> — A 1D array containing comprehensive data (like X, Y coordinates, and scores) for all detected targets if loop handling is needed.</div>
+  </div>
+</div>
+
+<div class="card-doc" id="ImgCaliperMeasure">
+  <h3>Caliper Measure <span class="badge badge-img">Image</span></h3>
+  <p>Searches for edges in the source image based on specified direction and edge polarity, and calculates the pixel distance between the two identified edges.</p>
+  <dl class="props">
+    <dt>Source Image</dt>
+    <dd>The target image to search in, referencing the output of a preceding screenshot or preprocessing card (e.g., <code>#1</code>).</dd>
+    <dt>Search Direction</dt>
+    <dd>Determines the 1D search direction for edge detection. Options: <code>LeftToRight</code>, <code>RightToLeft</code>, <code>TopToBottom</code>, <code>BottomToTop</code>.</dd>
+    <dt>Edge Polarity</dt>
+    <dd>The brightness transition characteristic used for capturing edges. Options: <code>Any</code>, <code>DarkToLight</code>, <code>LightToDark</code>.</dd>
+  </dl>
+  <div class="example-section">
+    <div class="example-title"> Application Scenarios</div>
+    <div class="example-item">Measure the border width of a window, check the distance between two parallel lines, or confirm the size of an offset due to lighting or occlusion. Combining with "Edge Polarity" helps accurately filter out interfering edges.</div>
+  </div>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item"><code>#N.image</code> — Resulting image with redrawn edge markers and highlighted caliper search area box.</div>
+    <div class="output-item"><code>#N.result</code> — Whether the dual edges were successfully captured and measured (true/false).</div>
+    <div class="output-item"><code>测量边距</code> — The calculated distance between the two edges in pixels (accessed via "测量边距").</div>
   </div>
 </div>
 

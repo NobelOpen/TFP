@@ -423,7 +423,7 @@
         <li><a href="#EndAllFlows">结束全部流程</a></li>
         <li><a href="#RestartFlow">重开当前流程</a></li>
 
-        <li class="toc-category">Windows 操作</li>
+        <li class="toc-category">Win操作</li>
         <li><a href="#WinLaunchApp">Win启动应用</a></li>
         <li><a href="#WinScreenshot">Win截屏工具</a></li>
         <li><a href="#WinClick">Win模拟点击</a></li>
@@ -452,6 +452,7 @@
         <li><a href="#ImgCrop">图像裁剪</a></li>
         <li><a href="#ImgTemplateMatch">模板匹配</a></li>
         <li><a href="#ImgOnnxDetect">ONNX定位</a></li>
+        <li><a href="#ImgCaliperMeasure">卡尺测量</a></li>
         <li><a href="#ImgOcr">OCR识别</a></li>
         <li><a href="#ImgColorDetect">颜色识别</a></li>
         <li><a href="#ImgColorSegment">颜色分割</a></li>
@@ -764,8 +765,8 @@
       </div>
     </div>
 
-    <!-- ==================== Windows 操作 ==================== -->
-    <div class="category-title">Windows 操作</div>
+    <!-- ==================== Win操作 ==================== -->
+    <div class="category-title">Win操作</div>
 
     <div class="card-doc" id="WinLaunchApp">
       <h3>Win启动应用 <span class="badge badge-win">Windows</span></h3>
@@ -1187,6 +1188,29 @@
         <div class="output-item"><code>OutputMatchScore</code> — 该“最高置信度”目标的实际检出分数。</div>
         <div class="output-item"><code>OutputMatchCount</code> — 本次推理总共成功检出了多少个符合条件的目标数量。</div>
         <div class="output-item"><code>OutputMatchResults</code> — 一维数组，包含所有检出目标的坐标集合数据等。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="ImgCaliperMeasure">
+      <h3>卡尺测量 <span class="badge badge-img">图像</span></h3>
+      <p>在源图像中，按指定方向和边缘极性搜索边缘，并计算两边缘之间的像素距离。</p>
+      <dl class="props">
+        <dt>源图像</dt>
+        <dd>要搜索的目标图像，引用前序截屏或预处理卡片的输出（如 <code>#1</code>）。</dd>
+        <dt>搜索方向</dt>
+        <dd>决定边缘搜索的一维扫描方向。可选：<code>从左到右 (LeftToRight)</code>、<code>从右到左 (RightToLeft)</code>、<code>从上到下 (TopToBottom)</code>、<code>从下到上 (BottomToTop)</code>。</dd>
+        <dt>边缘极性</dt>
+        <dd>抓取边缘的过渡亮度特征。可选：<code>Any (任意)</code>、<code>DarkToLight (由暗到亮)</code>、<code>LightToDark (由亮到暗)</code>。</dd>
+      </dl>
+      <div class="example-section">
+        <div class="example-title"> 应用场景</div>
+        <div class="example-item">测量窗口的边框宽度、检查两条平行线间的距离、确认特定目标由于光照或遮挡导致的偏移大小等。配合“极性”能精确过滤干扰边。</div>
+      </div>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.image</code> — 重新绘制了抓取边缘和卡尺检测范围高亮框的结果图像。</div>
+        <div class="output-item"><code>#N.result</code> — 是否成功抓取到双边缘并完成测量（true/false）。</div>
+        <div class="output-item"><code>测量间距</code> — 计算出的两条边缘的间距（以像素为单位，<code>OutputDistance</code> 输出）。</div>
       </div>
     </div>
 

@@ -353,7 +353,7 @@
                                           IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
                                           WindowChrome.IsHitTestVisibleInChrome="True"
                                           Cursor="Hand" Padding="4,6" BorderThickness="0">
-                                <TextBlock x:Name="RunModeDropdownIcon" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource PrimaryButtonTextBrush}"/>
+                                <TextBlock x:Name="RunModeDropdownIcon" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10"/>
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
                                         <Border x:Name="Bd" Background="{TemplateBinding Background}" 
@@ -379,6 +379,7 @@
                                 <ToggleButton.Style>
                                     <Style TargetType="ToggleButton">
                                         <Setter Property="Background" Value="{DynamicResource RunReadyButtonBgBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}"/>
                                     </Style>
                                 </ToggleButton.Style>
                                 <ToggleButton.ContextMenu>
@@ -419,6 +420,10 @@
                                             </MultiDataTrigger.Conditions>
                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerButtonHoverBrush}"/>
                                         </MultiDataTrigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
+                                        </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Button.Template>
@@ -671,6 +676,7 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgCrop}" Click="AddTask_Click" Tag="ImgCrop"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgTemplateMatch}" Click="AddTask_Click" Tag="ImgTemplateMatch"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgOnnxDetect}" Click="AddTask_Click" Tag="ImgOnnxDetect"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_ImgCaliperMeasure}" Click="AddTask_Click" Tag="ImgCaliperMeasure"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgOcr}" Click="AddTask_Click" Tag="ImgOcr"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgColorDetect}" Click="AddTask_Click" Tag="ImgColorDetect"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_ImgColorSegment}" Click="AddTask_Click" Tag="ImgColorSegment"/>

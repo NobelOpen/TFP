@@ -68,9 +68,17 @@ namespace TaskFlow.Services
             }
         }
 
-        private async Task<bool> ExecuteWinScreenshotAsync(WinScreenshotTaskCard task)
+        private async Task<bool> ExecuteWinScreenshotAsync(WinScreenshotTaskCard task, IList<TaskCardBase> allTasks)
         {
-            var result = await _screenshotService.CaptureWindowAsync(task.ProcessName, task.IncludeTitleBar, task.CropTopHeight);
+            int cropTopHeight = task.CropTopHeight; // 默认或者旧配置兼容
+            
+            // 如果表达式不为空且不是默认的"0"，则尝试求值
+            if (!string.IsNullOrWhiteSpace(task.CropTopHeightExpression) && task.CropTopHeightExpression.Trim() != "0")
+            {
+                if (!ResolveCoordinateExpression(task.CropTopHeightExpression, "裁剪高度", ref cropTopHeight, task, allTasks)) return false;
+            }
+
+            var result = await _screenshotService.CaptureWindowAsync(task.ProcessName, task.IncludeTitleBar, cropTopHeight);
             if (result.Success && result.Image != null)
             {
                 task.OutputImage?.Dispose();

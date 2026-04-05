@@ -27,6 +27,11 @@ namespace TaskFlow.Services
         /// Blob分析：连通域分析
         /// </summary>
         (List<BlobResult> Blobs, Mat? ResultImage) BlobAnalysis(Mat source, int minArea, int maxArea, BlobSortMode sortMode, int maxCount, bool invertBinary);
+
+        /// <summary>
+        /// 双边卡尺测量间距
+        /// </summary>
+        (bool Success, double Distance, Mat? ResultImage) MeasureCaliperWidth(Mat source, int roiX, int roiY, int roiW, int roiH, SearchDirection searchDir, EdgePolarity edge1Pol, EdgePolarity edge2Pol, EdgeSelection edge1Sel, EdgeSelection edge2Sel);
     }
 
     public class OpenCVService : IOpenCVService
@@ -440,6 +445,175 @@ namespace TaskFlow.Services
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Blob分析处理异常: {ex.Message}", ex);
+            }
+        }
+
+        public (bool Success, double Distance, Mat? ResultImage) MeasureCaliperWidth(Mat source, int roiX, int roiY, int roiW, int roiH, SearchDirection searchDir, EdgePolarity edge1Pol, EdgePolarity edge2Pol, EdgeSelection edge1Sel, EdgeSelection edge2Sel)
+        {
+            if (source == null || source.Empty())
+                return (false, 0, null);
+
+            try
+            {
+                // 1. 约束 ROI
+                int x = Math.Max(0, Math.Min(roiX, source.Width - 1));
+                int y = Math.Max(0, Math.Min(roiY, source.Height - 1));
+                int w = Math.Min(roiW, source.Width - x);
+                int h = Math.Min(roiH, source.Height - y);
+
+                if (w <= 0 || h <= 0) return (false, 0, null);
+
+                // 2. 截取 ROI 并转为灰度图
+                var roiRect = new Rect(x, y, w, h);
+                using var sourceRoi = new Mat(source, roiRect);
+                using var gray = sourceRoi.Channels() == 1 ? sourceRoi.Clone() : sourceRoi.CvtColor(ColorConversionCodes.BGR2GRAY);
+
+                // 3.投影方向与像素遍历策略计算梯度
+                bool isHorizontal = searchDir == SearchDirection.LeftToRight || searchDir == SearchDirection.RightToLeft;
+                bool isReverse = searchDir == SearchDirection.RightToLeft || searchDir == SearchDirection.BottomToTop;
+
+                // 步长与边界
+                int length = isHorizontal ? w : h;
+                int thickness = isHorizontal ? h : w;
+
+                // 投影平均值
+                double[] projection = new double[length];
+                for (int pIdx = 0; pIdx < length; pIdx++)
+                {
+                    double sum = 0;
+                    for (int tIdx = 0; tIdx < thickness; tIdx++)
+                    {
+                        byte val = isHorizontal ? gray.At<byte>(tIdx, pIdx) : gray.At<byte>(pIdx, tIdx);
+                        sum += val;
+                    }
+                    projection[pIdx] = sum / thickness;
+                }
+
+                // 4. 计算梯度与寻峰
+                // 简单的一维梯度算子 [-1, 0, 1]
+                double[] gradients = new double[length];
+                for (int i = 1; i < length - 1; i++)
+                {
+                    gradients[i] = projection[i + 1] - projection[i - 1];
+                }
+
+                // 候选点内部类
+                var candidates = new List<(int RawIndex, double SubpixelIndex, double Gradient, double AverageGray)>();
+
+                // 去除边缘波动寻找符合极性的所有候选点
+                int startIdx = isReverse ? length - 2 : 1;
+                int endIdx = isReverse ? 0 : length - 1;
+                int step = isReverse ? -1 : 1;
+
+                // 定义判断极性的本地函数
+                bool MatchesPolarity(double grad, EdgePolarity expected)
+                {
+                    if (Math.Abs(grad) < 5.0) return false;
+
+                    return expected switch
+                    {
+                        EdgePolarity.DarkToLight => grad > 0,
+                        EdgePolarity.LightToDark => grad < 0,
+                        _ => true
+                    };
+                }
+                
+                // 寻峰与抛物线亚像素插值
+                for (int i = startIdx; i != endIdx; i += step)
+                {
+                    if (MatchesPolarity(gradients[i], EdgePolarity.Any) && // 暂时先将所有显著突变加入候选池，后续根据具体极性过滤
+                        Math.Abs(gradients[i]) > Math.Abs(gradients[i - 1]) &&
+                        Math.Abs(gradients[i]) >= Math.Abs(gradients[i + 1]))
+                    {
+                        // 抛物线插值计算亚像素偏移
+                        double g_prev = Math.Abs(gradients[i - 1]);
+                        double g_curr = Math.Abs(gradients[i]);
+                        double g_next = Math.Abs(gradients[i + 1]);
+                        
+                        // 亚像素偏移公式：delta = (g_prev - g_next) / (2 * (g_prev - 2 * g_curr + g_next))
+                        double delta = 0.0;
+                        double denom = 2.0 * (g_prev - 2 * g_curr + g_next);
+                        if (denom != 0) 
+                        {
+                            delta = (g_prev - g_next) / denom;
+                        }
+                        
+                        // 由于亚像素拟合的极值是在绝对值上找的极值点
+                        double subpixel = i + delta;
+                        
+                        candidates.Add((i, subpixel, gradients[i], projection[i]));
+                    }
+                }
+                
+                // 5. 进行选择策略
+                (int RawIndex, double SubpixelIndex, double Gradient, double AverageGray)? SelectEdge(EdgeSelection selection, EdgePolarity polarity, HashSet<int> excludedIndices)
+                {
+                    // 先过滤被排除的，并匹配极性
+                    var filtered = new List<(int RawIndex, double SubpixelIndex, double Gradient, double AverageGray)>();
+                    foreach (var c in candidates)
+                    {
+                        if (excludedIndices.Contains(c.RawIndex)) continue;
+                        if (!MatchesPolarity(c.Gradient, polarity)) continue;
+                        filtered.Add(c);
+                    }
+                    
+                    if (filtered.Count == 0) return null;
+                    
+                    switch (selection)
+                    {
+                        case EdgeSelection.First:
+                            return filtered[0]; // 已经是按搜索顺序加入的
+                        case EdgeSelection.Last:
+                            return filtered[filtered.Count - 1];
+                        case EdgeSelection.Best:
+                            return filtered.OrderByDescending(x => Math.Abs(x.Gradient)).First();
+                        case EdgeSelection.Darkest:
+                            return filtered.OrderBy(x => x.AverageGray).First();
+                        case EdgeSelection.Brightest:
+                            return filtered.OrderByDescending(x => x.AverageGray).First();
+                        default:
+                            return filtered[0];
+                    }
+                }
+                
+                var excluded = new HashSet<int>();
+                var edge1 = SelectEdge(edge1Sel, edge1Pol, excluded);
+                if (edge1 == null) return (false, 0, null);
+                
+                excluded.Add(edge1.Value.RawIndex);
+                var edge2 = SelectEdge(edge2Sel, edge2Pol, excluded);
+                if (edge2 == null) return (false, 0, null);
+
+                // 6. 将相对坐标恢复为源图形坐标
+                double e1Pos = isHorizontal ? x + edge1.Value.SubpixelIndex : y + edge1.Value.SubpixelIndex;
+                double e2Pos = isHorizontal ? x + edge2.Value.SubpixelIndex : y + edge2.Value.SubpixelIndex;
+                
+                double distance = Math.Abs(e1Pos - e2Pos);
+
+                // 7. 绘图标记
+                var resultImage = source.Clone();
+                // 绘制 ROI 框
+                Cv2.Rectangle(resultImage, new OpenCvSharp.Point(x, y), new OpenCvSharp.Point(x + w, y + h), new Scalar(255, 0, 0), 1);
+                // 绘制两根红线
+                if (isHorizontal)
+                {
+                    Cv2.Line(resultImage, new OpenCvSharp.Point((int)Math.Round(x + edge1.Value.SubpixelIndex), y), new OpenCvSharp.Point((int)Math.Round(x + edge1.Value.SubpixelIndex), y + h), new Scalar(0, 0, 255), 2);
+                    Cv2.Line(resultImage, new OpenCvSharp.Point((int)Math.Round(x + edge2.Value.SubpixelIndex), y), new OpenCvSharp.Point((int)Math.Round(x + edge2.Value.SubpixelIndex), y + h), new Scalar(0, 0, 255), 2);
+                }
+                else
+                {
+                    Cv2.Line(resultImage, new OpenCvSharp.Point(x, (int)Math.Round(y + edge1.Value.SubpixelIndex)), new OpenCvSharp.Point(x + w, (int)Math.Round(y + edge1.Value.SubpixelIndex)), new Scalar(0, 0, 255), 2);
+                    Cv2.Line(resultImage, new OpenCvSharp.Point(x, (int)Math.Round(y + edge2.Value.SubpixelIndex)), new OpenCvSharp.Point(x + w, (int)Math.Round(y + edge2.Value.SubpixelIndex)), new Scalar(0, 0, 255), 2);
+                }
+                
+                // 写距离
+                Cv2.PutText(resultImage, $"Dist: {distance:0.00} px", new OpenCvSharp.Point(x, y - 5), HersheyFonts.HersheySimplex, 0.5, new Scalar(0, 255, 0), 1);
+
+                return (true, distance, resultImage);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"卡尺测量异常: {ex.Message}", ex);
             }
         }
     }

@@ -270,6 +270,10 @@ namespace TaskFlow.Helpers
             if (task.TaskType == TaskType.ImgBlobAnalysis)
                 outputs.Add(new TaskOutput(Strings.AC_BlobCount, Strings.AC_BlobCount));
 
+            // 卡尺测量输出间距
+            if (task.TaskType == TaskType.ImgCaliperMeasure)
+                outputs.Add(new TaskOutput("测量边距", "测量边距"));
+
             // 图像缩放输出宽度和高度缩放倍率
             if (task.TaskType == TaskType.ImgResize)
             {

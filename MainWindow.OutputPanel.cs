@@ -148,6 +148,7 @@ namespace TaskFlow
                 nameof(ArraySearchTaskCard.OutputMatchIndex) or
                 nameof(ArraySearchTaskCard.OutputMatchValue) or
                 nameof(WinFindFileTaskCard.OutputFilePath) or
+                nameof(ImgCaliperMeasureTaskCard.OutputDistance) or
                 nameof(ImgResizeTaskCard.OutputWidthScale) or
                 nameof(ImgResizeTaskCard.OutputHeightScale) or
                 nameof(WinScreenshotTaskCard.OutputResolution) or
@@ -321,6 +322,13 @@ namespace TaskFlow
             }
 
             // ImgResize specific: 显示宽度和高度缩放倍率
+
+
+            // ImgCaliperMeasure specific: 显示卡尺测量距离
+            if (task is ImgCaliperMeasureTaskCard caliperCard && caliperCard.Status == Models.TaskCards.TaskStatus.Success)
+            {
+                AddOutputRow("测量边距", caliperCard.OutputDistance.ToString("F2") + " px");
+            }
             if (task is ImgResizeTaskCard resizeCard && resizeCard.OutputImage != null)
             {
                 AddOutputRow(TaskFlow.Resources.Strings.Output_WidthScale, resizeCard.OutputWidthScale.ToString("F4"));

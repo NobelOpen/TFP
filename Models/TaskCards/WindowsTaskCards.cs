@@ -59,10 +59,16 @@ namespace TaskFlow.Models.TaskCards
         private bool _includeTitleBar = true;
 
         /// <summary>
-        /// 顶部裁剪高度（主要用于去除自定义标题栏）
+        /// 顶部裁剪高度（主要用于去除自定义标题栏），为了兼容旧版保留。
         /// </summary>
         [ObservableProperty]
         private int _cropTopHeight = 0;
+
+        /// <summary>
+        /// 顶部裁剪高度表达式（支持变量表达式）
+        /// </summary>
+        [ObservableProperty]
+        private string _cropTopHeightExpression = "0";
 
         /// <summary>
         /// 截屏后转换为灰度图像

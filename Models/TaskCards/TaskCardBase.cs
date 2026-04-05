@@ -69,6 +69,7 @@ namespace TaskFlow.Models.TaskCards
         ImgBlobAnalysis,
         ImgResize,
         ImgOnnxDetect,
+        ImgCaliperMeasure,
 
         // 逻辑判断
         ExpressionEval,
@@ -352,6 +353,7 @@ namespace TaskFlow.Models.TaskCards
             TaskType.ImgBlobAnalysis => TaskFlow.Resources.Strings.TaskType_ImgBlobAnalysis,
             TaskType.ImgResize => TaskFlow.Resources.Strings.TaskType_ImgResize,
             TaskType.ImgOnnxDetect => TaskFlow.Resources.Strings.TaskType_ImgOnnxDetect,
+            TaskType.ImgCaliperMeasure => TaskFlow.Resources.Strings.TaskType_ImgCaliperMeasure,
             TaskType.ExpressionEval => TaskFlow.Resources.Strings.TaskType_ExpressionEval,
             TaskType.StringSubstring => TaskFlow.Resources.Strings.TaskType_StringSubstring,
             TaskType.TypeConvert => TaskFlow.Resources.Strings.TaskType_TypeConvert,

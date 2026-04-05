@@ -1005,6 +1005,7 @@ namespace TaskFlow.ViewModels
                 TaskType.ImgBlobAnalysis => new ImgBlobAnalysisTaskCard(),
                 TaskType.ImgResize => new ImgResizeTaskCard(),
                 TaskType.ImgOnnxDetect => new ImgOnnxDetectTaskCard(),
+                TaskType.ImgCaliperMeasure => new ImgCaliperMeasureTaskCard(),
                 TaskType.ExpressionEval => new ExpressionEvalTaskCard(),
                 TaskType.BreakLoop => new BreakLoopTaskCard(),
                 TaskType.StringSubstring => new StringSubstringTaskCard(),

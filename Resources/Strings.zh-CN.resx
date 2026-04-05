@@ -86,6 +86,7 @@
   <data name="TaskType_ImgBlobAnalysis" xml:space="preserve"><value>Blob分析</value></data>
   <data name="TaskType_ImgResize" xml:space="preserve"><value>图像缩放</value></data>
   <data name="TaskType_ImgOnnxDetect" xml:space="preserve"><value>ONNX定位</value></data>
+  <data name="TaskType_ImgCaliperMeasure" xml:space="preserve"><value>卡尺测量</value></data>
   <data name="Main_VisionModels" xml:space="preserve"><value>视觉</value></data>
   <data name="TaskType_ExpressionEval" xml:space="preserve"><value>表达式赋值</value></data>
   <data name="TaskType_StringSubstring" xml:space="preserve"><value>字符串截取</value></data>
@@ -147,7 +148,7 @@
   <data name="Menu_ShowElse" xml:space="preserve"><value>显示Else</value></data>
   <data name="Menu_HideElse" xml:space="preserve"><value>隐藏Else</value></data>
   <data name="Menu_General" xml:space="preserve"><value>通用</value></data>
-  <data name="Menu_WinOps" xml:space="preserve"><value>Windows 操作</value></data>
+  <data name="Menu_WinOps" xml:space="preserve"><value>Win操作</value></data>
   <data name="Menu_AdbOps" xml:space="preserve"><value>ADB 操作</value></data>
   <data name="Menu_ImgProc" xml:space="preserve"><value>图像处理</value></data>
   <data name="Menu_DataProc" xml:space="preserve"><value>数据处理</value></data>

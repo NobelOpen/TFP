@@ -192,6 +192,9 @@
   <data name="TaskType_ImgOnnxDetect" xml:space="preserve">
     <value>ONNX Detect</value>
   </data>
+  <data name="TaskType_ImgCaliperMeasure" xml:space="preserve">
+    <value>Caliper Measure</value>
+  </data>
   <data name="Main_VisionModels" xml:space="preserve">
     <value>Vision Models</value>
   </data>

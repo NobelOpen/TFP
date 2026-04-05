@@ -98,7 +98,7 @@ namespace TaskFlow.Views.Dialogs
                 case WinScreenshotTaskCard screenshotCard:
                     AddTextProperty("ProcessName", TaskFlow.Resources.Strings.Prop_ProcessName, screenshotCard.ProcessName);
                     AddCheckboxProperty("IncludeTitleBar", TaskFlow.Resources.Strings.Prop_IncludeTitleBar, screenshotCard.IncludeTitleBar);
-                    AddIntProperty("CropTopHeight", TaskFlow.Resources.Strings.Prop_CropTopHeight, screenshotCard.CropTopHeight);
+                    AddTextProperty("CropTopHeightExpression", TaskFlow.Resources.Strings.Prop_CropTopHeight, screenshotCard.CropTopHeightExpression);
                     AddCheckboxProperty("ConvertToGrayscale", TaskFlow.Resources.Strings.Prop_ConvertGrayscale, screenshotCard.ConvertToGrayscale);
                     break;
 
@@ -301,6 +301,50 @@ namespace TaskFlow.Views.Dialogs
                     AddIntProperty("TargetWidth", TaskFlow.Resources.Strings.Prop_TargetWidth, resizeCard.TargetWidth);
                     AddIntProperty("TargetHeight", TaskFlow.Resources.Strings.Prop_TargetHeight, resizeCard.TargetHeight);
                     break;
+
+                case ImgCaliperMeasureTaskCard caliperCard:
+                    AddImageSourceProperty_Generic(caliperCard.UseSourceTaskImage, caliperCard.SourceTaskIdForImage, caliperCard.ImageFilePath);
+                    AddRoiCompactProperties(caliperCard.RoiX, caliperCard.RoiY, caliperCard.RoiWidth, caliperCard.RoiHeight);
+                    
+                    var caliperRoiBtn = new Button { Content = TaskFlow.Resources.Strings.Prop_SelectRoiArea, Height = 32, Margin = new Thickness(0, 0, 0, 12), Style = FindResource("ActionButton") as Style };
+                    caliperRoiBtn.Click += (s, e) => SelectRoiGeneric(caliperCard.UseSourceTaskImage, caliperCard.SourceTaskIdForImage, caliperCard.ImageFilePath);
+                    PropertyPanel.Children.Add(caliperRoiBtn);
+                    
+                    var searchDirDict = new Dictionary<SearchDirection, string>
+                    {
+                        { SearchDirection.LeftToRight, "从左向右寻找(水平)" },
+                        { SearchDirection.RightToLeft, "从右向左寻找(水平)" },
+                        { SearchDirection.TopToBottom, "从上向下寻找(垂直)" },
+                        { SearchDirection.BottomToTop, "从下向上寻找(垂直)" }
+                    };
+                    AddEnumComboProperty("SearchDirection", "测量搜索方向", caliperCard.SearchDirection, searchDirDict);
+
+                    var polarityDict = new Dictionary<EdgePolarity, string>
+                    {
+                        { EdgePolarity.Any, "任意极性 (Any)" },
+                        { EdgePolarity.DarkToLight, "黑到白 (Dark -> Light)" },
+                        { EdgePolarity.LightToDark, "白到黑 (Light -> Dark)" }
+                    };
+                    
+                    var selectionDict = new Dictionary<EdgeSelection, string>
+                    {
+                        { EdgeSelection.First, "第一边缘 (First)" },
+                        { EdgeSelection.Last, "最后边缘 (Last)" },
+                        { EdgeSelection.Best, "最佳边缘 (Best/Max Contrast)" },
+                        { EdgeSelection.Darkest, "最暗边缘 (Darkest)" },
+                        { EdgeSelection.Brightest, "最亮边缘 (Brightest)" }
+                    };
+                    
+                    AddEnumComboProperty("Edge1Polarity", "第一边缘极性", caliperCard.Edge1Polarity, polarityDict);
+                    AddEnumComboProperty("Edge1Selection", "第一边缘筛选", caliperCard.Edge1Selection, selectionDict);
+                    
+                    // 分隔符或空行稍微隔开
+                    PropertyPanel.Children.Add(new Border { Height = 1, Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 220, 220)), Margin = new System.Windows.Thickness(0, 4, 0, 8) });
+                    
+                    AddEnumComboProperty("Edge2Polarity", "第二边缘极性", caliperCard.Edge2Polarity, polarityDict);
+                    AddEnumComboProperty("Edge2Selection", "第二边缘筛选", caliperCard.Edge2Selection, selectionDict);
+                    break;
+
 
                 case ExpressionEvalTaskCard exprCard:
                     AddExpressionEvalProperties(exprCard);
@@ -2345,8 +2389,8 @@ namespace TaskFlow.Views.Dialogs
                             screenshotCard.ProcessName = procName;
                         if (GetBoolValue("IncludeTitleBar", out bool includeTitleBar))
                             screenshotCard.IncludeTitleBar = includeTitleBar;
-                        if (GetIntValue("CropTopHeight", out int cropTop))
-                            screenshotCard.CropTopHeight = cropTop;
+                        if (GetStringValue("CropTopHeightExpression", out string cropTopExpr))
+                            screenshotCard.CropTopHeightExpression = cropTopExpr;
                         if (GetBoolValue("ConvertToGrayscale", out bool winGray))
                             screenshotCard.ConvertToGrayscale = winGray;
                         break;
@@ -2514,6 +2558,19 @@ namespace TaskFlow.Views.Dialogs
                         SaveGenericImageSource(resizeCard);
                         if (GetIntValue("TargetWidth", out int tw)) resizeCard.TargetWidth = tw;
                         if (GetIntValue("TargetHeight", out int th)) resizeCard.TargetHeight = th;
+                        break;
+
+                    case ImgCaliperMeasureTaskCard caliperCard:
+                        SaveGenericImageSource(caliperCard);
+                        if (GetIntValue("RoiX", out int cRoiX)) caliperCard.RoiX = cRoiX;
+                        if (GetIntValue("RoiY", out int cRoiY)) caliperCard.RoiY = cRoiY;
+                        if (GetIntValue("RoiWidth", out int cRoiW)) caliperCard.RoiWidth = cRoiW;
+                        if (GetIntValue("RoiHeight", out int cRoiH)) caliperCard.RoiHeight = cRoiH;
+                        if (GetEnumValue<SearchDirection>("SearchDirection", out var sd)) caliperCard.SearchDirection = sd;
+                        if (GetEnumValue<EdgePolarity>("Edge1Polarity", out var e1p)) caliperCard.Edge1Polarity = e1p;
+                        if (GetEnumValue<EdgeSelection>("Edge1Selection", out var e1s)) caliperCard.Edge1Selection = e1s;
+                        if (GetEnumValue<EdgePolarity>("Edge2Polarity", out var e2p)) caliperCard.Edge2Polarity = e2p;
+                        if (GetEnumValue<EdgeSelection>("Edge2Selection", out var e2s)) caliperCard.Edge2Selection = e2s;
                         break;
 
                     case ExpressionEvalTaskCard exprCard:

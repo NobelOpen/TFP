@@ -484,6 +484,39 @@ namespace TaskFlow.Models.TaskCards
     }
 
     /// <summary>
+    /// 卡尺边缘选择筛选逻辑
+    /// </summary>
+    public enum EdgeSelection
+    {
+        First,
+        Last,
+        Best,
+        Darkest,
+        Brightest
+    }
+
+    /// <summary>
+    /// 边缘极性枚举
+    /// </summary>
+    public enum EdgePolarity
+    {
+        Any,
+        DarkToLight,
+        LightToDark
+    }
+
+    /// <summary>
+    /// 卡尺搜索方向枚举
+    /// </summary>
+    public enum SearchDirection
+    {
+        LeftToRight,
+        RightToLeft,
+        TopToBottom,
+        BottomToTop
+    }
+
+    /// <summary>
     /// 图像预处理任务卡片 - 灰度化/二值化/形态学处理
     /// </summary>
     public partial class ImgPreprocessTaskCard : TaskCardBase
@@ -803,6 +836,82 @@ namespace TaskFlow.Models.TaskCards
             OutputTopClassName = null;
             OutputTopConfidence = 0;
             OutputDetectionsArray = null;
+        }
+
+        public override void BindImageSource(TaskCardBase sourceCard)
+        {
+            UseSourceTaskImage = true;
+            SourceTaskIdForImage = sourceCard.Id;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            return TryBindImageSource(step, stepToCard);
+        }
+    }
+
+    /// <summary>
+    /// 卡尺测量任务卡片 - 测量双边缘距离
+    /// </summary>
+    public partial class ImgCaliperMeasureTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.ImgCaliperMeasure;
+
+        [ObservableProperty]
+        private string? _imageFilePath;
+
+        [ObservableProperty]
+        private Guid? _sourceTaskIdForImage;
+
+        [ObservableProperty]
+        private bool _useSourceTaskImage;
+
+        // ROI区域的起止坐标和长宽
+        [ObservableProperty]
+        private int _roiX;
+
+        [ObservableProperty]
+        private int _roiY;
+
+        [ObservableProperty]
+        private int _roiWidth;
+
+        [ObservableProperty]
+        private int _roiHeight;
+
+        [ObservableProperty]
+        private SearchDirection _searchDirection = SearchDirection.LeftToRight;
+
+        [ObservableProperty]
+        private EdgePolarity _edge1Polarity = EdgePolarity.Any;
+
+        [ObservableProperty]
+        private EdgeSelection _edge1Selection = EdgeSelection.First;
+
+        [ObservableProperty]
+        private EdgePolarity _edge2Polarity = EdgePolarity.Any;
+
+        [ObservableProperty]
+        private EdgeSelection _edge2Selection = EdgeSelection.First;
+
+        // 输出间距
+        [JsonIgnore]
+        [ObservableProperty]
+        private double _outputDistance;
+
+        public ImgCaliperMeasureTaskCard()
+        {
+            Name = "卡尺测量";
+        }
+
+        public override bool OutputsImage => true;
+        public override bool OutputsBoolResult => true;
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputDistance = 0;
         }
 
         public override void BindImageSource(TaskCardBase sourceCard)
