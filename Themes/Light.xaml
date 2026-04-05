@@ -4,6 +4,7 @@
     <!-- Anthropic Light Theme Palette -->
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#f0eee6" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="#faf9f5" />
+    <SolidColorBrush x:Key="AiInputBgBrush" Color="#faf9f5" />
     <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#f5f4ef" />
     <SolidColorBrush x:Key="BorderLightBrush" Color="#e8e6dc" />
     <SolidColorBrush x:Key="BorderDarkBrush" Color="#d3d1c8" />

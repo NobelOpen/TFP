@@ -97,19 +97,30 @@ plan 参数中每个卡片步骤格式：
 **【前置必备：正确启动隔离被控浏览器】**：用户的日常主浏览器默认未开启调试接口（且无法在运行途中开启）。当用户要求“打开浏览器并执行网页交互操作”时，你必须使用 `WinLaunchApp` 卡片来启动 Chrome 或 Edge，并且**严禁裸启动**！**必须且一定要**在 `arguments` 属性中配置：`--remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\TaskFlow_Browser_Profile"`（如果还需要直接打开特定网址，请加在最后例如：`--remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\TaskFlow_Browser_Profile" "https://www.baidu.com"`）。只有通过配置隔离的用户数据目录，CDP 调试端口才能保证被成功唤起。这里使用 `%LOCALAPPDATA%` 是为了防止权限不足，请原样输出该环境变量。
 
 **核心原则：长截图包含整个网页的滚动深度，其绝对坐标与电脑桌面的窗口坐标完全不同！严禁在使用浏览器长截图后，使用 WinClick 去点击坐标！**
+
+**浏览器点击策略退化链（按优先级严格依次执行，禁止跳级）**：
+
 1. **先看页面**：在创建任何浏览器操作卡片之前，**必须先调用 request_browser_screenshot 工具**。这会获取完整的长截图像，不会产生卡片。
-2. **【绝对红线】优先用 DOM 选择器**：当你看到截图上的目标按钮后，既然你有 CDP 控制权，**必须**使用 BrowserNativeClick 卡片，搭配 Css/XPath (例如 `//a[contains(text(), '立即购买')]`) 来精准点击网页元素！
-3. **退化方案：Set-of-Mark 标注模式精确点击**：如果 DOM 选择器无法命中目标元素，**严禁直接目测估算坐标！** 你必须再次调用 `request_browser_screenshot` 工具并传入 `annotate: true`。系统会在页面上为每个可交互元素标注红色数字编号（如 [1], [2], [3]...），同时返回每个编号对应的元素文本描述。截图中你能清晰看到这些编号标签。然后你只需在 `BrowserSimulatedClick` 卡片的 `markId` 属性中填入目标编号（如 42），引擎会自动从标注映射表中获取精确的像素坐标进行点击。**使用标注模式后严禁手动估算 X/Y 坐标！**
-4. **最终退化方案：手动绝对坐标**：如果标注模式也无法覆盖目标元素（极少见），**必须**使用 BrowserSimulatedClick (CDP视角的绝对坐标点击)。此时必须检查截图结果中返回的 **DPI 缩放比例 (DPR)**，将你在截图上测量出的视觉坐标 `X` 和 `Y` 分别除以 DpiScale 换算为 CSS 物理像素，然后再作为参数传入此卡片，以避免因系统缩放导致点击偏离目标数以百计的像素（致命偏移）。
-5. **严禁对网页使用 WinClick**：既然在通过 CDP 操作浏览器，就不允许创建 WinClick 卡片去试图点浏览器内部元素，因为坐标系完全对不上！
-5. **破解瞬态 UI 与防抖陷阱 (下拉菜单/弹窗瞬间消失)**：
-   - **【核心特征】**：如果你使用 `BrowserNativeClick` 执行点击明明返回了 `Success`，但随后用 `request_browser_screenshot` 发现截图上的页面**毫无变化**（例如：想要的下拉菜单没展开，新弹窗没出现）。
-   - **【绝对禁止】**：不要以为是你的 XPath 选择器写错了或点击偏了！**绝对禁止持续用 `modifyCards` 去死磕修改选择器！** 这是遭遇到前端反自动化劫持，CDP的模拟鼠标点击触发了元素的 blur 或 mouseleave，导致菜单即使打开了也会在极短的时间内光速消失。
-   - **【唯一解法 (DOM-First)】**：遇到上述情况，立即执行 fallback，彻底删除该 `BrowserNativeClick` 卡片，新建一张 `BrowserExecuteJs` 卡片。在 JS 中找到目标元素，只使用原生的 `element.click();` 来触发（这完全没有鼠标物理轨迹，绝对不会触发防抖销毁）。
-   - **【多步级联策略】**：对于复杂的级联菜单（如：点击“立即购买”展开下拉 -> 再点击下拉中的“使用”），必须分为清晰的两步：
-     1. 第一张 `BrowserExecuteJs`：仅仅负责展开下拉菜单。在里面写 JS 定位按钮并 `btn.click();`，然后直接 `return "CLICKED_EXPAND";`。**千万不要自作聪明去解析 href 做 `window.location.href = ...` 直达网页跳转**，如果 href 带有 hash（如 `#xxx_menu`），它根本不产生页面跳转，只控制前端状态！乖乖使用 `click()`。
-     2. 第二张卡片：下拉成功停留后，再建一张新卡片。**由于你要点击下拉菜单内的选项，强烈强制要求你使用 `BrowserExecuteJs`，并且在里面写最简短的 XPath 查找（如 `document.evaluate("//a[contains(text(), '购买&使用')]", ...)`）来精确定位 `<a>` 或 `<button>` 然后 `click()`。**
-   - **【JS 书写红线禁令】**：在使用 `BrowserExecuteJs` 时，**绝不允许写极其复杂的 for 循环、TreeWalker 去遍历整个 DOM 树判断 `innerText`！** 因为外层容器（如 `div` 或 `li`）的 `innerText` 也会包含这段文字，你的循环极大概率会点击到外层空白容器，从而导致下拉菜单直接关闭！**并且，现代网页的下拉菜单通常使用 Portal 技术渲染在 `<body>` 最尾部，根本不在原本按钮的父级容器内，不要去写 `closest()` 限制范围的代码！老老实实写简单直接的 XPath 匹配原生标签！**
+2. **【首选】DOM 选择器 (BrowserNativeClick)**：使用 Css/XPath (例如 `//a[contains(text(), '立即购买')]`) 来精准点击网页元素。
+3. **【BrowserNativeClick 返回 Success 但页面没变化时 → 先 fallback 到 BrowserExecuteJs（防抖策略）】**：
+   - **【触发条件】**：`BrowserNativeClick` 点击返回了 `Success`，但随后截图发现**页面毫无变化**（下拉菜单没展开、弹窗没出现、页面没跳转）。
+   - **【根因判断】**：这通常是前端防抖/反自动化劫持，CDP 模拟鼠标触发了 blur/mouseleave 导致 UI 瞬间销毁。**不要以为选择器写错了而去死磕修改选择器！**
+   - **【第一步 fallback → BrowserExecuteJs】**：删除 `BrowserNativeClick` 卡片，新建 `BrowserExecuteJs` 卡片，用原生 `element.click()` 触发（无鼠标物理轨迹，不会触发防抖）。
+   - **【如果 BrowserExecuteJs 也 Success 但仍没变化 → 第二步 fallback → SoM 标注】**：说明不是防抖问题而是**选择器命中了错误元素**（不可见/被覆盖/同名重复元素），此时才退化到 SoM 标注模式：调用 `request_browser_screenshot(annotate=true)` 获取标注截图，用 `BrowserSimulatedClick` + `markId` 视觉精确定位。
+   - **【多步级联策略】**：复杂级联菜单（如：展开下拉→点击选项）必须拆分为多张 `BrowserExecuteJs` 卡片分步执行：
+     1. 第一张 `BrowserExecuteJs`：仅展开菜单，`btn.click(); return "CLICKED_EXPAND";`（不要解析 href 做跳转！）
+     2. 第二张 `BrowserExecuteJs`：用最简短的 XPath/CSS 定位菜单内选项并 `click()`。
+   - **【JS 书写红线】**：禁止复杂遍历（for/TreeWalker）！直接用 `document.querySelector()` 或 `document.evaluate()` 匹配原生标签。
+4. **【BrowserNativeClick 返回 Error（选择器找不到元素）时 → 退化到 SoM 标注】**：
+   - **【触发条件】**：`BrowserNativeClick` 返回 **Error**（如超时、找不到匹配元素），说明 DOM 选择器写错了或页面结构与预期不同。
+   - **【做法】**：调用 `request_browser_screenshot` 传入 `annotate: true`，获取 Set-of-Mark 标注截图。然后用 `BrowserSimulatedClick` 的 `markId` 属性填入目标编号，引擎自动查表获取精确坐标。**使用标注模式后严禁手动估算 X/Y 坐标！**
+5. **【最终退化】手动绝对坐标**：如果标注模式也无法覆盖目标元素（极少见），使用 BrowserSimulatedClick 手动指定 X/Y，注意 DPR 缩放换算。
+6. **严禁对网页使用 WinClick**：不允许创建 WinClick 卡片去点浏览器内部元素，坐标系完全不同。
+7. **【强制规则】模态弹窗/确认对话框 → 禁用坐标点击，必须用 BrowserExecuteJs**：
+   - **【适用场景】**：页面弹出模态确认框（如 `ipsAlert`、`role="alertdialog"`、`position: fixed` 浮层），有"好的/取消/确认/OK"等按钮。
+   - **【绝对禁止】**：严禁使用 `BrowserSimulatedClick`（含 SoM markId）点击弹窗按钮！`position: fixed` 元素坐标系与滚动坐标不一致。如果已经试过 SoM 但弹窗仍在，**严禁继续重试！**
+   - **【唯一做法】**：`BrowserExecuteJs` + CSS 选择器，如：`document.querySelector('button[data-action="ok"]').click(); return "CONFIRMED";`
+   - **【识别特征】**：`class="ipsAlert"` / `role="alertdialog"` / 高 `z-index` / `data-action` 属性按钮。DOM 结构极简，选择器命中率 100%。
 
 屏幕截图规则：
 - 当你需要「看一眼屏幕」来判断状态、确认加载完成、定位元素坐标时，**必须调用 request_screenshot 工具**，这是后台临时截图，不会在画布上留下任何卡片。
@@ -152,7 +163,7 @@ PowerShell 集成：
 2. 根据根因选择 failureStrategy/对应操作：
    - retry：最多重试1次，不要盲目重复相同的失败操作
    - 修改参数：严禁删除(deleteCards)再重建(plan)！如果是卡片本身选型正确但参数错误，直接使用 **modifyCards** 修改对应属性，并在 runCards 中重新运行该卡片。这样可以保持任务结构干净。
-   - fallback：只有连卡片类型都选错了，或者必须切换大方向（如 WinUiAutomation → WinClick 坐标点击）时，才触发 fallback 删除失败卡片(deleteCards) + 创建替代方案(plan/fallbackPlan)。**【防死磕警告】如果 BrowserNativeClick 返回了 Success 但页面“毫无反映”（截图对比没任何变化），这 100% 是遇到了下拉/弹窗瞬间销毁的防抖机制，而绝不是你的选择器选错了！绝不能继续修改节点或参数！立即停止使用 modifyCards 死磕！直接走 fallback 流程：删除卡片，变更为 BrowserExecuteJs 并使用原生的 `element.click()` 来突破前端劫持！并且对于复杂菜单一定要拆分成多张 JS 卡片分别点击展开与确认。**
+   - fallback：只有连卡片类型都选错了，或者必须切换大方向（如 WinUiAutomation → WinClick 坐标点击）时，才触发 fallback 删除失败卡片(deleteCards) + 创建替代方案(plan/fallbackPlan)。**【防死磕警告①】如果 BrowserNativeClick 返回 Success 但页面"毫无反映"（截图没变化），首先不要以为选择器写错了！先 fallback 到 BrowserExecuteJs 用 element.click() 尝试（解决防抖问题）。如果 BrowserExecuteJs 也 Success 但仍没变化，说明选择器命中了错误元素，此时再 fallback 到 SoM 标注模式用 markId 精确点击。禁止跳过 BrowserExecuteJs 直接退化到 SoM！** **【防死磕警告②】如果 BrowserSimulatedClick（含 SoM markId）对模态弹窗/确认对话框点击返回 Success 但弹窗仍然存在，严禁继续创建新的 BrowserSimulatedClick 重试！这是 position:fixed 坐标偏移导致的，必须立即 fallback 到 BrowserExecuteJs 用 DOM 选择器（如 `button[data-action="ok"]` 或 XPath）点击。**
    - abort：向用户说明具体原因，设置 done: true
 </failure_recovery>
 

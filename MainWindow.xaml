@@ -639,6 +639,8 @@
                                 <ContextMenu x:Key="CanvasContextMenu">
                                     <MenuItem Header="{x:Static res:Strings.Main_SearchTask}" Click="SearchTask_Click" Tag="Search"/>
                                     <Separator/>
+                                    <MenuItem x:Name="MenuPasteCanvas" Header="{x:Static res:Strings.Menu_Paste}" Click="PasteTask_Click" Tag="Paste"/>
+                                    <Separator/>
                                     <MenuItem Header="{x:Static res:Strings.Main_AddTask}">
                                         <!-- 通用 -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_General}">
@@ -700,11 +702,11 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_BrowserGetText}" Click="AddTask_Click" Tag="BrowserGetText"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_BrowserExecuteJs}" Click="AddTask_Click" Tag="BrowserExecuteJs"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_BrowserWaitForElement}" Click="AddTask_Click" Tag="BrowserWaitForElement"/>
-                                            <MenuItem Header="浏览器原生点击" Click="AddTask_Click" Tag="BrowserNativeClick"/>
-                                            <MenuItem Header="浏览器原生输入" Click="AddTask_Click" Tag="BrowserNativeInput"/>
-                                            <MenuItem Header="浏览器模拟点击" Click="AddTask_Click" Tag="BrowserSimulatedClick"/>
-                                            <MenuItem Header="CDP 指令执行" Click="AddTask_Click" Tag="BrowserCdpCommand"/>
-                                            <MenuItem Header="浏览器页面截图" Click="AddTask_Click" Tag="BrowserScreenshot"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_BrowserNativeClick}" Click="AddTask_Click" Tag="BrowserNativeClick"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_BrowserNativeInput}" Click="AddTask_Click" Tag="BrowserNativeInput"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_BrowserSimulatedClick}" Click="AddTask_Click" Tag="BrowserSimulatedClick"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_BrowserCdpCommand}" Click="AddTask_Click" Tag="BrowserCdpCommand"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_BrowserScreenshot}" Click="AddTask_Click" Tag="BrowserScreenshot"/>
                                         </MenuItem>
                                         <!-- AI -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_AiOps}">

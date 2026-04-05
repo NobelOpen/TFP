@@ -914,7 +914,7 @@
     <value>语言已更改，请重启应用以使更改生效。</value>
   </data>
   <data name="UI_Confirm" xml:space="preserve"><value>确认</value></data>
-  <data name="Settings_OrchidSection" xml:space="preserve"><value>✦ Orchid 设置</value></data>
+  <data name="Settings_OrchidSection" xml:space="preserve"><value>Orchid 设置</value></data>
   <data name="Settings_SingleStage" xml:space="preserve"><value>开启单层调用（提高输出速度，但会增加Token消耗）</value></data>
   <data name="Settings_RouterModel" xml:space="preserve"><value>轻量路由模型 (第一阶段意图分类)</value></data>
   <data name="Settings_RouterModelNone" xml:space="preserve"><value>（未配置，将使用本地模式）</value></data>
@@ -962,4 +962,13 @@
   <data name="TaskType_BrowserGetText" xml:space="preserve"><value>浏览器取文本</value></data>
   <data name="TaskType_BrowserExecuteJs" xml:space="preserve"><value>浏览器执行脚本</value></data>
   <data name="TaskType_BrowserWaitForElement" xml:space="preserve"><value>浏览器等待元素</value></data>
+  <data name="Settings_GridSection" xml:space="preserve"><value>递归网格定位</value></data>
+  <data name="Settings_GridMacroLabel" xml:space="preserve"><value>宏观网格 (行 × 列)</value></data>
+  <data name="Settings_GridMicroLabel" xml:space="preserve"><value>微观子网格 (行 × 列)</value></data>
+  <data name="Settings_GridDebugPreview" xml:space="preserve"><value>保存网格预览图到桌面 (调试用)</value></data>
+  <data name="TaskType_BrowserNativeClick" xml:space="preserve"><value>Web原生点击</value></data>
+  <data name="TaskType_BrowserNativeInput" xml:space="preserve"><value>Web原生输入</value></data>
+  <data name="TaskType_BrowserSimulatedClick" xml:space="preserve"><value>Web模拟点击</value></data>
+  <data name="TaskType_BrowserCdpCommand" xml:space="preserve"><value>CDP 指令执行</value></data>
+  <data name="TaskType_BrowserScreenshot" xml:space="preserve"><value>Web页面截图</value></data>
 </root>

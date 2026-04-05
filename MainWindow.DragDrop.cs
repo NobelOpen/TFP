@@ -777,6 +777,10 @@ namespace TaskFlow
                             // 动态设置帮助锚点为当前任务类型
                             menuItem.Tag = GetHelpAnchor(task.TaskType);
                         }
+                        else if (tag == "Paste")
+                        {
+                            menuItem.IsEnabled = ViewModel.HasCopiedTask;
+                        }
                     }
                     else if (item is Separator separator)
                     {
@@ -903,7 +907,7 @@ namespace TaskFlow
             }
             addBelow.Items.Add(dataProc);
 
-            // 浏览器操作
+            // Web操作
             var browserOps = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_BrowserOps };
             foreach (var (type, tag) in new[] {
                 (TaskType.BrowserGetText, "BrowserGetText"),
@@ -991,6 +995,14 @@ namespace TaskFlow
             if (sender is FrameworkElement fe && fe.ContextMenu != null)
             {
                 UpdateSubFlowMenuItemsVisibility(fe.ContextMenu);
+
+                foreach (var item in fe.ContextMenu.Items)
+                {
+                    if (item is MenuItem menuItem && (menuItem.Tag as string) == "Paste")
+                    {
+                        menuItem.IsEnabled = ViewModel.HasCopiedTask;
+                    }
+                }
             }
         }
 

@@ -138,13 +138,13 @@ namespace TaskFlow.ViewModels
                                     if (mappings != null && mappings.Count > 0)
                                     {
                                         // 缓存精确坐标到执行引擎（供后续 BrowserSimulatedClick 查表）
-                                        var cache = new Dictionary<int, (float CssX, float CssY)>();
+                                        var cache = new Dictionary<int, (float CssX, float CssY, bool IsFixed)>();
                                         var textBuilder = new System.Text.StringBuilder();
                                         textBuilder.AppendLine($"[Set-of-Mark 标注结果] 共标注 {mappings.Count} 个可交互元素：");
 
                                         foreach (var m in mappings)
                                         {
-                                            cache[m.id] = (m.cx, m.cy);
+                                            cache[m.id] = (m.cx, m.cy, m.@fixed);
                                             var label = string.IsNullOrEmpty(m.text) ? "" : $" \"{m.text}\"";
                                             textBuilder.AppendLine($"  [{m.id}] {m.role}{label}");
                                         }
@@ -178,7 +178,8 @@ namespace TaskFlow.ViewModels
                 {
                     try
                     {
-                        await page.EvaluateAsync("() => { const o = document.getElementById('__som_overlay__'); if (o) o.remove(); }");
+                        var cleanupScript = "() => { const o = document.getElementById('__som_overlay__'); if (o) o.remove(); document.querySelectorAll('.__som_fixed_label__').forEach(el => el.remove()); }";
+                        await page.EvaluateAsync(cleanupScript);
                     }
                     catch { /* 清理失败不影响主流程 */ }
                 }
@@ -221,6 +222,8 @@ namespace TaskFlow.ViewModels
             public string text { get; set; } = "";
             public string role { get; set; } = "";
             public string tag { get; set; } = "";
+            /// <summary>元素是否为 position: fixed（弹窗/对话框/浮层）</summary>
+            public bool @fixed { get; set; }
         }
 
         /// <summary>

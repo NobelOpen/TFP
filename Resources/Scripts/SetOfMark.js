@@ -71,6 +71,17 @@ function getRole(el) {
     return tag;
 }
 
+// 判断元素或其祖先是否为 position: fixed（弹窗/对话框常见）
+function isFixedPosition(el) {
+    let current = el;
+    while (current && current !== document.documentElement) {
+        const pos = window.getComputedStyle(current).position;
+        if (pos === 'fixed') return true;
+        current = current.parentElement;
+    }
+    return false;
+}
+
 // 3. 遍历并收集
 const allElements = document.querySelectorAll('*');
 const candidates = [];
@@ -83,9 +94,14 @@ for (const el of allElements) {
     // 排除极小的元素（宽或高小于 5 像素）
     if (rect.width < 5 || rect.height < 5) continue;
 
-    // 计算全页面绝对坐标（CSS 坐标系）
-    const pageX = rect.left + window.scrollX;
-    const pageY = rect.top + window.scrollY;
+    // 检测是否为 fixed 定位（弹窗、对话框、浮层等）
+    const fixed = isFixedPosition(el);
+
+    // 计算坐标：
+    // - 普通元素：全页面绝对坐标 = viewportPos + scroll
+    // - fixed 元素：纯视口坐标（不加 scroll，因为 fixed 不随滚动移动）
+    const pageX = fixed ? rect.left : rect.left + window.scrollX;
+    const pageY = fixed ? rect.top : rect.top + window.scrollY;
     const cx = pageX + rect.width / 2;
     const cy = pageY + rect.height / 2;
 
@@ -104,7 +120,8 @@ for (const el of allElements) {
         h: Math.round(rect.height),
         text: getLabel(el),
         role: getRole(el),
-        tag: el.tagName
+        tag: el.tagName,
+        fixed: fixed
     });
 }
 
@@ -121,11 +138,13 @@ for (let i = 0; i < candidates.length; i++) {
     const id = i + 1;
 
     // 创建标签元素
+    // fixed 元素的标签也用 fixed 定位，确保在截图中标签与元素视觉位置对齐
     const label = document.createElement('div');
+    const posType = c.fixed ? 'fixed' : 'absolute';
     label.style.cssText = `
-        position:absolute;
-        left:${c.left}px;
-        top:${c.top}px;
+        position:${posType};
+        left:${c.fixed ? c.left : c.left}px;
+        top:${c.fixed ? c.top : c.top}px;
         min-width:18px;
         height:16px;
         line-height:16px;
@@ -140,9 +159,16 @@ for (let i = 0; i < candidates.length; i++) {
         pointer-events:none;
         box-shadow:0 1px 3px rgba(0,0,0,0.3);
         white-space:nowrap;
+        z-index:2147483647;
     `;
     label.textContent = id;
-    overlay.appendChild(label);
+    // fixed 标签直接挂到 body，不放在 overlay 里（overlay 是 absolute 定位会影响 fixed 标签）
+    if (c.fixed) {
+        document.body.appendChild(label);
+        label.classList.add('__som_fixed_label__');
+    } else {
+        overlay.appendChild(label);
+    }
 
     // 构建映射条目
     mappings.push({
@@ -151,7 +177,8 @@ for (let i = 0; i < candidates.length; i++) {
         cy: c.cy,
         text: c.text,
         role: c.role,
-        tag: c.tag
+        tag: c.tag,
+        fixed: c.fixed || false
     });
 }
 

@@ -46,6 +46,12 @@ namespace TaskFlow.Views.Dialogs
             TxtOrchidSection.Text = Strings.Settings_OrchidSection;
             ChkSingleStage.Content = Strings.Settings_SingleStage;
             TxtRouterModelLabel.Text = Strings.Settings_RouterModel + ":";
+            
+            // 递归网格
+            TxtGridSection.Text = Strings.Settings_GridSection;
+            TxtGridMacroLabel.Text = Strings.Settings_GridMacroLabel + ":";
+            TxtGridMicroLabel.Text = Strings.Settings_GridMicroLabel + ":";
+            ChkGridDebugPreview.Content = Strings.Settings_GridDebugPreview;
             TxtOcrSection.Text = Strings.UI_WeChatOcr;
             TxtOcrExeLabel.Text = Strings.UI_OcrExePath + ":";
             TxtOcrDirLabel.Text = Strings.UI_OcrDirPath + ":";
@@ -365,7 +371,14 @@ namespace TaskFlow.Views.Dialogs
 
             if (themeChanged)
             {
-                TaskFlow.Helpers.ThemeManager.ApplyTheme(_settings.Theme);
+                if (this.Owner is MainWindow main)
+                {
+                    _ = main.TransitionThemeAsync(_settings.Theme);
+                }
+                else
+                {
+                    TaskFlow.Helpers.ThemeManager.ApplyTheme(_settings.Theme);
+                }
             }
 
             // 应用开机自启动
@@ -526,11 +539,11 @@ namespace TaskFlow.Views.Dialogs
                 Width = 90,
                 Height = 32,
                 HorizontalAlignment = HorizontalAlignment.Right,
-                Background = new System.Windows.Media.SolidColorBrush(themeColor),
-                Foreground = (System.Windows.Media.Brush)FindResource("CreamyWhiteBrush"),
                 BorderThickness = new Thickness(0),
                 Cursor = System.Windows.Input.Cursors.Hand
             };
+            okButton.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "PrimaryButtonBgBrush");
+            okButton.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "PrimaryButtonTextBrush");
 
             var btnTemplate = new ControlTemplate(typeof(System.Windows.Controls.Button));
             var btnBorder = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
@@ -550,7 +563,7 @@ namespace TaskFlow.Views.Dialogs
                 Value = true
             };
             hoverTrigger.Setters.Add(new Setter(System.Windows.Controls.Border.BackgroundProperty,
-                new System.Windows.Media.SolidColorBrush(hoverColor), "Bd"));
+                new DynamicResourceExtension("PrimaryButtonHoverBrush"), "Bd"));
             btnTemplate.Triggers.Add(hoverTrigger);
             okButton.Template = btnTemplate;
 

@@ -445,10 +445,10 @@
     <value>OCR Engine Settings</value>
   </data>
   <data name="Settings_OcrStatus" xml:space="preserve">
-    <value>Status: 鈿?Not configured</value>
+    <value>Status: 閳?Not configured</value>
   </data>
   <data name="Settings_OcrStatusOk" xml:space="preserve">
-    <value>Status: 鉁?Verified</value>
+    <value>Status: 閴?Verified</value>
   </data>
   <data name="Settings_OcrExePath" xml:space="preserve">
     <value>OCR executable path:</value>
@@ -463,7 +463,7 @@
     <value>Test Availability</value>
   </data>
   <data name="Settings_About" xml:space="preserve">
-    <value>鈩?About</value>
+    <value>閳?About</value>
   </data>
   <data name="Settings_Language" xml:space="preserve">
     <value>Language</value>
@@ -595,7 +595,7 @@
     <value>Select ROI Area</value>
   </data>
   <data name="TaskProp_Eyedropper" xml:space="preserve">
-    <value>馃挧 Color Eyedropper (pick HSV from image)</value>
+    <value>棣冩導 Color Eyedropper (pick HSV from image)</value>
   </data>
   <!-- ========== Live Preview ========== -->
   <data name="Live_SettingsTitle" xml:space="preserve">
@@ -669,7 +669,7 @@
     <value>Export failed: {0}</value>
   </data>
   <data name="Msg_LiveSetProcess" xml:space="preserve">
-    <value>Please set the process name first via 鈼?button</value>
+    <value>Please set the process name first via 閳?button</value>
   </data>
   <data name="Msg_LiveCannotCapture" xml:space="preserve">
     <value>Cannot capture window: {0}</value>
@@ -939,7 +939,7 @@
     <value>HSV Range</value>
   </data>
   <data name="Prop_SelectRoiMask" xml:space="preserve">
-    <value>鈻?Select Analysis Region / Draw Mask</value>
+    <value>閳?Select Analysis Region / Draw Mask</value>
   </data>
   <data name="Prop_MinArea" xml:space="preserve">
     <value>Min Area</value>
@@ -978,7 +978,7 @@
     <value>{0}Condition Expression</value>
   </data>
   <data name="Prop_ElifCondition" xml:space="preserve">
-    <value>鈻?Elif {0} Condition (#{1})</value>
+    <value>閳?Elif {0} Condition (#{1})</value>
   </data>
   <data name="Prop_XCoordExpr" xml:space="preserve">
     <value>X Coordinate Expression</value>
@@ -1092,7 +1092,7 @@
     <value>Specify Window</value>
   </data>
   <data name="Prop_SelectSubtitleRegion" xml:space="preserve">
-    <value>馃搻 Select Display Region (auto screenshot and select)</value>
+    <value>棣冩惢 Select Display Region (auto screenshot and select)</value>
   </data>
   <data name="Prop_FillProcessFirst" xml:space="preserve">
     <value>Please fill in Process Name first</value>
@@ -1176,7 +1176,7 @@
     <value>Mask not set</value>
   </data>
   <data name="Prop_MaskSet" xml:space="preserve">
-    <value>鉁?Mask set</value>
+    <value>閴?Mask set</value>
   </data>
   <data name="Prop_XExpr" xml:space="preserve">
     <value>X Coordinate Expression</value>
@@ -1209,10 +1209,10 @@
     <value>Template Source Task</value>
   </data>
   <data name="Prop_SelectSearchRoiMask" xml:space="preserve">
-    <value>鈻?Select Search Area / Draw Mask</value>
+    <value>閳?Select Search Area / Draw Mask</value>
   </data>
   <data name="Prop_MaskPaint" xml:space="preserve">
-    <value>馃枌 Mask Paint</value>
+    <value>棣冩瀸 Mask Paint</value>
   </data>
   <data name="Prop_ClearMask" xml:space="preserve">
     <value>Clear Mask</value>
@@ -1239,7 +1239,7 @@
     <value>Use output image from another task</value>
   </data>
   <data name="Prop_ColorPicker" xml:space="preserve">
-    <value>馃挧 Color Picker (Pick HSV Range from Image)</value>
+    <value>棣冩導 Color Picker (Pick HSV Range from Image)</value>
   </data>
   <data name="Prop_AssignExpr" xml:space="preserve">
     <value>Assignment Expression</value>
@@ -1316,7 +1316,7 @@ Example: @A = 1; @B = @A + 1</value>
     <value>WeChat OCR</value>
   </data>
   <data name="Prop_WeChatOcrTip" xml:space="preserve">
-    <value>鈿?WeChat OCR requires configuration in Settings</value>
+    <value>閳?WeChat OCR requires configuration in Settings</value>
   </data>
   <data name="Prop_ArrayBuilderInputExpr" xml:space="preserve">
     <value>Insert Data Expression</value>
@@ -1391,22 +1391,22 @@ Example: @A = 1; @B = @A + 1</value>
     <value>OCR Engine Settings</value>
   </data>
   <data name="Dlg_OcrStatusNotConfigured" xml:space="preserve">
-    <value>Status: 鈿?Not configured</value>
+    <value>Status: 閳?Not configured</value>
   </data>
   <data name="Dlg_OcrStatusAvailable" xml:space="preserve">
-    <value>Status: 鉁?Available</value>
+    <value>Status: 閴?Available</value>
   </data>
   <data name="Dlg_OcrStatusConfigured" xml:space="preserve">
-    <value>Status: 鈿?Configured, not verified</value>
+    <value>Status: 閳?Configured, not verified</value>
   </data>
   <data name="Dlg_OcrStatusTesting" xml:space="preserve">
-    <value>Status: 馃攧 Testing...</value>
+    <value>Status: 棣冩敡 Testing...</value>
   </data>
   <data name="Dlg_OcrStatusUnavailable" xml:space="preserve">
-    <value>Status: 鉂?Unavailable</value>
+    <value>Status: 閴?Unavailable</value>
   </data>
   <data name="Dlg_OcrStatusError" xml:space="preserve">
-    <value>Status: 鉂?Test error</value>
+    <value>Status: 閴?Test error</value>
   </data>
   <data name="Dlg_OcrExePath" xml:space="preserve">
     <value>OCR executable path:</value>
@@ -2168,7 +2168,7 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Position: ({0}, {1})  H:{2} S:{3} V:{4}</value>
   </data>
   <data name="Win_ColorPicked" xml:space="preserve">
-    <value>鉁?Picked  H:{0} S:{1} V:{2}  (Position: {3}, {4})</value>
+    <value>閴?Picked  H:{0} S:{1} V:{2}  (Position: {3}, {4})</value>
   </data>
   <data name="Win_PickColorFirst" xml:space="preserve">
     <value>Please click on the image to pick a color first</value>
@@ -2177,7 +2177,7 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Cannot capture screen: {0}</value>
   </data>
   <data name="Win_InitRoiStatus" xml:space="preserve">
-    <value>Initial ROI: ({0}, {1}) {2}脳{3} 鈥?Drag or redraw directly</value>
+    <value>Initial ROI: ({0}, {1}) {2}鑴硔3} 閳?Drag or redraw directly</value>
   </data>
   <data name="Win_RectRoiHint" xml:space="preserve">
     <value>Rectangle ROI: hold left button on image and drag a rectangle</value>
@@ -2207,28 +2207,28 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Please select ROI first</value>
   </data>
   <data name="Win_MaskSaved" xml:space="preserve">
-    <value>鉁?Has mask</value>
+    <value>閴?Has mask</value>
   </data>
   <data name="Win_NoMask" xml:space="preserve">
     <value>No mask</value>
   </data>
   <data name="Win_RectRoiDrawing" xml:space="preserve">
-    <value>Rectangle ROI: ({0}, {1}) {2}脳{3}</value>
+    <value>Rectangle ROI: ({0}, {1}) {2}鑴硔3}</value>
   </data>
   <data name="Win_CircleRoiDrawing" xml:space="preserve">
     <value>Circle ROI: center ({0}, {1}) radius {2}</value>
   </data>
   <data name="Win_RectRoiConfirmed" xml:space="preserve">
-    <value>Rectangle ROI confirmed: ({0}, {1}) {2}脳{3} 鈥?Done!</value>
+    <value>Rectangle ROI confirmed: ({0}, {1}) {2}鑴硔3} 閳?Done!</value>
   </data>
   <data name="Win_CircleRoiConfirmed" xml:space="preserve">
-    <value>Circle ROI confirmed: ({0}, {1}) {2}脳{3} 鈥?Done!</value>
+    <value>Circle ROI confirmed: ({0}, {1}) {2}鑴硔3} 閳?Done!</value>
   </data>
   <data name="Win_AffineRoiMarked" xml:space="preserve">
     <value>Affine ROI: marked {0}/4 corners</value>
   </data>
   <data name="Win_AffineRoiConfirmed" xml:space="preserve">
-    <value>Affine ROI confirmed: ({0}, {1}) {2}脳{3} 鈥?Done!</value>
+    <value>Affine ROI confirmed: ({0}, {1}) {2}鑴硔3} 閳?Done!</value>
   </data>
   <data name="Win_TooSmallRedraw" xml:space="preserve">
     <value>Area too small, please redraw</value>
@@ -2258,16 +2258,16 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Select ROI type, then draw on the image</value>
   </data>
   <data name="Win_TemplateRoiConfirmed" xml:space="preserve">
-    <value>Rectangle ROI confirmed: ({0}, {1}) {2}脳{3} 鈥?Done! Save template</value>
+    <value>Rectangle ROI confirmed: ({0}, {1}) {2}鑴硔3} 閳?Done! Save template</value>
   </data>
   <data name="Win_TemplateCircleConfirmed" xml:space="preserve">
-    <value>Circle ROI confirmed: ({0}, {1}) {2}脳{3} 鈥?Done! Save template</value>
+    <value>Circle ROI confirmed: ({0}, {1}) {2}鑴硔3} 閳?Done! Save template</value>
   </data>
   <data name="Win_TemplateAffineConfirmed" xml:space="preserve">
-    <value>Affine ROI confirmed: ({0}, {1}) {2}脳{3} 鈥?Done! Save template</value>
+    <value>Affine ROI confirmed: ({0}, {1}) {2}鑴硔3} 閳?Done! Save template</value>
   </data>
   <data name="Win_TemplateDoneHint" xml:space="preserve">
-    <value>Done 鈥?Select ROI type and draw</value>
+    <value>Done 閳?Select ROI type and draw</value>
   </data>
   <data name="UI_Settings" xml:space="preserve">
     <value>Settings</value>
@@ -2483,7 +2483,7 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Color Picker - Click to pick color</value>
   </data>
   <data name="UI_ColorPickerHint" xml:space="preserve">
-    <value>馃憜 Click on image to pick HSV color for automation</value>
+    <value>棣冩啘 Click on image to pick HSV color for automation</value>
   </data>
   <data name="UI_ClickToPickColor" xml:space="preserve">
     <value>Click image to pick color</value>
@@ -2492,10 +2492,10 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Mask Paint</value>
   </data>
   <data name="UI_Brush" xml:space="preserve">
-    <value>馃枌 Brush</value>
+    <value>棣冩瀸 Brush</value>
   </data>
   <data name="UI_Eraser" xml:space="preserve">
-    <value>馃Ч Eraser</value>
+    <value>棣冃?Eraser</value>
   </data>
   <data name="UI_BrushSize" xml:space="preserve">
     <value>Brush size:</value>
@@ -2513,13 +2513,13 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Select ROI Region</value>
   </data>
   <data name="UI_RectRoi" xml:space="preserve">
-    <value>鈻?Rect ROI</value>
+    <value>閳?Rect ROI</value>
   </data>
   <data name="UI_AffineRoi" xml:space="preserve">
-    <value>鈼?Affine ROI</value>
+    <value>閳?Affine ROI</value>
   </data>
   <data name="UI_CircleRoi" xml:space="preserve">
-    <value>鈼?Circle ROI</value>
+    <value>閳?Circle ROI</value>
   </data>
   <data name="UI_ClearRoi" xml:space="preserve">
     <value>Clear ROI</value>
@@ -2579,7 +2579,7 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Confirm</value>
   </data>
   <data name="Settings_OrchidSection" xml:space="preserve">
-    <value>鉁?Orchid Settings</value>
+    <value>Orchid Settings</value>
   </data>
   <data name="Settings_SingleStage" xml:space="preserve">
     <value>Enable single-stage invocation (improves speed, increases token usage)</value>
@@ -2703,4 +2703,21 @@ See our troubleshooting guide for more help.</value>
   <data name="TaskType_BrowserWaitForElement" xml:space="preserve">
     <value>Browser Wait Element</value>
   </data>
+  <data name="Settings_GridSection" xml:space="preserve">
+    <value>Recursive Grid Positioning</value>
+  </data>
+  <data name="Settings_GridMacroLabel" xml:space="preserve">
+    <value>Macro Grid (Rows × Cols)</value>
+  </data>
+  <data name="Settings_GridMicroLabel" xml:space="preserve">
+    <value>Micro Grid (Rows × Cols)</value>
+  </data>
+  <data name="Settings_GridDebugPreview" xml:space="preserve">
+    <value>Save grid preview to desktop (for debugging)</value>
+  </data>
+  <data name="TaskType_BrowserNativeClick" xml:space="preserve"><value>Web Native Click</value></data>
+  <data name="TaskType_BrowserNativeInput" xml:space="preserve"><value>Web Native Input</value></data>
+  <data name="TaskType_BrowserSimulatedClick" xml:space="preserve"><value>Web Simulated Click</value></data>
+  <data name="TaskType_BrowserCdpCommand" xml:space="preserve"><value>CDP Command Execution</value></data>
+  <data name="TaskType_BrowserScreenshot" xml:space="preserve"><value>Web Page Screenshot</value></data>
 </root>

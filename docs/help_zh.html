@@ -443,10 +443,15 @@
         <li><a href="#AdbClick">ADB模拟点击</a></li>
         <li><a href="#AdbCloseApp">ADB关闭应用</a></li>
         <li><a href="#AdbDisconnect">ADB断开设备</a></li>
-        <li class="toc-category">浏览器自动化</li>
-        <li><a href="#BrowserGetText">浏览器取文本</a></li>
-        <li><a href="#BrowserExecuteJs">浏览器执行脚本</a></li>
-        <li><a href="#BrowserWaitForElement">浏览器等待元素</a></li>
+        <li class="toc-category">Web操作</li>
+        <li><a href="#BrowserGetText">Web提取文本</a></li>
+        <li><a href="#BrowserExecuteJs">Web执行脚本</a></li>
+        <li><a href="#BrowserWaitForElement">Web等待元素</a></li>
+        <li><a href="#BrowserNativeClick">Web原生点击</a></li>
+        <li><a href="#BrowserNativeInput">Web原生输入</a></li>
+        <li><a href="#BrowserSimulatedClick">Web模拟点击</a></li>
+        <li><a href="#BrowserCdpCommand">CDP 指令执行</a></li>
+        <li><a href="#BrowserScreenshot">Web页面截图</a></li>
 
         <li class="toc-category">图像处理</li>
         <li><a href="#ImgCrop">图像裁剪</a></li>
@@ -478,7 +483,9 @@
         <li><a href="#IfElse">If-Else分支</a></li>
         <li><a href="#ForLoop">For循环</a></li>
         <li><a href="#BreakLoop">中止循环</a></li>
-        <li><a href="#SubFlow">子流程</a></li>
+        <li><a href="#CallSubFlow">调用子流程</a></li>
+        <li><a href="#SubFlowInput">子流程输入</a></li>
+        <li><a href="#SubFlowOutput">子流程返回</a></li>
         <li><a href="#CustomScript">自定义脚本</a></li>
       </ul>
     </div>
@@ -511,6 +518,10 @@
         <dd>打开流程管理窗口。可创建、重命名、删除不同的任务流程（Flow）。</dd>
         <dt>📱 模型</dt>
         <dd>打开模型管理窗口。配置用于文本翻译、多模态识图的 LLM 接口参数。</dd>
+        <dt>👁 视觉模型</dt>
+        <dd>打开视觉模型管理窗口。用于预加载、热重载以及移除本地推理的 ONNX 目标检测权重文件。</dd>
+        <dt>❓ 帮助</dt>
+        <dd>打开本地的内置任务流程离线说明书。</dd>
         <dt>▷ 单步运行 / 运行当前 / 运行全部</dt>
         <dd>
           <strong>单步运行：</strong>仅运行当前选中的那张卡片一次（便于调试）；<br><strong>运行当前：</strong>运行当前激活的流程页签内的所有任务；<br><strong>运行全部：</strong>按顺序依次运行所有流程页签内的任务。
@@ -1635,20 +1646,40 @@
       </div>
     </div>
 
-    <div class="card-doc" id="SubFlow">
-      <h3>子流程 <span class="badge badge-flow">控制流</span></h3>
-      <p>支持将复杂流程模块化。主流程可调用子流程，并通过输入/返回机制传递和获取数据。由 <code>调用子流程</code>(主流程内)、<code>子流程输入</code>和<code>子流程返回</code> 三部分组成。</p>
+    <div class="card-doc" id="CallSubFlow">
+      <h3>调用子流程 <span class="badge badge-flow">控制流</span></h3>
+      <p>在主流程执行期间，暂时挂起当前流程，切换到另一个作为函数模块的独立子流程中去执行。这能让复杂的重复性操作高度模块化和复用。</p>
       <dl class="props">
-        <dt>调用子流程 (主流程内)</dt>
-        <dd>选择目标子流程。可将主流程中的图像、文本或坐标输出映射传入子流程。执行时主流程会挂起，等待子流程完成。</dd>
-        <dt>子流程输入 (位于子流程画布最顶端)</dt>
-        <dd>接收主流程调用时传来的参数，供本子流程内部卡片引用（例如 <code>#1 子流程输入.image</code>）。</dd>
-        <dt>子流程返回 (位于子流程内任意结束位置)</dt>
-        <dd>打断并结束子流程执行，将内部计算的结果映射返回给主流程的调用卡片。主流程后续可直接引用调用卡片（如 <code>#5 调用子流程.text</code>）。</dd>
+        <dt>目标子流程选项</dt>
+        <dd>选择你要调用的对应子流程对象。</dd>
+        <dt>传参配置</dt>
+        <dd>主流程可以把当前上下文的【图像/文本/坐标】类型数据当做参数传入子流程。在子流程里的 <code>子流程输入</code> 卡片中就可以直接引用这些传来的数据。</dd>
       </dl>
       <div class="output-section">
         <div class="output-title"> 输出</div>
-        <div class="output-item">调用卡片的输出即为 "子流程返回" 卡片所映射的内容（支持坐标、布尔值、图像和文本等全部类型）。</div>
+        <div class="output-item">调用的返回输出完全对应了子流程里的 <code>子流程返回</code> 卡片映射输出（包含坐标、布尔值、图像和文本等）。主流程后续可以直接使用本卡片引出这些计算结果。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="SubFlowInput">
+      <h3>子流程输入 <span class="badge badge-flow">控制流</span></h3>
+      <p>每个子流程必须以首张卡片形式自带的一张输入卡片。它负责接收主流程传递过来的变量信息。</p>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">该卡片自身的作用就是用来输出外部传给它的参数（例如 <code>#1 子流程输入.text</code> 供后续任务使用）。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="SubFlowOutput">
+      <h3>子流程返回 <span class="badge badge-flow">控制流</span></h3>
+      <p>设置在子流程内的结束节点处，其作用是打断并结束当前的子流程，将最终运算好的数据再抛回到主流程中原本挂起了那个 <code>调用子流程</code> 卡片上。</p>
+      <dl class="props">
+        <dt>返回值</dt>
+        <dd>将子流程内的各个人物产生的坐标、结果、图像或文本，映射回给外面的调用者接收。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">无任何直接输出属性（只是负责跳转和抛发数据）。</div>
       </div>
     </div>
 
@@ -1714,7 +1745,7 @@
     </div>
 
     <div class="card-doc" id="BrowserGetText">
-      <h3>浏览器取文本 <span class="badge badge-win">浏览器</span></h3>
+      <h3>Web提取文本 <span class="badge badge-win">Web</span></h3>
       <p>通过 CDP（Chrome DevTools Protocol）连接已运行的 Chrome/Edge 浏览器，使用 CSS 选择器或 XPath 定位 DOM 元素，提取其 <code>innerText</code> 或指定 HTML 属性值（如 <code>href</code>、<code>src</code>、<code>value</code>）。</p>
 
       <div class="tip-box" style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
@@ -1740,7 +1771,7 @@
     </div>
 
     <div class="card-doc" id="BrowserExecuteJs">
-      <h3>浏览器执行脚本 <span class="badge badge-win">浏览器</span></h3>
+      <h3>Web执行脚本 <span class="badge badge-win">Web</span></h3>
       <p>在当前激活的浏览器页面中注入并执行一段自定义或任意 JavaScript 代码。代码内部通过 <code>return</code> 语句返回的值将被自动读取并转化为当前卡片的输出文本。这能够应付诸如页面跳跃拦截、复杂跨域读取或者隐性元素的直接点击等高级需求。</p>
       
       <div class="tip-box" style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
@@ -1767,7 +1798,7 @@
     </div>
 
     <div class="card-doc" id="BrowserWaitForElement">
-      <h3>浏览器等待元素 <span class="badge badge-win">浏览器</span></h3>
+      <h3>Web等待元素 <span class="badge badge-win">Web</span></h3>
       <p>使工作流在此处挂起并一直等待，直到网页内特定选择器描述的元素匹配到您要求的状态（出现/可见，或是消失/被移除）为止。通常用于在异步加载完成验证、倒计时结束等不确定等待时间的场景下发挥“同步锁”的作用。</p>
       <dl class="props">
         <dt>选择器类型</dt>
@@ -1787,6 +1818,91 @@
       <div class="output-section">
         <div class="output-title"> 输出</div>
         <div class="output-item"><code>#N.result</code> — 此布尔值指代在超时期限前，流程是否成功等到元素特定状态的变化（成功为 <code>true</code>，若超时未能满足状态则为 <code>false</code>）。该结果可配合 If-Else 分支任务来确定步骤失败时的处理策略。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserNativeClick">
+      <h3>Web原生点击 <span class="badge badge-win">Web</span></h3>
+      <p>通过 CDP（Chrome DevTools Protocol）利用 CSS 选择器或 XPath 找到指定的 DOM 元素并触发点击或连点。此方法不依赖桌面物理坐标，即使窗口在后台或被遮挡也能精准完成点击动作。</p>
+      <dl class="props">
+        <dt>选择器类型</dt>
+        <dd>支持 <code>CSS 选择器</code> 或 <code>XPath</code>。</dd>
+        <dt>选择器表达式</dt>
+        <dd>元素定位的具体表达式。</dd>
+        <dt>点击类型</dt>
+        <dd>支持 <strong>单击</strong>、<strong>双击</strong>、<strong>多次点击</strong> 以及在网页上的 <strong>滑动(Swipe)</strong>。可配置多次点击之间的间隔时间。</dd>
+        <dt>偏移量 (X/Y)</dt>
+        <dd>基于找到的元素区域的额外像素偏移量。若留空（为0），则点击元素的中心点。</dd>
+        <dt>CDP 端口</dt>
+        <dd>指定浏览器开放调试的端口号（默认 <code>9222</code>）。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">无任何直接数据输出（仅触发操作）。如果发生重定向，流程将自动同步等待。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserNativeInput">
+      <h3>Web原生输入 <span class="badge badge-win">Web</span></h3>
+      <p>定位页面上的 DOM 输入框（如 input、textarea 等）并键入文本。支持逐字输入或整块文本填入。</p>
+      <dl class="props">
+        <dt>选择器类型与表达式</dt>
+        <dd>使用 CSS 或 XPath 定位出目标输入控件。</dd>
+        <dt>输入文本</dt>
+        <dd>想要填充或录入的内容，支持注入 <code>@变量</code> 与引用表达式。</dd>
+        <dt>字符输入间隔</dt>
+        <dd>当选择【逐字输入】模式时生效。设置每一次键入之间间隔的时间（毫秒），可用于模拟真人打字过程，以此触发前端可能挂载的按键联想检测（如搜索建议）。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">无。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserSimulatedClick">
+      <h3>Web模拟点击 <span class="badge badge-win">Web</span></h3>
+      <p>区别于 <strong>Web原生点击</strong>，此处是在浏览器可视窗口内部使用基于网页分辨率的绝对坐标 X/Y 来派发模拟鼠标事件。这在面临 DOM 前端具有高度防抖、防机器点击校验或是画布（Canvas）渲染的应用场景时极为有效。</p>
+      <dl class="props">
+        <dt>坐标 (X / Y)</dt>
+        <dd>要在网页可视区域内点击的目标位置。若后续使用了 Set-of-Mark 技术标注了动态节点，则此项将自动覆盖无需人工填写。</dd>
+        <dt>标记 ID (Set-of-Mark)</dt>
+        <dd>若您在之前的页面截图中请求了标记解析（markId），则填入指定的元素编号（>0）后，引擎会自动计算并替换实际的精确点击坐标。</dd>
+        <dt>点击类型</dt>
+        <dd>可配置 单击/双击 以及自定义点击频次与间隔。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">无任何输出（仅触发动作反馈）。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserCdpCommand">
+      <h3>CDP 指令执行 <span class="badge badge-win">Web</span></h3>
+      <p>直接通过底层开放的 Chrome DevTools Protocol 向目标发送底层的原生方法指令。面向高阶开发人群或者需特殊配置的环境。</p>
+      <dl class="props">
+        <dt>方法名 (Method Name)</dt>
+        <dd>例如：<code>Network.enable</code> 或 <code>Page.captureScreenshot</code> 等标准 CDP 方法库接口名称。</dd>
+        <dt>参数配置 (JSON Arguments)</dt>
+        <dd>必须是合法的 JSON 格式字符串，携带上述指令需要传递的方法附注参数（默认 <code>{}</code>）。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.text</code> — 原生接口直接透传返回的协议结果内容文本。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserScreenshot">
+      <h3>Web页面截图 <span class="badge badge-win">Web</span></h3>
+      <p>无损截取当前通过端口连接浏览器的网页内容。常作为后面 OCR / LLM Vision 等高级图像处理分析的输入源卡片使用。</p>
+      <dl class="props">
+        <dt>捕获方式</dt>
+        <dd>默认开启 <strong>完整页面截屏 (Full Page)</strong>。如果在设置中关闭了全页截屏，它只会截取浏览器当前可视区域（Viewport）图像的数据。</dd>
+        <dt>CDP 端口</dt>
+        <dd>默认 <code>9222</code>。建议不要随意变更除非你在进行多浏览器分流管理挂机操作。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.image</code> — 生成了一张标准的系统图像类型以供随后的图像处理流程消耗。</div>
       </div>
     </div>
 

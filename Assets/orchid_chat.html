@@ -9,18 +9,19 @@
 <link rel="stylesheet" href="libs/highlight-dark.min.css"/>
 <style>
 :root {
-  --bg-color: #1a1714;
-  --text-primary: #f0ebe3;
+  --bg-color: #262624;
+  --text-primary: #c2c0b6;
   --text-secondary: #a09890;
   --text-tertiary: #c0b8a8;
   --border-color: #332e26;
-  --bubble-bg: #2a251e;
+  --bubble-bg: #c6613f;
+  --bubble-text: #ffffff;
   --divider-color: #453f34;
-  --accent-color: #d97757;
-  --code-color: #d9744e;
-  --bg-secondary: #242019;
-  --bg-tertiary: #1e1b16;
-  --code-block-bg: #1a1714;
+  --accent-color: #c6613f;
+  --code-color: #c6613f;
+  --bg-secondary: #30302e;
+  --bg-tertiary: #252523;
+  --code-block-bg: #252523;
   --code-block-border: #332e26;
 }
 
@@ -31,6 +32,7 @@
   --text-tertiary: #453f34;
   --border-color: #e6dfd5;
   --bubble-bg: #ffffff;
+  --bubble-text: #1e1b16;
   --divider-color: #d4cec5;
   --accent-color: #c05c3b;
   --code-color: #b84a26;
@@ -73,7 +75,7 @@ body {
 }
 .msg-user .bubble {
   background: var(--bubble-bg); border-radius: 16px; padding: 10px 14px;
-  max-width: 600px; color: var(--text-primary); word-break: break-word; overflow-wrap: anywhere;
+  max-width: 600px; color: var(--bubble-text); word-break: break-word; overflow-wrap: anywhere;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
@@ -490,6 +492,11 @@ function escapeHtml(text) {
 window.chrome.webview.addEventListener('message', (event) => {
   const msg = event.data;
   switch (msg.action) {
+    case 'setLocalization':
+      if (msg.disclaimer) {
+        document.querySelector('.disclaimer').innerText = msg.disclaimer;
+      }
+      break;
     case 'addMessage':
       addMessage(msg.role, msg.content, msg.thinking);
       break;

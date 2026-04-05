@@ -2,13 +2,14 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Anthropic Dark Theme Palette (Warm) -->
-    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1a1714" />
-    <SolidColorBrush x:Key="SurfaceBrush" Color="#242019" />
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#252523" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#262624" />
+    <SolidColorBrush x:Key="AiInputBgBrush" Color="#30302e" />
     <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#2a251e" />
     <SolidColorBrush x:Key="BorderLightBrush" Color="#332e26" />
     <SolidColorBrush x:Key="BorderDarkBrush" Color="#453f34" />
     
-    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#f0ebe3" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#c2c0b6" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#a09890" />
     <SolidColorBrush x:Key="TextTertiaryBrush" Color="#a09890" />
     <SolidColorBrush x:Key="TextIconBrush" Color="#857f78" />
@@ -22,11 +23,11 @@
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#c4623f" />
     
     <!-- Action Buttons (Inverted for Dark Mode) -->
-    <SolidColorBrush x:Key="PrimaryButtonBgBrush" Color="#e8e6dc" />
-    <SolidColorBrush x:Key="PrimaryButtonTextBrush" Color="#141413" />
+    <SolidColorBrush x:Key="PrimaryButtonBgBrush" Color="#c6613f" />
+    <SolidColorBrush x:Key="PrimaryButtonTextBrush" Color="#ffffff" />
     <SolidColorBrush x:Key="PrimaryButtonHoverBrush" Color="#faf9f5" />
     
-    <SolidColorBrush x:Key="RunReadyButtonBgBrush" Color="#d97757" />
+    <SolidColorBrush x:Key="RunReadyButtonBgBrush" Color="#c6613f" />
 
     <!-- Danger/Error Colors -->
     <SolidColorBrush x:Key="DangerButtonBgBrush" Color="#e05252" />
@@ -34,7 +35,7 @@
     <SolidColorBrush x:Key="DangerButtonTextBrush" Color="#f0ebe3" />
     <SolidColorBrush x:Key="ErrorBrush" Color="#e05252" />
     <SolidColorBrush x:Key="RunReadyButtonHoverBrush" Color="#e58562" />
-    <SolidColorBrush x:Key="StopActiveButtonBgBrush" Color="#d9744e" />
+    <SolidColorBrush x:Key="StopActiveButtonBgBrush" Color="#c6613f" />
     
     <SolidColorBrush x:Key="CardBorderBrush" Color="#4a4540" />
     

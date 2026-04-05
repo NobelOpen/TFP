@@ -199,6 +199,11 @@ namespace TaskFlow.ViewModels
         private string? _copiedTaskJson;
 
         /// <summary>
+        /// 剪贴板中是否有已复制的任务卡片
+        /// </summary>
+        public bool HasCopiedTask => !string.IsNullOrEmpty(_copiedTaskJson);
+
+        /// <summary>
         /// 当前已选中的卡片集合（用于快速取消选中，避免遍历全部卡片）
         /// </summary>
         private readonly HashSet<TaskCardBase> _selectedCards = new();

@@ -342,10 +342,10 @@ namespace TaskFlow.Services
 
         /// <summary>
         /// Set-of-Mark 标注映射表缓存（由截图管道填充）。
-        /// Key = markId, Value = (CssX, CssY) 全页面绝对 CSS 坐标。
+        /// Key = markId, Value = (CssX, CssY, IsFixed) 全页面绝对 CSS 坐标（或 fixed 元素的视口坐标）。
         /// 每次新的标注截图会覆盖旧缓存。
         /// </summary>
-        internal static Dictionary<int, (float CssX, float CssY)>? _markMappings;
+        internal static Dictionary<int, (float CssX, float CssY, bool IsFixed)>? _markMappings;
 
         private async Task<bool> ExecuteBrowserSimulatedClickAsync(
             BrowserSimulatedClickTaskCard task, IList<TaskCardBase> allTasks, CancellationToken ct)
@@ -356,6 +356,7 @@ namespace TaskFlow.Services
                 var page = await WithCancellation(BrowserSessionManager.GetActivePageAsync(task.CdpPort), ct);
 
                 float cssX, cssY;
+                bool isFixed = false;
 
                 // -------------------------------------------------------
                 // 优先使用 MarkId 从标注映射表查询精确 CSS 坐标
@@ -364,10 +365,11 @@ namespace TaskFlow.Services
                 {
                     cssX = markPos.CssX;
                     cssY = markPos.CssY;
+                    isFixed = markPos.IsFixed;
                     // 回写到卡片属性，让用户能在属性窗口看到实际使用的坐标
                     task.X = (int)Math.Round(cssX);
                     task.Y = (int)Math.Round(cssY);
-                    Log($"[{DateTime.Now:HH:mm:ss}] [SoM] MarkId={task.MarkId} → 查表得精确 CSS 坐标: ({cssX:F1}, {cssY:F1})");
+                    Log($"[{DateTime.Now:HH:mm:ss}] [SoM] MarkId={task.MarkId} → 查表得精确 CSS 坐标: ({cssX:F1}, {cssY:F1}){(isFixed ? " [Fixed定位]" : "")}");
                 }
                 else if (task.MarkId > 0)
                 {
@@ -391,20 +393,36 @@ namespace TaskFlow.Services
                     Log($"[{DateTime.Now:HH:mm:ss}] 浏览器模拟点击: 图片({task.X},{task.Y}) DPR={dpr} CSS({cssX:F1},{cssY:F1})");
                 }
 
-                var viewportSize = page.ViewportSize;
-                int vpWidth = viewportSize?.Width ?? 1920;
-                int vpHeight = viewportSize?.Height ?? 1080;
+                float viewportX, viewportY;
 
-                // CSS 坐标 → 计算滚动位置
-                int scrollX = Math.Max(0, (int)(cssX - vpWidth / 3));
-                int scrollY = Math.Max(0, (int)(cssY - vpHeight / 3));
+                if (isFixed)
+                {
+                    // -------------------------------------------------------
+                    // Fixed 定位元素（弹窗/对话框/浮层）：
+                    // 坐标已经是视口相对坐标，不需要滚动，直接点击
+                    // -------------------------------------------------------
+                    viewportX = cssX;
+                    viewportY = cssY;
+                    Log($"[{DateTime.Now:HH:mm:ss}] [SoM] Fixed元素，跳过滚动，直接使用视口坐标: ({viewportX:F1}, {viewportY:F1})");
+                }
+                else
+                {
+                    // -------------------------------------------------------
+                    // 普通元素：CSSPageCoord → 滚动 → 视口内坐标
+                    // -------------------------------------------------------
+                    var viewportSize = page.ViewportSize;
+                    int vpWidth = viewportSize?.Width ?? 1920;
+                    int vpHeight = viewportSize?.Height ?? 1080;
 
-                await page.EvaluateAsync($"window.scrollTo({scrollX}, {scrollY})");
-                await Task.Delay(150, ct);
+                    int scrollX = Math.Max(0, (int)(cssX - vpWidth / 3));
+                    int scrollY = Math.Max(0, (int)(cssY - vpHeight / 3));
 
-                // 转换为视口内坐标
-                float viewportX = Math.Max(0, Math.Min(cssX - scrollX, vpWidth - 1));
-                float viewportY = Math.Max(0, Math.Min(cssY - scrollY, vpHeight - 1));
+                    await page.EvaluateAsync($"window.scrollTo({scrollX}, {scrollY})");
+                    await Task.Delay(150, ct);
+
+                    viewportX = Math.Max(0, Math.Min(cssX - scrollX, vpWidth - 1));
+                    viewportY = Math.Max(0, Math.Min(cssY - scrollY, vpHeight - 1));
+                }
 
                 if (task.ClickType == ClickType.Double)
                 {

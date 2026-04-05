@@ -12,6 +12,7 @@ using TaskFlow.Models.TaskCards;
 using TaskFlow.ViewModels;
 using TaskFlow.Views.Dialogs;
 using TaskFlow.Resources;
+using System.Windows.Media;
 
 namespace TaskFlow
 {
@@ -246,7 +247,6 @@ namespace TaskFlow
             return IntPtr.Zero;
         }
 
-        // ====== 自定义标题栏按钮事件 ======
         private async void TitleBar_ThemeToggle_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is MainViewModel vm && vm.IsBusy) return;
@@ -255,14 +255,36 @@ namespace TaskFlow
             bool isCurrentlyDark = settings.Theme == "Dark";
             string newTheme = isCurrentlyDark ? "Light" : "Dark";
 
+            await TransitionThemeAsync(newTheme);
+            
+            settings.Theme = newTheme;
+            settings.Save();
+        }
+
+        public async Task TransitionThemeAsync(string newTheme)
+        {
             ThemeTransitionIcon.Text = newTheme == "Dark" ? "\uE708" : "\uE706";
+            
+            // 解决 Airspace 问题：切换时隐藏 WebView2 (HwndHost)
+            var originalAiVis = AiFlowPanelControl.Visibility;
+            if (originalAiVis == Visibility.Visible)
+                AiFlowPanelControl.Visibility = Visibility.Hidden;
+
             ThemeTransitionOverlay.Visibility = Visibility.Visible;
             
+            // 添加旋转动画
+            var rotateAnim = new DoubleAnimation(0, 360, new Duration(TimeSpan.FromMilliseconds(800)))
+            {
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            ThemeTransitionIcon.RenderTransform = new RotateTransform();
+            ThemeTransitionIcon.RenderTransformOrigin = new Point(0.5, 0.5);
+            ThemeTransitionIcon.RenderTransform.BeginAnimation(RotateTransform.AngleProperty, rotateAnim);
+
             await Task.Delay(50);
             
             TaskFlow.Helpers.ThemeManager.ApplyTheme(newTheme);
-            settings.Theme = newTheme;
-            settings.Save();
             
             ThemeIconText.Text = newTheme == "Dark" ? "\uE708" : "\uE706";
 
@@ -271,9 +293,13 @@ namespace TaskFlow
             int useImmersiveDarkMode = newTheme == "Dark" ? 1 : 0;
             DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int));
 
-            await Task.Delay(350);
+            await Task.Delay(400);
 
+            ThemeTransitionIcon.RenderTransform.BeginAnimation(RotateTransform.AngleProperty, null);
             ThemeTransitionOverlay.Visibility = Visibility.Collapsed;
+            
+            if (originalAiVis == Visibility.Visible)
+                AiFlowPanelControl.Visibility = Visibility.Visible;
         }
 
         private void TitleBar_Minimize_Click(object sender, RoutedEventArgs e)

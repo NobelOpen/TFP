@@ -338,10 +338,15 @@
     <li><a href="#AdbClick">ADB Simulate Click</a></li>
     <li><a href="#AdbCloseApp">ADB Close App</a></li>
     <li><a href="#AdbDisconnect">ADB Disconnect</a></li>
-    <li class="toc-category">Browser Automation</li>
-    <li><a href="#BrowserGetText">Browser Get Text</a></li>
-    <li><a href="#BrowserExecuteJs">Browser Execute JS</a></li>
-    <li><a href="#BrowserWaitForElement">Browser Wait Element</a></li>
+    <li class="toc-category">Web Operations</li>
+    <li><a href="#BrowserGetText">Web Extract Text</a></li>
+    <li><a href="#BrowserExecuteJs">Web Execute JS</a></li>
+    <li><a href="#BrowserWaitForElement">Web Wait Element</a></li>
+    <li><a href="#BrowserNativeClick">Web Native Click</a></li>
+    <li><a href="#BrowserNativeInput">Web Native Input</a></li>
+    <li><a href="#BrowserSimulatedClick">Web Simulated Click</a></li>
+    <li><a href="#BrowserCdpCommand">CDP Command</a></li>
+    <li><a href="#BrowserScreenshot">Web Screenshot</a></li>
 
     <li class="toc-category">Image Processing</li>
     <li><a href="#ImgCrop">Image Crop</a></li>
@@ -373,7 +378,9 @@
     <li><a href="#IfElse">If-Else Branch</a></li>
     <li><a href="#ForLoop">For Loop</a></li>
     <li><a href="#BreakLoop">Break Loop</a></li>
-    <li><a href="#SubFlow">SubFlow</a></li>
+    <li><a href="#CallSubFlow">Call SubFlow</a></li>
+    <li><a href="#SubFlowInput">SubFlow Input</a></li>
+    <li><a href="#SubFlowOutput">SubFlow Output</a></li>
     <li><a href="#CustomScript">Custom Script</a></li>
   </ul>
 </div>
@@ -405,6 +412,10 @@
     <dd>Open the flow management window to create, rename, or delete different task flows.</dd>
     <dt>📱 Models</dt>
     <dd>Open the model management window to configure LLM API parameters for text translation and multimodal vision.</dd>
+    <dt>👁 Vision Models</dt>
+    <dd>Open the vision model management window. Use this to explicitly load, hot-swap, or remove local ONNX object detection weight files from memory buffers.</dd>
+    <dt>❓ Help</dt>
+    <dd>Open the built-in offline task flow instruction manual in a local browser.</dd>
     <dt>▷ Run Once / Run Current / Run All</dt>
     <dd><strong>Run Once:</strong> Executes only the currently selected card once (useful for debugging).<br><strong>Run Current:</strong> Executes all tasks in the currently active flow tab.<br><strong>Run All:</strong> Executes all tasks across all flow tabs in sequence.</dd>
     <dt>⏹ Stop All</dt>
@@ -1481,20 +1492,40 @@
   </div>
 </div>
 
-<div class="card-doc" id="SubFlow">
-  <h3>SubFlow <span class="badge badge-flow">Control Flow</span></h3>
-  <p>Modularizes complex workflows. The main flow can call subflows and exchange data via an input/return mechanism. Consists of <code>Call SubFlow</code> (in main flow), <code>SubFlow Input</code>, and <code>SubFlow Output</code>.</p>
+<div class="card-doc" id="CallSubFlow">
+  <h3>Call SubFlow <span class="badge badge-flow">Control Flow</span></h3>
+  <p>During main flow execution, suspends the current flow to jump back into another dependent, modular SubFlow instance. Great for DRY programming and function loops.</p>
   <dl class="props">
-    <dt>Call SubFlow (in main flow)</dt>
-    <dd>Selects target subflow. Maps main flow's image, text, or coordinate outputs as parameters. Pauses the main flow until the subflow completes.</dd>
-    <dt>SubFlow Input (top of subflow)</dt>
-    <dd>Receives parameters from the caller, acting as a source for internal subflow cards (e.g., <code>#1 SubFlow Input.image</code>).</dd>
-    <dt>SubFlow Output (anywhere in subflow)</dt>
-    <dd>Interrupts and ends the subflow, mapping internal results back to the caller. The main flow can reference these mapped results (e.g., <code>#5 Call SubFlow.text</code>).</dd>
+    <dt>Target SubFlow</dt>
+    <dd>Select which SubFlow structure you wish to invoke.</dd>
+    <dt>Argument Passthrough</dt>
+    <dd>You can map variables and states like Images, Texts, and XY Coordinates from the overarching context into the nested SubFlow. The SubFlow retrieves this via the <code>SubFlow Input</code> hook.</dd>
   </dl>
   <div class="output-section">
     <div class="output-title"> Output</div>
-    <div class="output-item">The calling card's output reflects the mapped fields (coordinates, booleans, images, text) of the "SubFlow Output" card.</div>
+    <div class="output-item">Mirror reflections directly from the corresponding nested <code>SubFlow Output</code> return node. The main flow can reference data outputs right from this specific invoking line later on.</div>
+  </div>
+</div>
+
+<div class="card-doc" id="SubFlowInput">
+  <h3>SubFlow Input <span class="badge badge-flow">Control Flow</span></h3>
+  <p>An omnipresent node pinned at the top-most position of every SubFlow. It functions as the entry-point parameter hook, taking the data shipped by the exterior Main Flow Call card.</p>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item">Exposes identically constructed parameters injected at invoke time to the internal SubFlow scope (Ex: <code>#1 SubFlow Input.text</code>).</div>
+  </div>
+</div>
+
+<div class="card-doc" id="SubFlowOutput">
+  <h3>SubFlow Output <span class="badge badge-flow">Control Flow</span></h3>
+  <p>Acts as an interrupt breakpoint located somewhere within the SubFlow architecture that terminates the branch and pumps data mappings back to the originally pending <code>Call SubFlow</code> task.</p>
+  <dl class="props">
+    <dt>Return Value Mapping</dt>
+    <dd>Extract any local Coordinates, Test Results, Images, or Text logic variables within the sandbox back up to the caller.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item">Not applicable. Exists exclusively to transport pipeline results externally.</div>
   </div>
 </div>
 
@@ -1562,7 +1593,7 @@
 </div>
 
     <div class="card-doc" id="BrowserGetText">
-      <h3>Browser Get Text <span class="badge badge-win">Browser</span></h3>
+      <h3>Web Extract Text <span class="badge badge-win">Web</span></h3>
       <p>Connect to a running Chrome or Edge browser via CDP (Chrome DevTools Protocol) using CSS selectors or XPath to locate a DOM element, and extract its <code>innerText</code> or a specific HTML attribute value (e.g. <code>href</code>, <code>src</code>, <code>value</code>).</p>
 
       <div class="tip-box" style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
@@ -1588,7 +1619,7 @@
     </div>
 
     <div class="card-doc" id="BrowserExecuteJs">
-      <h3>Browser Execute JS <span class="badge badge-win">Browser</span></h3>
+      <h3>Web Execute JS <span class="badge badge-win">Web</span></h3>
       <p>Inject and execute a custom or arbitrary block of JavaScript code within the currently active browser page. The value returned inside the code using the <code>return</code> statement will be automatically captured and converted into the textual output of the current card. This is highly capable of handling advanced requirements such as intercepting page jumps, reading complex cross-domain data, or triggering direct clicks on hidden DOM elements.</p>
       
       <div class="tip-box" style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
@@ -1615,7 +1646,7 @@
     </div>
 
     <div class="card-doc" id="BrowserWaitForElement">
-      <h3>Browser Wait Element <span class="badge badge-win">Browser</span></h3>
+      <h3>Web Wait Element <span class="badge badge-win">Web</span></h3>
       <p>Suspends the workflow and waits indefinitely at this stage until the element described by a specific selector hits your requested state (Appears/Visible, or Disappears/Removed). This often serves as a "synchronization lock" in scenarios with unpredictable wait times, such as validating the completion of asynchronous loading or the end of a countdown timer.</p>
       <dl class="props">
         <dt>Selector Type</dt>
@@ -1635,6 +1666,89 @@
       <div class="output-section">
         <div class="output-title"> Output</div>
         <div class="output-item"><code>#N.result</code> — This boolean value indicates whether the flow successfully waited for the specific state change of the element before the timeout limit (<code>true</code> for success, and <code>false</code> if the state is unfulfilled upon timeout). This result can be paired with an If-Else branch task to determine the handling strategy when a step fails.</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserNativeClick">
+      <h3>Web Native Click <span class="badge badge-win">Web</span></h3>
+      <p>Uses CDP to locate a DOM element by CSS selector or XPath and triggers a native click event. This bypasses physical desktop coordinates, ensuring reliable clicks even if the window is hidden, overlapped, or minimized.</p>
+      <dl class="props">
+        <dt>Selector Type</dt>
+        <dd>Supports <code>CSS Selector</code> or <code>XPath</code>.</dd>
+        <dt>Selector Expression</dt>
+        <dd>The locator string for finding the target DOM node.</dd>
+        <dt>Click Type</dt>
+        <dd><strong>Single Click</strong>, <strong>Double Click</strong>, <strong>Multi Click</strong>, and <strong>Swipe</strong>. You can configure custom multi-click bounds and wait intervals.</dd>
+        <dt>Offset (X / Y)</dt>
+        <dd>Extra numerical pixel offset from the located element. Leave empty (0) to click exactly at the center point of the element.</dd>
+        <dt>CDP Port</dt>
+        <dd>Defaults to <code>9222</code>.</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item">No output. Execution causes the interaction and waits for synchronization.</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserNativeInput">
+      <h3>Web Native Input <span class="badge badge-win">Web</span></h3>
+      <p>Locate a DOM input control (input, textarea, etc.) on the page and natively send keystrokes. This works similarly to typing but interfaces directly with the Document properties.</p>
+      <dl class="props">
+        <dt>Selector Type & Expression</dt>
+        <dd>Uses CSS or XPath to target the specific input object.</dd>
+        <dt>Input Text</dt>
+        <dd>The content to write into the browser element. Supports <code>@variables</code> and dynamic value references.</dd>
+        <dt>Character Interval</dt>
+        <dd>Effective during strict <strong>CharByChar</strong> modes. You can insert small millisecond intervals between types to bypass anti-bot spam protections and naturally trigger search autosuggestions or JS validations.</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item">None.</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserSimulatedClick">
+      <h3>Web Simulated Click <span class="badge badge-win">Web</span></h3>
+      <p>Unlike <strong>Web Native Click</strong>, this task fires purely synthetic absolute pointer events via CDP at physical webpage coordinates. It is incredibly effective against stubborn SPA frontends fighting DOM manipulation, or performing interactions strictly on HTML5 Canvas apps and video players.</p>
+      <dl class="props">
+        <dt>Coordinates (X / Y)</dt>
+        <dd>Exact absolute X and Y position to fire a pointer click. If Set-of-Mark parsing rules apply, these coordinates map to the document scope dynamically.</dd>
+        <dt>Set-of-Mark ID</dt>
+        <dd>If you're using SoM computer vision bounding to read annotated numbers over interactive elements on images, punch the associated object index here (>0) to bypass manually measuring coordinates.</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item">None.</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserCdpCommand">
+      <h3>CDP Command <span class="badge badge-win">Web</span></h3>
+      <p>A bare-metal access layer directly hooked into the Chrome DevTools Protocol structure, allowing you to pass complex RPC methods to the browser natively.</p>
+      <dl class="props">
+        <dt>Method Name</dt>
+        <dd>An official CDP namespace and method like <code>Network.enable</code> or <code>Page.setDeviceMetricsOverride</code>.</dd>
+        <dt>JSON Arguments</dt>
+        <dd>Must be a correctly parsed JSON configuration payload (Default is an empty object <code>{}</code>).</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item"><code>#N.text</code> — Raw unstructured output returned recursively from the browser socket.</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="BrowserScreenshot">
+      <h3>Web Screenshot <span class="badge badge-win">Web</span></h3>
+      <p>Losslessly captures the current context of the browser viewport. Extensively used in automation pipelines as a visual context generator connecting AI models (such as LLM Vision) or OCR/OpenCV image processing logic.</p>
+      <dl class="props">
+        <dt>Capture Mode</dt>
+        <dd>Defaults to <strong>Full Page</strong>, forcing the layout engine to scroll down and capture a giant portrait rendering of all information. If disabled, it only snaps the currently visible monitor viewport bounds.</dd>
+        <dt>CDP Port</dt>
+        <dd>Defaults to <code>9222</code>.</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item"><code>#N.image</code> — Carries a volatile system image object compatible with all downstream OpenCV and AI modules.</div>
       </div>
     </div>
 

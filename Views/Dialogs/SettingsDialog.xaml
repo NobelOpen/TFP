@@ -324,7 +324,7 @@
                 </Button>
             </StackPanel>
 
-            <TextBlock x:Name="TxtOrchidSection" Text="✦ Orchid 设置" Style="{StaticResource SectionHeader}"/>
+            <TextBlock x:Name="TxtOrchidSection" Text="Orchid 设置" Style="{StaticResource SectionHeader}"/>
             <CheckBox x:Name="ChkSingleStage" Content="开启单层调用（提高输出速度，但会增加Token消耗）"
                       Style="{StaticResource SettingCheckBox}"/>
             <DockPanel Margin="0,4">
@@ -335,7 +335,7 @@
             </DockPanel>
 
             <!-- 递归网格设置 -->
-            <TextBlock x:Name="TxtGridSection" Text="🎯 递归网格定位" Style="{StaticResource SectionHeader}"/>
+            <TextBlock x:Name="TxtGridSection" Text="递归网格定位" Style="{StaticResource SectionHeader}"/>
             <DockPanel Margin="0,4">
                 <TextBlock x:Name="TxtGridMacroLabel" Text="宏观网格（行 × 列）:" Style="{StaticResource SettingLabel}" DockPanel.Dock="Left" Margin="0,0,8,0"/>
                 <TextBox x:Name="TxtGridMacroRows" Style="{StaticResource SettingTextBox}" Width="50"/>

@@ -63,7 +63,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserGetTextTaskCard()
         {
-            Name = "浏览器取文本";
+            Name = "Web提取文本";
         }
 
         public override void Reset()
@@ -117,7 +117,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserExecuteJsTaskCard()
         {
-            Name = "浏览器执行脚本";
+            Name = "Web执行脚本";
         }
 
         public override void Reset()
@@ -189,7 +189,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserWaitForElementTaskCard()
         {
-            Name = "浏览器等待元素";
+            Name = "Web等待元素";
         }
 
         public override void Reset()
@@ -265,7 +265,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserNativeClickTaskCard()
         {
-            Name = "浏览器原生点击";
+            Name = "Web原生点击";
         }
 
         public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
@@ -313,7 +313,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserNativeInputTaskCard()
         {
-            Name = "浏览器原生输入";
+            Name = "Web原生输入";
         }
 
         public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
@@ -378,7 +378,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserSimulatedClickTaskCard()
         {
-            Name = "浏览器模拟点击";
+            Name = "Web模拟点击";
         }
 
         public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
@@ -494,7 +494,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserScreenshotTaskCard()
         {
-            Name = "浏览器页面截图";
+            Name = "Web页面截图";
         }
 
         public override bool OutputsImage => true;

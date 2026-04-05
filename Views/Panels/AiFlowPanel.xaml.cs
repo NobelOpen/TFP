@@ -208,8 +208,9 @@ namespace TaskFlow.Views.Panels
                             sb.Children.Add(translateAnim);
                             sb.Begin();
 
-                            // 发送初始主题
+                            // 发送初始主题和本地化文本
                             PostWebMessage(new { action = "setTheme", theme = TaskFlow.Helpers.ThemeManager.CurrentIsDark ? "Dark" : "Light" });
+                            PostWebMessage(new { action = "setLocalization", disclaimer = TaskFlow.Resources.Strings.Main_OrchidDisclaimer });
 
                             // 发送缓存的消息
                             foreach (var pending in _pendingMessages)

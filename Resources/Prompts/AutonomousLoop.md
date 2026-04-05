@@ -26,6 +26,7 @@
 - 严禁自行添加验证/确认/二次检查步骤（如截图验证、LlmVision 分析结果等），除非用户明确要求
 - 你自己就是多模态 Vision 模型，不需要创建 LlmVision 卡片来分析图像，你已经能直接看到卡片输出的图像
 - **【浏览器操作失败时】**：不要凭推测修改选择器或猜测坐标。**必须先调用 request_browser_screenshot 查看页面当前状态**，根据实际截图内容再决定修改方案。这是最高优先级规则。
+- **【弹窗点击无效时】**：如果 BrowserSimulatedClick（含 SoM markId）点击模态弹窗/确认对话框返回 Success 但截图显示弹窗仍在，**严禁再用 BrowserSimulatedClick 重试！** 必须立即 fallback 到 BrowserExecuteJs，用 CSS 选择器（如 `button[data-action="ok"]`）或简单 XPath 直接 `element.click()`，这是因为 position:fixed 弹窗的坐标系与页面滚动坐标不一致。
 
 ## 重要提醒
 - 不要只说「已完成」而不给出具体结果——用户需要看到关键数据

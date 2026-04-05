@@ -596,7 +596,7 @@
         <!-- 整合输入区（WebView2 就绪前隐藏） -->
         <!-- 底部输入区域，带有入场上浮动画属性预设 -->
         <Border Grid.Row="3" x:Name="InputAreaBorder" Visibility="Collapsed" Opacity="0"
-                Background="{DynamicResource SurfaceBrush}" CornerRadius="16" Margin="16,8,16,8" Padding="12,10,12,10"
+                Background="{DynamicResource AiInputBgBrush}" CornerRadius="16" Margin="16,8,16,8" Padding="12,10,12,10"
                 BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
             <Border.RenderTransform>
                 <TranslateTransform x:Name="InputAreaTranslate" Y="20"/>

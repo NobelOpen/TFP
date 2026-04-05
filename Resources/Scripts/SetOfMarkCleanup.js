@@ -5,4 +5,6 @@
 // ================================================================
 const overlay = document.getElementById('__som_overlay__');
 if (overlay) overlay.remove();
+// 清理直接挂在 body 上的 fixed 定位标签
+document.querySelectorAll('.__som_fixed_label__').forEach(el => el.remove());
 return 'CLEANED';
