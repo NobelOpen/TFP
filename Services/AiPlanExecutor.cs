@@ -266,7 +266,15 @@ namespace TaskFlow.Services
                     }
                     foreach (var kv in mod.Properties)
                     {
-                        var prop = card.GetType().GetProperty(kv.Key,
+                        string pName = kv.Key;
+                        // 兼容 AI 常用的属性别名映射
+                        if (pName.Equals("scriptCode", StringComparison.OrdinalIgnoreCase)) pName = "Script";
+                        else if (pName.Equals("commandName", StringComparison.OrdinalIgnoreCase)) pName = "MethodName";
+                        else if (pName.Equals("commandParams", StringComparison.OrdinalIgnoreCase)) pName = "JsonArguments";
+                        else if (pName.Equals("text", StringComparison.OrdinalIgnoreCase)) pName = "InputText";
+                        else if (pName.Equals("debuggingPort", StringComparison.OrdinalIgnoreCase)) pName = "CdpPort";
+
+                        var prop = card.GetType().GetProperty(pName,
                             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
                         if (prop != null && prop.CanWrite && prop.PropertyType == typeof(string))
                         {
