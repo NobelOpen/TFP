@@ -63,7 +63,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserGetTextTaskCard()
         {
-            Name = "Web提取文本";
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
         }
 
         public override void Reset()
@@ -117,7 +117,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserExecuteJsTaskCard()
         {
-            Name = "Web执行脚本";
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
         }
 
         public override void Reset()
@@ -189,7 +189,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserWaitForElementTaskCard()
         {
-            Name = "Web等待元素";
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
         }
 
         public override void Reset()
@@ -265,7 +265,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserNativeClickTaskCard()
         {
-            Name = "Web原生点击";
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
         }
 
         public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
@@ -313,7 +313,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserNativeInputTaskCard()
         {
-            Name = "Web原生输入";
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
         }
 
         public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
@@ -378,7 +378,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserSimulatedClickTaskCard()
         {
-            Name = "Web模拟点击";
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
         }
 
         public override List<AiFlowReportItem> FillFromAiPlan(AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
@@ -441,7 +441,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserCdpCommandTaskCard()
         {
-            Name = "CDP 指令执行";
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
         }
 
         public override void Reset()
@@ -494,7 +494,7 @@ namespace TaskFlow.Models.TaskCards
 
         public BrowserScreenshotTaskCard()
         {
-            Name = "Web页面截图";
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
         }
 
         public override bool OutputsImage => true;

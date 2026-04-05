@@ -372,11 +372,11 @@ namespace TaskFlow.Models.TaskCards
             TaskType.BrowserGetText => TaskFlow.Resources.Strings.TaskType_BrowserGetText,
             TaskType.BrowserExecuteJs => TaskFlow.Resources.Strings.TaskType_BrowserExecuteJs,
             TaskType.BrowserWaitForElement => TaskFlow.Resources.Strings.TaskType_BrowserWaitForElement,
-            TaskType.BrowserNativeClick => "浏览器原生点击",
-            TaskType.BrowserNativeInput => "浏览器原生输入",
-            TaskType.BrowserSimulatedClick => "浏览器模拟点击",
-            TaskType.BrowserCdpCommand => "CDP 指令执行",
-            TaskType.BrowserScreenshot => "浏览器页面截图",
+            TaskType.BrowserNativeClick => TaskFlow.Resources.Strings.TaskType_BrowserNativeClick,
+            TaskType.BrowserNativeInput => TaskFlow.Resources.Strings.TaskType_BrowserNativeInput,
+            TaskType.BrowserSimulatedClick => TaskFlow.Resources.Strings.TaskType_BrowserSimulatedClick,
+            TaskType.BrowserCdpCommand => TaskFlow.Resources.Strings.TaskType_BrowserCdpCommand,
+            TaskType.BrowserScreenshot => TaskFlow.Resources.Strings.TaskType_BrowserScreenshot,
             _ => type.ToString()
         };
 
