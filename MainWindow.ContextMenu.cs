@@ -124,12 +124,25 @@ namespace TaskFlow
                 {
                     ifCard.IsElseHidden = !ifCard.IsElseHidden;
 
-                    // 找到同组的ElseStart卡片，切换其可见性
-                    var elseStart = ViewModel.TaskCards.FirstOrDefault(t =>
-                        t.BranchGroupId == ifCard.BranchGroupId && t.BranchRole == BranchRole.ElseStart);
-                    if (elseStart != null)
+                    // 找到同组的 ElseStart 和 ElseEnd，切换它们之间所有卡片的可见性
+                    var groupId = ifCard.BranchGroupId.Value;
+                    int elseStartIdx = -1;
+                    int elseEndIdx = -1;
+                    for (int i = 0; i < ViewModel.TaskCards.Count; i++)
                     {
-                        elseStart.IsHiddenByCollapse = ifCard.IsElseHidden;
+                        var c = ViewModel.TaskCards[i];
+                        if (c.BranchGroupId == groupId && c.BranchRole == BranchRole.ElseStart)
+                            elseStartIdx = i;
+                        if (c.BranchGroupId == groupId && c.BranchRole == BranchRole.ElseEnd)
+                            elseEndIdx = i;
+                    }
+                    if (elseStartIdx >= 0 && elseEndIdx > elseStartIdx)
+                    {
+                        // 隐藏/显示 ElseStart 到 ElseEnd 之间的所有卡片（不含 ElseEnd 本身）
+                        for (int i = elseStartIdx; i < elseEndIdx; i++)
+                        {
+                            ViewModel.TaskCards[i].IsHiddenByCollapse = ifCard.IsElseHidden;
+                        }
                         ViewModel.RefreshTaskCardsView();
                     }
                 }

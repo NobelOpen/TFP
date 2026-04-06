@@ -405,12 +405,24 @@ namespace TaskFlow.Services
                         continue;
                     }
 
+                    // 检查目标 else 分支是否处于隐藏状态
+                    bool shouldHideInserted = false;
+                    if (branchTarget == "else")
+                    {
+                        var ifStartCard = groupCards.FirstOrDefault(c => c.BranchRole == BranchRole.IfStart);
+                        if (ifStartCard is IfElseBranchTaskCard ifc && ifc.IsElseHidden)
+                            shouldHideInserted = true;
+                    }
+
                     int insertedCount = 0;
                     foreach (var step in insertReq.Cards)
                     {
                         var card = CreateSingleCardFromStep(step, stepToCard, reports, mode, modelId);
                         if (card != null)
                         {
+                            // 如果目标 else 分支被隐藏，新插入的卡片也需要隐藏
+                            if (shouldHideInserted)
+                                card.IsHiddenByCollapse = true;
                             Application.Current.Dispatcher.Invoke(() => _mainViewModel.TaskCards.Insert(insertIndex + insertedCount, card));
                             stepToCard[step.Step] = card;
                             insertedCount++;

@@ -732,6 +732,33 @@ namespace TaskFlow.ViewModels
             DisplayImage = null;
         }
 
+        /// <summary>
+        /// 判断指定索引的卡片是否位于某个分支组的 else body 内（ElseStart 和 ElseEnd 之间）
+        /// </summary>
+        private bool _IsInsideElseBranch(int cardIndex, Guid branchGroupId)
+        {
+            // 从当前位置向前搜索同组的 ElseStart
+            bool foundElseStart = false;
+            for (int j = cardIndex - 1; j >= 0; j--)
+            {
+                if (TaskCards[j].BranchGroupId == branchGroupId)
+                {
+                    if (TaskCards[j].BranchRole == BranchRole.ElseStart)
+                    {
+                        foundElseStart = true;
+                        break;
+                    }
+                    // 如果先遇到了 ElifStart/IfStart，说明不在 else 区域内
+                    if (TaskCards[j].BranchRole == BranchRole.IfStart ||
+                        TaskCards[j].BranchRole == BranchRole.ElifStart)
+                    {
+                        break;
+                    }
+                }
+            }
+            return foundElseStart;
+        }
+
         [RelayCommand]
         private void ToggleBranchCollapse(TaskCardBase task)
         {
@@ -783,9 +810,23 @@ namespace TaskFlow.ViewModels
                     }
                     else
                     {
-                        // 展开：ElseStart如果IsElseHidden则保持隐藏
-                        if (isElseHidden && TaskCards[i].BranchRole == BranchRole.ElseStart)
+                        // 展开：如果 IsElseHidden，则 ElseStart 到 ElseEnd 之间的所有卡片都保持隐藏
+                        bool inHiddenElse = false;
+                        if (isElseHidden && TaskCards[i].BranchGroupId == task.BranchGroupId
+                            && TaskCards[i].BranchRole == BranchRole.ElseStart)
                         {
+                            inHiddenElse = true;
+                        }
+
+                        if (inHiddenElse)
+                        {
+                            TaskCards[i].IsHiddenByCollapse = true;
+                            // 检查后续卡片是否仍在隐藏的 else 区域内，直到遇到 ElseEnd
+                            // （ElseEnd 本身属于分支结构卡片，不在 else body 内）
+                        }
+                        else if (isElseHidden && _IsInsideElseBranch(i, task.BranchGroupId.Value))
+                        {
+                            // 当前卡片位于被隐藏的 else body 内部（ElseStart 和 ElseEnd 之间的普通卡片）
                             TaskCards[i].IsHiddenByCollapse = true;
                         }
                         else
