@@ -153,7 +153,7 @@
   <data name="Menu_ImgProc" xml:space="preserve"><value>图像处理</value></data>
   <data name="Menu_DataProc" xml:space="preserve"><value>数据处理</value></data>
   <data name="Menu_AiOps" xml:space="preserve"><value>AI 操作</value></data>
-  <data name="Menu_BrowserOps" xml:space="preserve"><value>浏览器操作</value></data>
+  <data name="Menu_BrowserOps" xml:space="preserve"><value>Web操作</value></data>
   <data name="Menu_ControlFlow" xml:space="preserve"><value>控制流</value></data>
   <data name="Menu_IfElseBranch" xml:space="preserve"><value>If-Else分支</value></data>
   <data name="Menu_ForLoop" xml:space="preserve"><value>For循环</value></data>
@@ -959,9 +959,9 @@
   <data name="Prop_SubFlowInputY" xml:space="preserve"><value>传入Y坐标</value></data>
   <data name="Prop_SubFlowOutputResult" xml:space="preserve"><value>返回结果</value></data>
   <data name="TaskType_CustomScript" xml:space="preserve"><value>自定义脚本</value></data>
-  <data name="TaskType_BrowserGetText" xml:space="preserve"><value>浏览器取文本</value></data>
-  <data name="TaskType_BrowserExecuteJs" xml:space="preserve"><value>浏览器执行脚本</value></data>
-  <data name="TaskType_BrowserWaitForElement" xml:space="preserve"><value>浏览器等待元素</value></data>
+  <data name="TaskType_BrowserGetText" xml:space="preserve"><value>Web提取文本</value></data>
+  <data name="TaskType_BrowserExecuteJs" xml:space="preserve"><value>Web执行脚本</value></data>
+  <data name="TaskType_BrowserWaitForElement" xml:space="preserve"><value>Web等待元素</value></data>
   <data name="Settings_GridSection" xml:space="preserve"><value>递归网格定位</value></data>
   <data name="Settings_GridMacroLabel" xml:space="preserve"><value>宏观网格 (行 × 列)</value></data>
   <data name="Settings_GridMicroLabel" xml:space="preserve"><value>微观子网格 (行 × 列)</value></data>

@@ -58,11 +58,26 @@ namespace TaskFlow.Services
                 "当前时间" or "时间戳" => task is GetTimestampTaskCard tsCard ? tsCard.OutputTimestamp : 0L,
                 "匹配数量" => task is ImgTemplateMatchTaskCard tmCard2 ? tmCard2.OutputMatchCount : 0,
                 "Blob数量" => task is ImgBlobAnalysisTaskCard blobCard ? blobCard.OutputBlobCount : 0,
+                "最佳匹配分数" => task is ImgTemplateMatchTaskCard tmCard3 
+                    ? (tmCard3.OutputMatchResults.Count > 0 ? tmCard3.OutputMatchResults.OrderByDescending(m => m.Score).First().Score : 0.0) : 0.0,
+                "宽度缩放倍率" => task is ImgResizeTaskCard resizeCard ? resizeCard.OutputWidthScale : 0.0,
+                "高度缩放倍率" => task is ImgResizeTaskCard resizeCard2 ? resizeCard2.OutputHeightScale : 0.0,
+                "图像分辨率" => task is WinScreenshotTaskCard ssCard ? ssCard.OutputResolution : "",
+                "宽度分辨率" => task is WinScreenshotTaskCard ssCard2 ? ssCard2.OutputWidth : 0,
+                "高度分辨率" => task is WinScreenshotTaskCard ssCard3 ? ssCard3.OutputHeight : 0,
                 "数组当前容量" => task is ArrayBuilderTaskCard abCard ? abCard.OutputArrayCount : 0,
+                "保存文件路径" => task is ArrayBuilderTaskCard abCard2 ? abCard2.OutputSavePath ?? "" : "",
+                "已翻译文件路径" => task is LlmFileTranslateTaskCard ftCard ? ftCard.OutputTranslatedFilePath ?? "" : "",
+                "数组元素数量" => task is FileReadTaskCard frCard ? frCard.OutputArrayCount : 0,
+                "匹配索引" => task is ArraySearchTaskCard asCard ? asCard.OutputMatchIndex : -1,
+                "匹配值" => task is ArraySearchTaskCard asCard2 ? asCard2.OutputMatchValue ?? "" : "",
+                "查找路径" or "outputFilePath" or "filePath" => task is WinFindFileTaskCard ffCard ? ffCard.OutputFilePath ?? "" : "",
+                "测量边距" => task is ImgCaliperMeasureTaskCard caliperCard ? caliperCard.OutputDistance : 0.0,
                 "解析结果" => task is ArrayParseTaskCard apCard2 ? apCard2.ArrayDataType switch
                 {
                     ArrayDataType.Int => (object)apCard2.OutputIntValue,
                     ArrayDataType.String => apCard2.OutputStringValue ?? "",
+                    ArrayDataType.Coordinate => apCard2.OutputX ?? 0,
                     ArrayDataType.Double => apCard2.OutputDoubleValue,
                     _ => 0
                 } : 0,
