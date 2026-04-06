@@ -163,10 +163,11 @@ namespace TaskFlow.Views.Dialogs
 
             var btn = sender as Button;
             string oldContent = btn.Content.ToString();
-            btn.Content = Strings.Dlg_Testing;
 
-            // 测试中禁用窗口所有交互
+            // 禁用整个窗口交互，显示中心遮罩
             this.IsEnabled = false;
+            if (this.FindName("LoadingOverlay") is Border overlay)
+                overlay.Visibility = Visibility.Visible;
 
             try
             {
@@ -413,7 +414,8 @@ namespace TaskFlow.Views.Dialogs
             {
                 // 恢复窗口交互
                 this.IsEnabled = true;
-                btn.Content = oldContent;
+                if (this.FindName("LoadingOverlay") is Border endOverlay)
+                    endOverlay.Visibility = Visibility.Collapsed;
                 // 恢复按钮状态（根据当前选择）
                 ModelGrid_SelectionChanged(ModelGrid, null!);
             }

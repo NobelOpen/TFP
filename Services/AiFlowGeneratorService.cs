@@ -1595,6 +1595,28 @@ namespace TaskFlow.Services
                             var newPlan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(tcArgs) ?? new();
                             plan = MergeSubmitPlans(plan, newPlan);
                             AiFlowLogger.Info($"[ToolUse] submit_plan: {newPlan.Plan.Count} 个新步骤（合并后共 {plan.Plan.Count} 个步骤, {plan.ModifyCards.Count} 个修改）");
+
+                            // 空方案检测：AI 只写了 thought 但没有任何实际操作字段
+                            bool hasAction = newPlan.Plan.Count > 0
+                                || newPlan.ModifyCards.Count > 0
+                                || newPlan.DeleteCards.Count > 0
+                                || newPlan.RunCards.Count > 0
+                                || (newPlan.InsertCards != null && newPlan.InsertCards.Count > 0)
+                                || newPlan.Variables.Count > 0
+                                || newPlan.DeleteVariables.Count > 0
+                                || newPlan.ModifyVariables.Count > 0
+                                || (newPlan.CreateFlows != null && newPlan.CreateFlows.Count > 0)
+                                || (newPlan.DeleteFlows != null && newPlan.DeleteFlows.Count > 0)
+                                || newPlan.Done
+                                || newPlan.NeedsScreenshot
+                                || newPlan.NeedsBrowserScreenshot;
+                            if (!hasAction)
+                            {
+                                AiFlowLogger.Warn("[ToolUse] ⚠️ submit_plan 只包含 thought，没有任何操作字段（plan/modifyCards/insertCards/deleteCards/runCards/done 等均为空）！");
+                                var warnMsg = "⚠️ AI 分析了需求但未提交任何操作。请再试一次或手动执行。";
+                                plan.Summary = warnMsg;
+                                onDelta?.Invoke($"\n\n{warnMsg}\n");
+                            }
                         }
                         catch (Exception ex)
                         {

@@ -334,7 +334,16 @@ namespace TaskFlow.ViewModels
                     // 没有要运行的卡片且没有其他操作，退出循环
                     if (!currentPlan.HasRunCards && !currentPlan.HasAnyAction && !currentPlan.NeedsScreenshot && !currentPlan.NeedsBrowserScreenshot)
                     {
-                        AiFlowLogger.Info($"AI 自主执行结束: {currentPlan.Summary}");
+                        if (currentPlan.Summary != null && (currentPlan.Summary.Contains("请求失败") || currentPlan.Summary.Contains("分析失败") || currentPlan.Summary.Contains("解析失败")))
+                        {
+                            AiFlowLogger.Warn($"自主执行异常中断: {currentPlan.Summary}");
+                            AddMessage(AiChatRole.System, $"⚠️ 自主执行受阻，请检查应用状态。\n原因：{currentPlan.Summary}");
+                            ShowRetryButton = true;
+                        }
+                        else
+                        {
+                            AiFlowLogger.Info($"AI 自主执行结束: {currentPlan.Summary}");
+                        }
                         break;
                     }
 
@@ -641,6 +650,8 @@ namespace TaskFlow.ViewModels
                     {
                         AddMessage(AiChatRole.Assistant, nextPlan.Summary);
                     }
+
+
 
                     // 处理失败回退策略（仅当上一轮有卡片运行失败 且 任务未完成时才生效）
                     // AI 可能预防性地设置 failureStrategy，但如果没有实际失败，应忽略

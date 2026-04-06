@@ -258,6 +258,28 @@
                 HorizontalAlignment="Right"
                 Margin="0,12,0,0"
                 Style="{StaticResource ModelButtonDark}"/>
+        <!-- 中心加载遮罩 -->
+        <Border x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#88000000" CornerRadius="12" Margin="-16" Visibility="Collapsed" Panel.ZIndex="100">
+            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,24" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.15" Color="{DynamicResource CardShadowColor}"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="✦" FontSize="32" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,12">
+                        <TextBlock.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.3" To="1" Duration="0:0:0.8"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </TextBlock.Triggers>
+                    </TextBlock>
+                    <TextBlock Text="正在测试中，请稍候..." FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
     </Border>
 </Window>
