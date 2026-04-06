@@ -2720,4 +2720,12 @@ See our troubleshooting guide for more help.</value>
   <data name="TaskType_BrowserSimulatedClick" xml:space="preserve"><value>Web Simulated Click</value></data>
   <data name="TaskType_BrowserCdpCommand" xml:space="preserve"><value>CDP Command Execution</value></data>
   <data name="TaskType_BrowserScreenshot" xml:space="preserve"><value>Web Page Screenshot</value></data>
+  <data name="TaskType_HttpRequest" xml:space="preserve"><value>HTTP Request (Silent)</value></data>
+  <data name="Prop_HttpUrl" xml:space="preserve"><value>Request URL</value></data>
+  <data name="Prop_HttpMethod" xml:space="preserve"><value>HTTP Method</value></data>
+  <data name="Prop_HttpHeaders" xml:space="preserve"><value>Custom Headers (Key: Value per line)</value></data>
+  <data name="Prop_HttpBody" xml:space="preserve"><value>Request Body (JSON)</value></data>
+  <data name="Prop_HttpTimeout" xml:space="preserve"><value>Timeout (ms)</value></data>
+  <data name="AC_HttpStatusCode" xml:space="preserve"><value>HTTP Status Code</value></data>
 </root>
+

@@ -221,7 +221,7 @@ namespace TaskFlow.Models.AiFlow
         /// <summary>是否包含任何有效操作（卡片/变量/流程/命令）</summary>
         [Newtonsoft.Json.JsonIgnore]
         public bool HasAnyAction => HasSteps || HasVariables || HasDeleteVariables || HasModifyVariables
-            || HasModifyCards || HasDeleteCards || HasRunCards || HasInsertCards || HasFlowOps || HasShellCommands;
+            || HasModifyCards || HasDeleteCards || HasRunCards || HasInsertCards || HasFlowOps || HasShellCommands || Done;
     }
 
     /// <summary>
@@ -373,5 +373,13 @@ namespace TaskFlow.Models.AiFlow
         /// 若为 true，CollectionChanged 处理时应跳过 addMessage，避免重复显示。
         /// </summary>
         public bool IsStreamedToWebView { get; set; }
+
+        /// <summary>
+        /// 对话历史专用内容（可选）。当消息展示给用户的完整内容（Content）过长时，
+        /// 此字段存储截断/压缩版本，供 BuildConversationHistory 优先使用，
+        /// 避免 AI 在后续轮次中复读冗长内容导致输出被截断。
+        /// 若为 null，则 BuildConversationHistory 使用 Content。
+        /// </summary>
+        public string? HistoryContent { get; set; }
     }
 }

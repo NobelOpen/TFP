@@ -441,8 +441,9 @@ namespace TaskFlow.Services
             foreach (var msg in recent)
             {
                 var role = msg.Role == AiChatRole.User ? "user" : "assistant";
-                // 不再截断，完整保留内容以维持高阶模型所需的长上下文推理能力
-                history.Add((role, msg.Content));
+                // 优先使用 HistoryContent（截断版），避免超长内容导致 AI 复读
+                var content = msg.HistoryContent ?? msg.Content;
+                history.Add((role, content));
             }
 
             // 合并连续相同角色的消息（某些模型不允许连续出现同角色消息，如 Claude）

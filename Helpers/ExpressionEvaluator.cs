@@ -133,6 +133,9 @@ namespace TaskFlow.Helpers
                     "测量边距" => referencedTask is ImgCaliperMeasureTaskCard caliperCard
                         ? caliperCard.OutputDistance.ToString()
                         : "0",
+                    "状态码" or "statusCode" => referencedTask is HttpRequestTaskCard httpCard2
+                        ? httpCard2.OutputStatusCode.ToString()
+                        : "0",
                     _ => throw new InvalidOperationException($"不支持的输出属性: {property}")
                 };
             });

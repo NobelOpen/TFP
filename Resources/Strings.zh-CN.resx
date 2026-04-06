@@ -971,4 +971,12 @@
   <data name="TaskType_BrowserSimulatedClick" xml:space="preserve"><value>Web模拟点击</value></data>
   <data name="TaskType_BrowserCdpCommand" xml:space="preserve"><value>CDP 指令执行</value></data>
   <data name="TaskType_BrowserScreenshot" xml:space="preserve"><value>Web页面截图</value></data>
+  <data name="TaskType_HttpRequest" xml:space="preserve"><value>HTTP 静默请求</value></data>
+  <data name="Prop_HttpUrl" xml:space="preserve"><value>请求 URL</value></data>
+  <data name="Prop_HttpMethod" xml:space="preserve"><value>HTTP 方法</value></data>
+  <data name="Prop_HttpHeaders" xml:space="preserve"><value>自定义 Headers (每行一个 Key: Value)</value></data>
+  <data name="Prop_HttpBody" xml:space="preserve"><value>请求体 (JSON)</value></data>
+  <data name="Prop_HttpTimeout" xml:space="preserve"><value>超时 (毫秒)</value></data>
+  <data name="AC_HttpStatusCode" xml:space="preserve"><value>HTTP 状态码</value></data>
 </root>
+

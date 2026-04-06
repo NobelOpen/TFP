@@ -81,6 +81,7 @@ namespace TaskFlow.Services
                     ArrayDataType.Double => apCard2.OutputDoubleValue,
                     _ => 0
                 } : 0,
+                "状态码" or "statusCode" => task is HttpRequestTaskCard httpCard2 ? httpCard2.OutputStatusCode : 0,
                 _ => throw new InvalidOperationException($"不支持的输出属性: {property}")
             };
         }

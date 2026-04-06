@@ -347,6 +347,7 @@
     <li><a href="#BrowserSimulatedClick">Web Simulated Click</a></li>
     <li><a href="#BrowserCdpCommand">CDP Command</a></li>
     <li><a href="#BrowserScreenshot">Web Screenshot</a></li>
+    <li><a href="#HttpRequest">HTTP Silent Request</a></li>
 
     <li class="toc-category">Image Processing</li>
     <li><a href="#ImgCrop">Image Crop</a></li>
@@ -1749,6 +1750,36 @@
       <div class="output-section">
         <div class="output-title"> Output</div>
         <div class="output-item"><code>#N.image</code> — Carries a volatile system image object compatible with all downstream OpenCV and AI modules.</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="HttpRequest">
+      <h3>HTTP Silent Request <span class="badge badge-win">Web</span></h3>
+      <p>Sends HTTP requests silently in the background and retrieves the response content. No browser instance required — ideal for API calls, web scraping, health checks, and data retrieval tasks. Compared to browser-based cards, this consumes minimal resources and executes much faster, but does not support JavaScript rendering.</p>
+      <dl class="props">
+        <dt>Request URL</dt>
+        <dd>Target URL, supports expressions. E.g. <code>https://api.example.com/data</code> or <code>{{#2.text}}</code> to reference a URL from a preceding card's output.</dd>
+        <dt>HTTP Method</dt>
+        <dd>Request method: <code>GET</code> (default) or <code>POST</code>. GET for data retrieval, POST for data submission.</dd>
+        <dt>Custom Headers</dt>
+        <dd>Optional. One <code>Key: Value</code> header per line. Commonly used for <code>Authorization</code>, <code>Content-Type</code>, <code>User-Agent</code>, etc. Supports expressions.</dd>
+        <dt>Request Body (JSON)</dt>
+        <dd>Optional. Only effective for POST requests. Enter JSON-formatted body content, e.g. <code>{"key": "value"}</code>. Supports expressions.</dd>
+        <dt>Timeout (ms)</dt>
+        <dd>Request timeout in milliseconds, default <code>30000</code> (30 seconds). The task is marked as failed upon timeout.</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> Output</div>
+        <div class="output-item"><code>#N.text</code> — Response text content (HTML tags are automatically stripped, returning plain text only)</div>
+        <div class="output-item"><code>#N.statusCode</code> — HTTP response status code (e.g. 200, 404, 500)</div>
+      </div>
+      <div class="example-section">
+        <div class="example-title"> Examples</div>
+        <div class="example-item"><strong>GET Request:</strong> URL = <code>https://httpbin.org/get</code>, Method = <code>GET</code> → Fetches test API response data</div>
+        <div class="example-item"><strong>API Call:</strong> URL = <code>https://api.example.com/users</code>, Headers = <code>Authorization: Bearer sk-xxx</code></div>
+        <div class="example-item"><strong>POST Submit:</strong> URL = <code>https://api.example.com/submit</code>, Method = <code>POST</code>, Body = <code>{"name": "test"}</code></div>
+        <div class="example-item"><strong>Status Check:</strong> Use with If-Else: <code>{{#N.statusCode}} == 200</code> to verify request success</div>
+        <div class="example-item"><strong>Web Scraping:</strong> URL = <code>https://example.com</code> → Retrieves plain text page content (no JS execution, ideal for static pages)</div>
       </div>
     </div>
 

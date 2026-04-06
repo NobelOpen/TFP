@@ -1079,6 +1079,7 @@ namespace TaskFlow.ViewModels
                 TaskType.BrowserSimulatedClick => new BrowserSimulatedClickTaskCard(),
                 TaskType.BrowserCdpCommand => new BrowserCdpCommandTaskCard(),
                 TaskType.BrowserScreenshot => new BrowserScreenshotTaskCard(),
+                TaskType.HttpRequest => new HttpRequestTaskCard(),
                 _ => throw new ArgumentException($"Unsupported task type: {taskType}")
             };
         }

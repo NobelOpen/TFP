@@ -605,10 +605,11 @@ namespace TaskFlow.ViewModels
                     var loopStreamedText = loopStreamBuilder.ToString();
                     var loopThinkingText = loopThinkingBuilder.Length > 0 ? loopThinkingBuilder.ToString() : null;
                     bool streamAlreadyPersisted = false; // 防止后续 Summary 重复追加
+                    AiChatMessage? persistedStreamMsg = null; // 保留引用，用于后续合并 Summary
                     if (!string.IsNullOrWhiteSpace(loopStreamedText))
                     {
-                        var streamMsg = new AiChatMessage { Role = AiChatRole.Assistant, Content = loopStreamedText, ThinkingContent = loopThinkingText, IsStreamedToWebView = true };
-                        Application.Current.Dispatcher.Invoke(() => Messages.Add(streamMsg));
+                        persistedStreamMsg = new AiChatMessage { Role = AiChatRole.Assistant, Content = loopStreamedText, ThinkingContent = loopThinkingText, IsStreamedToWebView = true };
+                        Application.Current.Dispatcher.Invoke(() => Messages.Add(persistedStreamMsg));
                         streamAlreadyPersisted = true;
                     }
                     else if (nextPlan.Done)
@@ -649,6 +650,38 @@ namespace TaskFlow.ViewModels
                     else if (!streamAlreadyPersisted && !string.IsNullOrEmpty(nextPlan.Summary))
                     {
                         AddMessage(AiChatRole.Assistant, nextPlan.Summary);
+                    }
+
+                    // 【关键修复】当流式文本已持久化，但 summary 包含了额外的关键内容时
+                    // （如 HTTP Fallback 场景：流式文本是过渡语"我拿到正文了"，summary 是完整总结），
+                    // 必须将 summary 合并到已持久化的消息中，否则下一轮对话历史将丢失总结内容。
+                    if (streamAlreadyPersisted && persistedStreamMsg != null 
+                        && !string.IsNullOrEmpty(nextPlan.Summary)
+                        && !loopStreamedText.Contains(nextPlan.Summary))
+                    {
+                        var summaryForHistory = nextPlan.Summary;
+                        
+                        // 超长 summary（>500字）在对话历史中只保留摘要，防止 AI 追问时复读
+                        // 完整版已通过 WebView 流式展示给用户，对话历史只需为 AI 记忆提供线索
+                        if (summaryForHistory.Length > 500)
+                        {
+                            summaryForHistory = summaryForHistory[..500] + "\n...(已向用户展示完整内容，追问时请勿复述，直接回答新问题)";
+                            AiFlowLogger.Info($"Summary 过长（{nextPlan.Summary.Length}字），对话历史中已截断至 500 字");
+                        }
+
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            // WebView 显示完整内容
+                            persistedStreamMsg.Content = loopStreamedText + "\n\n" + nextPlan.Summary;
+                            MessagesUpdated?.Invoke();
+                        });
+                        
+                        // 对话历史中使用截断版本（BuildConversationHistory 读取 Content 字段）
+                        // 但 WebView 显示完整版本（已在上方通过 Dispatcher 设置）
+                        // 为避免冲突，通过专用字段存储历史版本
+                        persistedStreamMsg.HistoryContent = loopStreamedText + "\n\n" + summaryForHistory;
+                        
+                        AiFlowLogger.Info("已将 Summary 合并到流式消息中，确保对话历史完整");
                     }
 
 

@@ -917,7 +917,8 @@ namespace TaskFlow
                 (TaskType.BrowserNativeInput, "BrowserNativeInput"),
                 (TaskType.BrowserSimulatedClick, "BrowserSimulatedClick"),
                 (TaskType.BrowserCdpCommand, "BrowserCdpCommand"),
-                (TaskType.BrowserScreenshot, "BrowserScreenshot") })
+                (TaskType.BrowserScreenshot, "BrowserScreenshot"),
+                (TaskType.HttpRequest, "HttpRequest") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;

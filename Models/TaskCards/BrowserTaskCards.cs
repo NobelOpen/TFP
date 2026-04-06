@@ -513,5 +513,83 @@ namespace TaskFlow.Models.TaskCards
             return missing;
         }
     }
+
+    // ============================================================
+    //  HTTP 静默请求（无需浏览器，后台 HttpClient）
+    // ============================================================
+
+    /// <summary>
+    /// HTTP 静默请求卡片 - 后台发送 HTTP 请求获取网页内容，不弹出浏览器窗口
+    /// 支持 GET/POST 方法，可自定义请求头和请求体
+    /// </summary>
+    public partial class HttpRequestTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.HttpRequest;
+
+        /// <summary>目标 URL 表达式（支持变量引用）</summary>
+        [ObservableProperty]
+        private string _urlExpression = "";
+
+        /// <summary>HTTP 方法（GET / POST）</summary>
+        [ObservableProperty]
+        private string _httpMethod = "GET";
+
+        /// <summary>自定义请求头（每行一个，格式 Key: Value）</summary>
+        [ObservableProperty]
+        private string _customHeaders = "";
+
+        /// <summary>POST 请求体内容</summary>
+        [ObservableProperty]
+        private string _requestBody = "";
+
+        /// <summary>请求超时（毫秒），默认 30 秒</summary>
+        [ObservableProperty]
+        private int _timeoutMs = 30000;
+
+        /// <summary>输出：HTTP 状态码</summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _outputStatusCode;
+
+        public override bool OutputsText => true;
+        public override bool OutputsBoolResult => true;
+
+        public HttpRequestTaskCard()
+        {
+            Name = TaskCardBase.GetTaskTypeName(TaskType);
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            OutputStatusCode = 0;
+        }
+
+        public override List<AiFlowReportItem> FillFromAiPlan(
+            AiFlowPlanStep step, Dictionary<int, TaskCardBase> stepToCard)
+        {
+            var missing = new List<AiFlowReportItem>();
+            var props = step.Properties;
+
+            if (props.TryGetValue("url", out var url) && !string.IsNullOrWhiteSpace(url))
+                UrlExpression = url;
+            else
+                missing.Add(new AiFlowReportItem { PropertyName = "目标URL", Hint = "需要指定请求的URL地址" });
+
+            if (props.TryGetValue("method", out var method) && !string.IsNullOrWhiteSpace(method))
+                HttpMethod = method.ToUpper();
+
+            if (props.TryGetValue("headers", out var headers))
+                CustomHeaders = headers;
+
+            if (props.TryGetValue("body", out var body))
+                RequestBody = body;
+
+            if (props.TryGetValue("timeoutMs", out var timeout) && int.TryParse(timeout, out int t))
+                TimeoutMs = t;
+
+            return missing;
+        }
+    }
 }
 

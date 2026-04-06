@@ -118,7 +118,10 @@ namespace TaskFlow.Models.TaskCards
         BrowserNativeInput,
         BrowserSimulatedClick,
         BrowserCdpCommand,
-        BrowserScreenshot
+        BrowserScreenshot,
+
+        // 网络请求
+        HttpRequest
     }
 
     /// <summary>
@@ -377,6 +380,7 @@ namespace TaskFlow.Models.TaskCards
             TaskType.BrowserSimulatedClick => TaskFlow.Resources.Strings.TaskType_BrowserSimulatedClick,
             TaskType.BrowserCdpCommand => TaskFlow.Resources.Strings.TaskType_BrowserCdpCommand,
             TaskType.BrowserScreenshot => TaskFlow.Resources.Strings.TaskType_BrowserScreenshot,
+            TaskType.HttpRequest => TaskFlow.Resources.Strings.TaskType_HttpRequest,
             _ => type.ToString()
         };
 

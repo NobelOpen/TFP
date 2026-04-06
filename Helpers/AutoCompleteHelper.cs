@@ -339,6 +339,13 @@ namespace TaskFlow.Helpers
                 outputs.Add(new TaskOutput(Strings.AC_ExecResult, "等待结果"));
             }
 
+            // HTTP 静默请求输出：输出文本、状态码
+            if (task.TaskType == TaskType.HttpRequest)
+            {
+                outputs.Add(new TaskOutput(Strings.AC_OutputText, "输出文本"));
+                outputs.Add(new TaskOutput(Strings.AC_HttpStatusCode, "状态码"));
+            }
+
             return outputs;
         }
 

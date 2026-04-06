@@ -396,6 +396,10 @@ namespace TaskFlow.Views.Dialogs
                 case BrowserScreenshotTaskCard browserScreenshotCard:
                     AddBrowserScreenshotProperties(browserScreenshotCard);
                     break;
+
+                case HttpRequestTaskCard httpRequestCard:
+                    AddHttpRequestProperties(httpRequestCard);
+                    break;
             }
         }
 
@@ -2312,6 +2316,10 @@ namespace TaskFlow.Views.Dialogs
                         break;
                     case BrowserScreenshotTaskCard browserScreenshotCard:
                         SaveBrowserScreenshotProperties(browserScreenshotCard);
+                        break;
+
+                    case HttpRequestTaskCard httpRequestCard:
+                        SaveHttpRequestProperties(httpRequestCard);
                         break;
 
                     case InputComboTaskCard comboCard:
@@ -4768,6 +4776,42 @@ namespace TaskFlow.Views.Dialogs
                 card.FullPage = fp;
 
             if (GetIntValue("CdpPort", out int port)) card.CdpPort = port;
+        }
+
+        // ============================================================
+        //  HTTP 静默请求
+        // ============================================================
+
+        private void AddHttpRequestProperties(HttpRequestTaskCard card)
+        {
+            AddTextProperty("UrlExpression", Strings.Prop_HttpUrl, card.UrlExpression);
+
+            // HTTP 方法下拉框
+            var methodLabel = new TextBlock { Text = Strings.Prop_HttpMethod, Style = FindResource("PropertyLabel") as Style };
+            var methodCombo = new ComboBox { Style = FindResource("PropertyComboBox") as Style };
+            methodCombo.Items.Add(new ComboBoxItem { Content = "GET", Tag = "GET" });
+            methodCombo.Items.Add(new ComboBoxItem { Content = "POST", Tag = "POST" });
+            methodCombo.SelectedIndex = card.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+            PropertyPanel.Children.Add(methodLabel);
+            PropertyPanel.Children.Add(methodCombo);
+            _propertyControls["HttpMethod"] = methodCombo;
+
+            AddTextProperty("CustomHeaders", Strings.Prop_HttpHeaders, card.CustomHeaders);
+            AddTextProperty("RequestBody", Strings.Prop_HttpBody, card.RequestBody);
+            AddIntProperty("TimeoutMs", Strings.Prop_HttpTimeout, card.TimeoutMs);
+        }
+
+        private void SaveHttpRequestProperties(HttpRequestTaskCard card)
+        {
+            if (GetStringValue("UrlExpression", out string url)) card.UrlExpression = url;
+
+            if (_propertyControls.TryGetValue("HttpMethod", out var ctrl) && ctrl is ComboBox combo
+                && combo.SelectedItem is ComboBoxItem ci && ci.Tag is string method)
+                card.HttpMethod = method;
+
+            if (GetStringValue("CustomHeaders", out string headers)) card.CustomHeaders = headers;
+            if (GetStringValue("RequestBody", out string body)) card.RequestBody = body;
+            if (GetIntValue("TimeoutMs", out int timeout)) card.TimeoutMs = timeout;
         }
 
         #endregion

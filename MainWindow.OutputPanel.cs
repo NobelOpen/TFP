@@ -154,7 +154,8 @@ namespace TaskFlow
                 nameof(WinScreenshotTaskCard.OutputResolution) or
                 nameof(WinScreenshotTaskCard.OutputWidth) or
                 nameof(WinScreenshotTaskCard.OutputHeight) or
-                nameof(CustomScriptTaskCard.OutputLog))
+                nameof(CustomScriptTaskCard.OutputLog) or
+                nameof(HttpRequestTaskCard.OutputStatusCode))
             {
                 Dispatcher.BeginInvoke(() => ScheduleOutputPanelUpdate());
             }
@@ -417,6 +418,12 @@ namespace TaskFlow
                     AddOutputRow(TaskFlow.Resources.Strings.TaskType_CustomScript, scriptCard.OutputLog);
             }
 
+            // HttpRequest specific: HTTP 状态码
+            if (task is HttpRequestTaskCard httpCard)
+            {
+                AddOutputRow(Strings.AC_HttpStatusCode, httpCard.OutputStatusCode.ToString());
+            }
+
             // BrowserGetText / BrowserExecuteJs：取文本结果已通过通用 OutputText 行显示，无需额外行
             // BrowserWaitForElement：等待结果已通过通用 OutputResult 行显示，无需额外行
 
@@ -436,7 +443,8 @@ namespace TaskFlow
                             task is ArrayBuilderTaskCard || task is LlmFileTranslateTaskCard ||
                             task is FileReadTaskCard || task is ArraySearchTaskCard ||
                             task is WinScreenshotTaskCard || task is ImgResizeTaskCard ||
-                            task is CustomScriptTaskCard;
+                            task is CustomScriptTaskCard ||
+                            task is HttpRequestTaskCard;
 
             if (!hasOutput)
             {

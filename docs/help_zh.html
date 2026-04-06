@@ -452,6 +452,7 @@
         <li><a href="#BrowserSimulatedClick">Web模拟点击</a></li>
         <li><a href="#BrowserCdpCommand">CDP 指令执行</a></li>
         <li><a href="#BrowserScreenshot">Web页面截图</a></li>
+        <li><a href="#HttpRequest">HTTP静默请求</a></li>
 
         <li class="toc-category">图像处理</li>
         <li><a href="#ImgCrop">图像裁剪</a></li>
@@ -1903,6 +1904,36 @@
       <div class="output-section">
         <div class="output-title"> 输出</div>
         <div class="output-item"><code>#N.image</code> — 生成了一张标准的系统图像类型以供随后的图像处理流程消耗。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="HttpRequest">
+      <h3>HTTP静默请求 <span class="badge badge-win">Web</span></h3>
+      <p>在后台静默发送 HTTP 请求并获取响应内容。无需启动浏览器，适用于 API 调用、网页数据抓取、接口健康检查等场景。相比浏览器操作卡片，资源消耗极低且速度更快，但不支持 JavaScript 渲染。</p>
+      <dl class="props">
+        <dt>请求 URL</dt>
+        <dd>目标地址，支持表达式。例如 <code>https://api.example.com/data</code> 或 <code>{{#2.text}}</code> 引用前序卡片输出的 URL。</dd>
+        <dt>HTTP 方法</dt>
+        <dd>请求方法，支持 <code>GET</code>（默认）和 <code>POST</code>。GET 用于获取数据，POST 用于提交数据。</dd>
+        <dt>自定义请求头</dt>
+        <dd>可选。每行一个 <code>Key: Value</code> 格式的请求头。常用于设置 <code>Authorization</code>、<code>Content-Type</code>、<code>User-Agent</code> 等。支持表达式。</dd>
+        <dt>请求体 (JSON)</dt>
+        <dd>可选。仅在 POST 请求时有效。填写 JSON 格式的请求体内容，如 <code>{"key": "value"}</code>。支持表达式。</dd>
+        <dt>超时时间 (ms)</dt>
+        <dd>请求超时的毫秒数，默认 <code>30000</code>（30秒）。超时后任务将标记为失败。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.text</code> — 响应的文本内容（HTML 标签会被自动清除，仅保留纯文本）</div>
+        <div class="output-item"><code>#N.状态码</code> 或 <code>#N.statusCode</code> — HTTP 响应状态码（如 200、404、500）</div>
+      </div>
+      <div class="example-section">
+        <div class="example-title"> 使用示例</div>
+        <div class="example-item"><strong>GET 请求：</strong>URL = <code>https://httpbin.org/get</code>，方法 = <code>GET</code> → 获取测试接口返回的数据</div>
+        <div class="example-item"><strong>API 调用：</strong>URL = <code>https://api.example.com/users</code>，请求头 = <code>Authorization: Bearer sk-xxx</code></div>
+        <div class="example-item"><strong>POST 提交：</strong>URL = <code>https://api.example.com/submit</code>，方法 = <code>POST</code>，请求体 = <code>{"name": "test"}</code></div>
+        <div class="example-item"><strong>状态码判断：</strong>配合 If-Else 使用 <code>{{#N.状态码}} == 200</code> 判断请求是否成功</div>
+        <div class="example-item"><strong>网页抓取：</strong>URL = <code>https://example.com</code> → 获取页面纯文本内容（不执行 JS，适合静态页面）</div>
       </div>
     </div>
 

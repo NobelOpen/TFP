@@ -707,6 +707,7 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_BrowserSimulatedClick}" Click="AddTask_Click" Tag="BrowserSimulatedClick"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_BrowserCdpCommand}" Click="AddTask_Click" Tag="BrowserCdpCommand"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_BrowserScreenshot}" Click="AddTask_Click" Tag="BrowserScreenshot"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_HttpRequest}" Click="AddTask_Click" Tag="HttpRequest"/>
                                         </MenuItem>
                                         <!-- AI -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_AiOps}">

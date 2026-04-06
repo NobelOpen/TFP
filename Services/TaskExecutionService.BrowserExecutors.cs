@@ -572,5 +572,121 @@ namespace TaskFlow.Services
             }
             await task;
         }
+
+        // ----------------------------------------------------------
+        // HTTP 静默请求（无需浏览器，后台 HttpClient）
+        // ----------------------------------------------------------
+
+        private async Task<bool> ExecuteHttpRequestAsync(
+            HttpRequestTaskCard task, IList<TaskCardBase> allTasks, CancellationToken ct)
+        {
+            try
+            {
+                // 1. 解析 URL 表达式
+                string url = _variableStore.ResolveVariableReferences(task.UrlExpression);
+                url = ExpressionEvaluator.ResolveExpression(url, allTasks, _variableStore);
+                url = url.Trim().Trim('"');
+
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    task.ErrorMessage = "URL 为空";
+                    return false;
+                }
+
+                ct.ThrowIfCancellationRequested();
+
+                // 2. 构建请求
+                using var request = new System.Net.Http.HttpRequestMessage(
+                    task.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase)
+                        ? System.Net.Http.HttpMethod.Post
+                        : System.Net.Http.HttpMethod.Get,
+                    url);
+
+                // 默认 User-Agent（防止被直接拦截）
+                request.Headers.TryAddWithoutValidation("User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+
+                // 自定义请求头（每行一个，格式 Key: Value）
+                if (!string.IsNullOrWhiteSpace(task.CustomHeaders))
+                {
+                    var headerLines = task.CustomHeaders.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var line in headerLines)
+                    {
+                        var colonIdx = line.IndexOf(':');
+                        if (colonIdx > 0)
+                        {
+                            var key = line.Substring(0, colonIdx).Trim();
+                            var val = line.Substring(colonIdx + 1).Trim();
+                            request.Headers.TryAddWithoutValidation(key, val);
+                        }
+                    }
+                }
+
+                // POST 请求体
+                if (task.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(task.RequestBody))
+                {
+                    string body = _variableStore.ResolveVariableReferences(task.RequestBody);
+                    body = ExpressionEvaluator.ResolveExpression(body, allTasks, _variableStore);
+                    request.Content = new System.Net.Http.StringContent(body, System.Text.Encoding.UTF8, "application/json");
+                }
+
+                // 3. 发送请求（使用共享的静态 HttpClient + 超时取消令牌）
+                using var timeoutCts = new CancellationTokenSource(task.TimeoutMs);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+                Log($"[{DateTime.Now:HH:mm:ss}] HTTP {task.HttpMethod} → {url}");
+
+                var response = await _sharedHttpClient.SendAsync(request, linkedCts.Token);
+                task.OutputStatusCode = (int)response.StatusCode;
+
+                // 4. 读取响应体
+                string responseBody = await response.Content.ReadAsStringAsync(linkedCts.Token);
+
+                // 5. 基础 HTML 标签清理（去除 script/style/tag，保留可读文本）
+                string cleanedText = StripHtmlTags(responseBody);
+
+                task.OutputText = cleanedText;
+                task.OutputResult = response.IsSuccessStatusCode;
+
+                Log($"[{DateTime.Now:HH:mm:ss}] HTTP 响应: {task.OutputStatusCode}, 文本长度: {cleanedText.Length}");
+                return true;
+            }
+            catch (TaskCanceledException)
+            {
+                task.ErrorMessage = "HTTP 请求超时";
+                task.OutputResult = false;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = $"HTTP 请求失败: {ex.Message}";
+                task.OutputResult = false;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 基础 HTML 标签清理：移除 script/style 块和所有 HTML 标签，保留可读纯文本
+        /// </summary>
+        private static string StripHtmlTags(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html)) return "";
+
+            // 移除 <script>...</script> 和 <style>...</style> 块
+            var cleaned = System.Text.RegularExpressions.Regex.Replace(
+                html, @"<(script|style)[^>]*>[\s\S]*?</\1>", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            // 移除所有 HTML 标签
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"<[^>]+>", "");
+
+            // 解码常见 HTML 实体
+            cleaned = System.Net.WebUtility.HtmlDecode(cleaned);
+
+            // 压缩连续空白行为最多两个换行
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"(\r?\n\s*){3,}", "\n\n");
+
+            return cleaned.Trim();
+        }
     }
 }

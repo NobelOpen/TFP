@@ -58,7 +58,6 @@ body {
 /* ===== 消息容器 ===== */
 #chat-container {
   flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 0;
-  scroll-behavior: smooth;
 }
 #chat-container::-webkit-scrollbar { width: 6px; }
 #chat-container::-webkit-scrollbar-track { background: transparent; }
@@ -264,10 +263,13 @@ container.addEventListener('scroll', () => {
   autoScroll = (container.scrollHeight - container.scrollTop - container.clientHeight) < threshold;
 });
 
-function scrollToBottom() {
+function scrollToBottom(smooth = true) {
   if (autoScroll) {
     requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
     });
   }
 }
@@ -322,7 +324,7 @@ function createThinkingSection(thinkingText) {
 }
 
 // ===== 添加完整消息 =====
-function addMessage(role, content, thinking) {
+function addMessage(role, content, thinking, doScroll = true) {
   const msg = document.createElement('div');
   msg.className = 'message msg-' + role;
 
@@ -344,7 +346,7 @@ function addMessage(role, content, thinking) {
 
   container.appendChild(msg);
   updateEmptyState();
-  scrollToBottom();
+  if (doScroll) scrollToBottom(true);
 }
 
 // ===== 流式消息 =====
@@ -518,8 +520,9 @@ window.chrome.webview.addEventListener('message', (event) => {
     case 'loadHistory':
       if (msg.messages && Array.isArray(msg.messages)) {
          msg.messages.forEach(m => {
-             addMessage(m.role, m.content, m.thinking);
+             addMessage(m.role, m.content, m.thinking, false);
          });
+         scrollToBottom(false);
       }
       break;
     case 'setLoading':

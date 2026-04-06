@@ -407,6 +407,7 @@ namespace TaskFlow.Services
                 ["deleteFlows"] = new JObject { ["type"] = "array", ["description"] = "删除的流程名列表", ["items"] = new JObject { ["type"] = "string" } },
                 ["targetFlow"] = new JObject { ["type"] = "string", ["description"] = "plan 步骤的目标流程名。指定后，plan 中的卡片将直接创建在该流程中，无需切换 UI 标签页。留空则创建在当前流程。" },
                 ["switchFlow"] = new JObject { ["type"] = "string", ["description"] = "[可选] 切换 UI 显示到的目标流程名，纯 UI 操作，不影响卡片创建位置。通常在工作完成后设置以让用户看到结果。" },
+                ["summary"] = new JObject { ["type"] = "string", ["description"] = "向用户输出的任务总结或结果反馈的文本。如果在使用此工具前没有在 content 中回复文本，请务必将回答或主要说明写在这里。" },
                 ["thought"] = new JObject { ["type"] = "string", ["description"] = "设计或执行前的思考决策过程（必须提供）" }
             };
 
@@ -575,6 +576,51 @@ namespace TaskFlow.Services
             });
 
             // ===== 以下工具在所有模式下均可用（只读零风险操作） =====
+
+            // 工具: request_http —— 发送静默 HTTP 请求
+            tools.Add(new JObject
+            {
+                ["type"] = "function",
+                ["function"] = new JObject
+                {
+                    ["name"] = "request_http",
+                    ["description"] = "在后台静默发送 HTTP 请求并获取响应内容。速度极快，无需创建真实卡片。当你需要查询第三方API或者读取静态网址的文本内容来进行分析和判断时极其有用。但只会获取纯文本，支持 HTML 标签剥离隔离，且不支持 JavaScript 动态渲染。",
+                    ["parameters"] = new JObject
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject
+                        {
+                            ["url"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "目标 URL"
+                            },
+                            ["method"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["enum"] = new JArray("GET", "POST"),
+                                ["description"] = "HTTP 请求方法 (GET/POST)"
+                            },
+                            ["headers"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "可选的自定义请求头，以换行符分割。如 \"Authorization: Bearer xxx\\nContent-Type: application/json\""
+                            },
+                            ["body"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "可选的 POST 请求体 JSON 字符串"
+                            },
+                            ["thought"] = new JObject
+                            {
+                                ["type"] = "string",
+                                ["description"] = "为什么需要发送此 HTTP 请求"
+                            }
+                        },
+                        ["required"] = new JArray("url", "method", "thought")
+                    }
+                }
+            });
 
             // 工具: read_file —— 读取文件内容（支持分页）
             tools.Add(new JObject
@@ -879,6 +925,7 @@ namespace TaskFlow.Services
                     var screenshotCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_screenshot");
                     var browserScreenshotCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_browser_screenshot");
                     var cardImageCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_card_image");
+                    var requestHttpCall = currentToolCalls?.FirstOrDefault(t => t.Name == "request_http");
                     var fileToolCalls = currentToolCalls?.Where(t => t.Name is "read_file" or "list_directory" or "search_text").ToList();
 
                     // 优先处理 analyze_flow（支持一次返回多个），其次 request_screenshot / request_browser_screenshot，再次文件工具
@@ -1342,6 +1389,141 @@ namespace TaskFlow.Services
                             break;
                         }
                     }
+                    else if (requestHttpCall != null && requestHttpCall.Value.Name == "request_http")
+                    {
+                        // ---- 处理 request_http ----
+                        analyzeRound++;
+                        var (reqId, _, reqArgs) = requestHttpCall.Value;
+                        try
+                        {
+                            var rArg = JObject.Parse(reqArgs);
+                            string url = rArg["url"]?.Value<string>() ?? "";
+                            string methodStr = rArg["method"]?.Value<string>()?.ToUpper() ?? "GET";
+                            string headers = rArg["headers"]?.Value<string>() ?? "";
+                            string body = rArg["body"]?.Value<string>() ?? "";
+                            
+                            AiFlowLogger.Info($"[ToolUse] request_http({methodStr} {url}) → 正在静默请求...");
+                            onStatus?.Invoke("发起安全 HTTP 请求中...");
+
+                            using var client = new System.Net.Http.HttpClient();
+                            client.Timeout = TimeSpan.FromSeconds(15);
+                            var requestMessage = new System.Net.Http.HttpRequestMessage(
+                                methodStr == "POST" ? System.Net.Http.HttpMethod.Post : System.Net.Http.HttpMethod.Get, 
+                                url);
+
+                            if (!string.IsNullOrWhiteSpace(headers))
+                            {
+                                foreach (var line in headers.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    var colonIndex = line.IndexOf(':');
+                                    if (colonIndex > 0)
+                                    {
+                                        var k = line.Substring(0, colonIndex).Trim();
+                                        var v = line.Substring(colonIndex + 1).Trim();
+                                        requestMessage.Headers.TryAddWithoutValidation(k, v);
+                                    }
+                                }
+                            }
+
+                            if (methodStr == "POST" && !string.IsNullOrWhiteSpace(body))
+                            {
+                                requestMessage.Content = new System.Net.Http.StringContent(body, System.Text.Encoding.UTF8, "application/json");
+                            }
+
+                            var response = await client.SendAsync(requestMessage, cancellationToken);
+                            var respText = await response.Content.ReadAsStringAsync(cancellationToken);
+                            int statusCode = (int)response.StatusCode;
+
+                            // Strip HTML tags if looks like HTML to save tokens
+                            if (respText.Contains("<html", StringComparison.OrdinalIgnoreCase) || respText.Contains("<body", StringComparison.OrdinalIgnoreCase))
+                            {
+                                respText = System.Text.RegularExpressions.Regex.Replace(respText, "<[^>]*>", " ");
+                                respText = System.Text.RegularExpressions.Regex.Replace(respText, @"\s+", " ").Trim();
+                            }
+
+                            // Truncate to save tokens (limit to 6000 chars)
+                            if (respText.Length > 6000)
+                            {
+                                respText = respText.Substring(0, 6000) + "\n...[已截断超长部分以保护会话Token]";
+                            }
+
+                            var requestDesc = $"[HTTP 请求结果] ({methodStr} {url})\n状态码: {statusCode}\n文本内容:\n{respText}";
+
+                            messagesJson.Add(new JObject
+                            {
+                                ["role"] = "user",
+                                ["content"] = requestDesc
+                            });
+
+                            // 发起下一轮请求
+                            var requestLlmMsg = new JObject
+                            {
+                                ["model"] = modelConfig.ModelName,
+                                ["messages"] = messagesJson,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
+                            };
+
+                            string newRespMsgs;
+                            int inBs, outBs;
+                            List<(string Id, string Name, string Arguments)>? tcBs;
+
+                            if (onDelta != null)
+                            {
+                                (newRespMsgs, inBs, outBs, tcBs, _) =
+                                    await CallLlmStreamAsync(modelConfig, requestLlmMsg, onDelta, cancellationToken, onThinking);
+                            }
+                            else
+                            {
+                                (newRespMsgs, inBs, outBs, tcBs) =
+                                    await CallLlmAsync(modelConfig, requestLlmMsg, cancellationToken);
+                            }
+
+                            AiFlowLogger.LogLlmResponse($"阶段2-[HTTP请求信息]分析轮", newRespMsgs, inBs, outBs);
+
+                            inputTokens += inBs;
+                            outputTokens += outBs;
+                            responseText = newRespMsgs;
+                            currentToolCalls = tcBs;
+                            currentResponseText = newRespMsgs;
+                        }
+                        catch (Exception ex)
+                        {
+                            var userMessageContent = $"[HTTP 请求失败] 发生异常: {ex.Message}。你可以继续分析原因，或通过其他手段达到目的。";
+                            AiFlowLogger.Warn($"[ToolUse] request_http 处理失败: {ex.Message}");
+                            messagesJson.Add(new JObject
+                            {
+                                ["role"] = "user",
+                                ["content"] = userMessageContent
+                            });
+                            // Not breaking here, but continuing to invoke LLM so it knows it failed and can think
+                            var requestLlmMsg = new JObject
+                            {
+                                ["model"] = modelConfig.ModelName,
+                                ["messages"] = messagesJson,
+                                ["temperature"] = 0.3,
+                                ["tools"] = tools
+                            };
+                            string newRespMsgs;
+                            int inBs, outBs;
+                            List<(string Id, string Name, string Arguments)>? tcBs;
+                            if (onDelta != null)
+                            {
+                                (newRespMsgs, inBs, outBs, tcBs, _) =
+                                    await CallLlmStreamAsync(modelConfig, requestLlmMsg, onDelta, cancellationToken, onThinking);
+                            }
+                            else
+                            {
+                                (newRespMsgs, inBs, outBs, tcBs) =
+                                    await CallLlmAsync(modelConfig, requestLlmMsg, cancellationToken);
+                            }
+                            inputTokens += inBs;
+                            outputTokens += outBs;
+                            responseText = newRespMsgs;
+                            currentToolCalls = tcBs;
+                            currentResponseText = newRespMsgs;
+                        }
+                    }
                     else if (cardImageCall != null && cardImageCall.Value.Name == "request_card_image" && captureCardImage != null)
                     {
                         // ---- 处理 request_card_image ----
@@ -1567,7 +1749,7 @@ namespace TaskFlow.Services
                 var finalToolCalls = currentToolCalls ?? toolCalls;
                 foreach (var (tcId, tcName, tcArgs) in finalToolCalls)
                 {
-                    if (tcName == "analyze_flow" || tcName == "request_screenshot" || tcName == "request_browser_screenshot")
+                    if (tcName == "analyze_flow" || tcName == "request_screenshot" || tcName == "request_browser_screenshot" || tcName == "request_http")
                     {
                         // 已在上面多轮循环中处理过，跳过
                         continue;
@@ -1582,17 +1764,27 @@ namespace TaskFlow.Services
                             {
                                 var rawArgs = JObject.Parse(tcArgs);
                                 var thought = rawArgs["thought"]?.ToString();
+                                var summary = rawArgs["summary"]?.ToString();
+                                
                                 if (!string.IsNullOrWhiteSpace(thought))
                                 {
                                     AiFlowLogger.Info($"[ToolUse] submit_plan.thought: {thought}");
-                                    // 如果 AI 没有输出任何自然语言文本，将 thought 作为意图说明显示
-                                    if (string.IsNullOrWhiteSpace(responseText))
+                                    if (string.IsNullOrWhiteSpace(responseText) && string.IsNullOrWhiteSpace(summary))
                                     {
                                         onDelta?.Invoke(thought + "\n\n");
                                     }
                                 }
+                                
+                                if (!string.IsNullOrWhiteSpace(summary))
+                                {
+                                    AiFlowLogger.Info($"[ToolUse] submit_plan.summary: {summary}");
+                                    if (string.IsNullOrWhiteSpace(responseText))
+                                    {
+                                        onDelta?.Invoke("📝 总结回复:\n" + summary + "\n\n");
+                                    }
+                                }
                             }
-                            catch { /* thought 提取失败不影响主逻辑 */ }
+                            catch { /* json 提取失败不影响主逻辑 */ }
 
                             var newPlan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(tcArgs) ?? new();
                             plan = MergeSubmitPlans(plan, newPlan);
@@ -1624,9 +1816,54 @@ namespace TaskFlow.Services
                         catch (Exception ex)
                         {
                             AiFlowLogger.Warn($"[ToolUse] submit_plan 解析失败: {ex.Message}");
-                            // 设置 Summary 防止上层误报"未能生成有效方案"
-                            plan.Summary = $"❌ 方案解析失败: {ex.Message}";
-                            onDelta?.Invoke($"\n\n{plan.Summary}\n");
+                            
+                            // 【容错修复】尝试从截断的 JSON 中抢救 summary/thought 内容
+                            // 场景：AI 在 summary 中写了长篇回复，但 SSE 流被截断导致 JSON 不完整
+                            string? rescuedContent = null;
+                            try
+                            {
+                                // 尝试用正则提取 summary 字段的内容（即使 JSON 不完整）
+                                var summaryMatch = System.Text.RegularExpressions.Regex.Match(
+                                    tcArgs, @"""summary""\s*:\s*""((?:[^""\\]|\\.)*)");
+                                if (summaryMatch.Success && summaryMatch.Groups[1].Length > 20)
+                                {
+                                    rescuedContent = summaryMatch.Groups[1].Value
+                                        .Replace("\\n", "\n").Replace("\\\"", "\"").Replace("\\\\", "\\");
+                                    AiFlowLogger.Info($"[ToolUse] 从截断 JSON 中抢救到 summary 内容（{rescuedContent.Length} 字符）");
+                                }
+                                else
+                                {
+                                    // 尝试抢救 thought 字段
+                                    var thoughtMatch = System.Text.RegularExpressions.Regex.Match(
+                                        tcArgs, @"""thought""\s*:\s*""((?:[^""\\]|\\.)*)");
+                                    if (thoughtMatch.Success && thoughtMatch.Groups[1].Length > 20)
+                                    {
+                                        rescuedContent = thoughtMatch.Groups[1].Value
+                                            .Replace("\\n", "\n").Replace("\\\"", "\"").Replace("\\\\", "\\");
+                                        AiFlowLogger.Info($"[ToolUse] 从截断 JSON 中抢救到 thought 内容（{rescuedContent.Length} 字符）");
+                                    }
+                                }
+                                
+                                // 检查是否有 done 标记
+                                if (tcArgs.Contains("\"done\":true") || tcArgs.Contains("\"done\": true"))
+                                {
+                                    plan.Done = true;
+                                }
+                            }
+                            catch { /* 正则抢救失败不影响主流程 */ }
+
+                            if (!string.IsNullOrEmpty(rescuedContent))
+                            {
+                                // 成功抢救到内容，作为正常回复输出
+                                plan.Summary = rescuedContent + "\n\n*(⚠️ 回复可能因传输中断而不完整)*";
+                                onDelta?.Invoke(rescuedContent + "\n\n*(⚠️ 回复可能因传输中断而不完整)*");
+                            }
+                            else
+                            {
+                                // 完全无法抢救，显示错误
+                                plan.Summary = $"❌ 方案解析失败: {ex.Message}";
+                                onDelta?.Invoke($"\n\n{plan.Summary}\n");
+                            }
                         }
                     }
                     else if (tcName == "execute_shell")
@@ -1684,6 +1921,11 @@ namespace TaskFlow.Services
                         {
                             AiFlowLogger.Warn($"[ToolUse] request_screenshot 解析失败: {ex.Message}");
                         }
+                    }
+                    else if (tcName == "request_http")
+                    {
+                        // 在多轮执行中应已处理过，仅用于静默日志
+                        AiFlowLogger.Info($"[ToolUse] request_http fallback loop");
                     }
                     else if (tcName == "request_browser_screenshot")
                     {

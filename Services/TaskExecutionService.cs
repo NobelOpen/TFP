@@ -557,6 +557,9 @@ namespace TaskFlow.Services
                     TaskType.BrowserCdpCommand => await ExecuteBrowserCdpCommandAsync((BrowserCdpCommandTaskCard)task, allTasks, cancellationToken),
                     TaskType.BrowserScreenshot => await ExecuteBrowserScreenshotAsync((BrowserScreenshotTaskCard)task, allTasks, cancellationToken),
 
+                    // 网络请求（静默后台）
+                    TaskType.HttpRequest => await ExecuteHttpRequestAsync((HttpRequestTaskCard)task, allTasks, cancellationToken),
+
                     _ => false
                 };
 

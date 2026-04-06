@@ -1018,5 +1018,15 @@ namespace TaskFlow.Resources {
         public static string TaskType_BrowserSimulatedClick => ResourceManager.GetString("TaskType_BrowserSimulatedClick", resourceCulture) ?? "Web Simulated Click";
         public static string TaskType_BrowserCdpCommand => ResourceManager.GetString("TaskType_BrowserCdpCommand", resourceCulture) ?? "CDP Command Execution";
         public static string TaskType_BrowserScreenshot => ResourceManager.GetString("TaskType_BrowserScreenshot", resourceCulture) ?? "Web Page Screenshot";
+
+        // ——— HttpRequest 静默请求卡片 ———
+        public static string TaskType_HttpRequest => ResourceManager.GetString("TaskType_HttpRequest", resourceCulture) ?? "HTTP Request (Silent)";
+        public static string Prop_HttpUrl => ResourceManager.GetString("Prop_HttpUrl", resourceCulture) ?? "Request URL";
+        public static string Prop_HttpMethod => ResourceManager.GetString("Prop_HttpMethod", resourceCulture) ?? "HTTP Method";
+        public static string Prop_HttpHeaders => ResourceManager.GetString("Prop_HttpHeaders", resourceCulture) ?? "Custom Headers (Key: Value per line)";
+        public static string Prop_HttpBody => ResourceManager.GetString("Prop_HttpBody", resourceCulture) ?? "Request Body (JSON)";
+        public static string Prop_HttpTimeout => ResourceManager.GetString("Prop_HttpTimeout", resourceCulture) ?? "Timeout (ms)";
+        public static string AC_HttpStatusCode => ResourceManager.GetString("AC_HttpStatusCode", resourceCulture) ?? "HTTP Status Code";
+
 }
 }

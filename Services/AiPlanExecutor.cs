@@ -142,7 +142,23 @@ namespace TaskFlow.Services
                 }
                 else
                 {
-                    AiFlowLogger.Warn($"[TargetFlow] 目标流程 \"{plan.TargetFlow}\" 不存在，回退到当前流程");
+                    AiFlowLogger.Warn($"[TargetFlow] 目标流程 \"{plan.TargetFlow}\" 不存在，现在自动为其创建兜底...");
+                    
+                    // 确保新的子流程命名规范
+                    string newFlowName = plan.TargetFlow;
+                    if (!newFlowName.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        newFlowName = "SUB_" + newFlowName;
+                    }
+                    
+                    var autoCreatedTab = new WorkflowTab { Name = newFlowName };
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _mainViewModel.Tabs.Add(autoCreatedTab);
+                    });
+                    
+                    targetTab = autoCreatedTab;
+                    AiFlowLogger.Info($"[TargetFlow] 已自动创建并拦截卡片至流程: {targetTab.Name}");
                 }
             }
 

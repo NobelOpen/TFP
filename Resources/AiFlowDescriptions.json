@@ -719,5 +719,22 @@
     "Outputs": [
       "outputResult: 翻译是否成功完成(布尔值)"
     ]
+  },
+  {
+    "TaskType": "HttpRequest",
+    "Category": "浏览器自动化",
+    "Description": "在后台静默发送 HTTP 请求（GET/POST）并获取响应内容，不依赖浏览器实例",
+    "Usage": "当需要调用第三方 API、抓取静态网页文本内容、或检查网络连接时使用。其速度极快且极少消耗资源，但不会渲染网页和执行 JavaScript",
+    "KeyProperties": [
+      "httpUrl: 目标 URL地址 (支持动态表达式，如 {{#1.text}})",
+      "httpMethod: 请求方法 (GET 或 POST)",
+      "httpHeaders: 自定义 HTTP 请求头 (每行一个，如 Auto: Bearer xxx)",
+      "httpBody: POST 请求体的 JSON 数据",
+      "httpTimeoutMs: 超时时间(毫秒)"
+    ],
+    "Outputs": [
+      "outputText: 响应返回的纯文本内容（自动移除了 HTML 标签，仅保留文本）",
+      "outputStatusCode: HTTP 响应状态码（如 200, 404，也可通过引用 #N.状态码 读取）"
+    ]
   }
 ]
