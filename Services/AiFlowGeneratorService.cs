@@ -829,6 +829,8 @@ namespace TaskFlow.Services
 
             // ======= 处理 Tool Calls =======
             AiFlowPlanResponse plan = new();
+            bool emptyPlanDetected = false;
+            string? emptyPlanThought = null;
 
             if (toolCalls != null && toolCalls.Count > 0)
             {
@@ -1609,13 +1611,14 @@ namespace TaskFlow.Services
                                 || (newPlan.DeleteFlows != null && newPlan.DeleteFlows.Count > 0)
                                 || newPlan.Done
                                 || newPlan.NeedsScreenshot
-                                || newPlan.NeedsBrowserScreenshot;
+                                || newPlan.NeedsBrowserScreenshot
+                                || !string.IsNullOrWhiteSpace(newPlan.FailureStrategy)
+                                || !string.IsNullOrWhiteSpace(newPlan.SwitchFlow);
                             if (!hasAction)
                             {
-                                AiFlowLogger.Warn("[ToolUse] ⚠️ submit_plan 只包含 thought，没有任何操作字段（plan/modifyCards/insertCards/deleteCards/runCards/done 等均为空）！");
-                                var warnMsg = "⚠️ AI 分析了需求但未提交任何操作。请再试一次或手动执行。";
-                                plan.Summary = warnMsg;
-                                onDelta?.Invoke($"\n\n{warnMsg}\n");
+                                AiFlowLogger.Warn("[ToolUse] ⚠️ submit_plan 只包含 thought，没有任何操作字段！将自动重试。");
+                                emptyPlanDetected = true;
+                                emptyPlanThought = tcArgs;
                             }
                         }
                         catch (Exception ex)
@@ -1698,6 +1701,86 @@ namespace TaskFlow.Services
                         {
                             AiFlowLogger.Warn($"[ToolUse] request_browser_screenshot 解析失败: {ex.Message}");
                         }
+                    }
+                }
+
+                // ---- 空方案自动重试：AI 只提交了 thought 但没有操作字段 ----
+                if (emptyPlanDetected)
+                {
+                    onDelta?.Invoke("\n\n🔄 检测到空方案，正在自动提醒 AI 补充操作...\n\n");
+                    try
+                    {
+                        // 构造纠正消息
+                        var retryMessages = new JArray();
+                        var sysMsg = messagesJson.FirstOrDefault(m => m["role"]?.ToString() == "system");
+                        var originalUserMsg = messagesJson.LastOrDefault(m => m["role"]?.ToString() == "user");
+                        if (sysMsg != null) retryMessages.Add(sysMsg);
+                        if (originalUserMsg != null) retryMessages.Add(originalUserMsg);
+                        // 注入 AI 上一轮的空方案 assistant 回复
+                        retryMessages.Add(new JObject { ["role"] = "assistant", ["content"] = responseText ?? "" });
+                        // 注入系统纠正提示
+                        retryMessages.Add(new JObject
+                        {
+                            ["role"] = "user",
+                            ["content"] = "⚠️ 你刚才调用了 submit_plan，但只填写了 thought，没有提供任何实际操作字段（plan、modifyCards、insertCards、deleteCards、runCards、done 等均为空）。你的 thought 中的分析是正确的，请**立即重新调用 submit_plan**，这次必须包含具体的操作字段。例如：修改卡片属性用 modifyCards，向分支中插入卡片用 insertCards，创建新卡片用 plan。"
+                        });
+
+                        var retryRequest = new JObject
+                        {
+                            ["model"] = modelConfig.ModelName,
+                            ["messages"] = retryMessages,
+                            ["temperature"] = 0.3,
+                            ["tools"] = tools
+                        };
+
+                        AiFlowLogger.Info("[空方案重试] 发起自动纠正轮次...");
+                        string retryResp;
+                        int retryIn, retryOut;
+                        List<(string Id, string Name, string Arguments)>? retryTc;
+
+                        if (onDelta != null)
+                        {
+                            (retryResp, retryIn, retryOut, retryTc, _) =
+                                await CallLlmStreamAsync(modelConfig, retryRequest, onDelta, cancellationToken, onThinking);
+                        }
+                        else
+                        {
+                            (retryResp, retryIn, retryOut, retryTc) =
+                                await CallLlmAsync(modelConfig, retryRequest, cancellationToken);
+                        }
+
+                        AiFlowLogger.LogLlmResponse("阶段2-空方案自动重试", retryResp, retryIn, retryOut);
+                        inputTokens += retryIn;
+                        outputTokens += retryOut;
+
+                        // 处理重试结果中的 submit_plan
+                        if (retryTc != null)
+                        {
+                            foreach (var (rtId, rtName, rtArgs) in retryTc)
+                            {
+                                if (rtName == "submit_plan")
+                                {
+                                    try
+                                    {
+                                        var retryPlan = JsonConvert.DeserializeObject<AiFlowPlanResponse>(rtArgs) ?? new();
+                                        plan = MergeSubmitPlans(plan, retryPlan);
+                                        AiFlowLogger.Info($"[空方案重试] ✅ 重试成功: {retryPlan.Plan.Count} 个新步骤, {retryPlan.ModifyCards.Count} 个修改, {retryPlan.InsertCards?.Count ?? 0} 个插入");
+                                    }
+                                    catch (Exception retryEx)
+                                    {
+                                        AiFlowLogger.Warn($"[空方案重试] 重试 submit_plan 解析失败: {retryEx.Message}");
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(retryResp))
+                            responseText = retryResp;
+                    }
+                    catch (Exception retryEx)
+                    {
+                        AiFlowLogger.Warn($"[空方案重试] 自动重试失败: {retryEx.Message}");
+                        onDelta?.Invoke($"\n\n⚠️ 自动重试失败，请手动再试一次。\n");
                     }
                 }
 
