@@ -46,39 +46,52 @@ namespace TaskFlow.Services
                     Log($"[{DateTime.Now:HH:mm:ss}] 正在编译脚本...");
 
                     // 3. Roslyn 编译（首次或代码变更时）
+                    // 预分离代码中的 using 语句，提取命名空间
+                    // 局部代码块里出现 using 命名空间声明会导致致命的编译错误(CS0106/CS1529)
+                    var codeLines = task.ScriptCode.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                    var cleanedCode = new StringBuilder();
+                    var extractedImports = new List<string>();
+
+                    foreach (var line in codeLines)
+                    {
+                        var trimmed = line.Trim();
+                        // 过滤掉引入命名空间的 using 语句（末尾分号，且不包含等号即非 using别名或using var，不包含左括号即将非using(...)块）
+                        if (trimmed.StartsWith("using ") && trimmed.EndsWith(";") && !trimmed.Contains("=") && !trimmed.Contains("("))
+                        {
+                            var ns = trimmed.Substring(6, trimmed.Length - 7).Trim();
+                            extractedImports.Add(ns);
+                            continue;
+                        }
+                        cleanedCode.AppendLine(line);
+                    }
+
+                    // 3. Roslyn 编译（首次或代码变更时）
                     var options = ScriptOptions.Default
                         .WithReferences(
-                            typeof(object).Assembly,                           // System.Runtime
+                            typeof(object).Assembly,                           // System.Private.CoreLib 等
                             typeof(Enumerable).Assembly,                       // System.Linq
+                            typeof(System.IO.File).Assembly,                   // System.IO
+                            typeof(System.Text.Json.JsonDocument).Assembly,    // System.Text.Json
+                            typeof(System.Text.RegularExpressions.Regex).Assembly, // System.Text.RegularExpressions
+                            typeof(Console).Assembly,                          // System.Console
                             typeof(OpenCvSharp.Mat).Assembly,                  // OpenCvSharp
                             typeof(OpenCvSharp.Cv2).Assembly,                  // OpenCvSharp 处理方法
                             typeof(TaskFlowProContext).Assembly                // TaskFlow 本体
                         )
                         .WithImports(
-                            "System",
-                            "System.Linq",
-                            "System.Collections.Generic",
-                            "System.Text",
-                            "System.Text.RegularExpressions",
-                            "OpenCvSharp",
-                            "TaskFlow.Services"
+                            new[] {
+                                "System",
+                                "System.IO",
+                                "System.Linq",
+                                "System.Collections.Generic",
+                                "System.Text",
+                                "System.Text.RegularExpressions",
+                                "System.Text.Json",
+                                "OpenCvSharp",
+                                "TaskFlow.Services"
+                            }.Union(extractedImports).Distinct()
                         )
                         .WithLanguageVersion(Microsoft.CodeAnalysis.CSharp.LanguageVersion.Latest);
-
-                    // 清理代码头部的 using 语句，因为随后代码会被包裹在 {} 中，局部代码块里出现 using 命名空间声明会导致致命的编译错误(CS0106/CS1529)。
-                    // 过滤掉行首的 "using [xxx];" 但保留 "using var xxx =" 和 "using (xxx)" 等合法用法。
-                    var codeLines = task.ScriptCode.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-                    var cleanedCode = new StringBuilder();
-                    foreach (var line in codeLines)
-                    {
-                        var trimmed = line.Trim();
-                        // 如果是引入命名空间的 using 语句（末尾分号，且不包含 = 即非 using 别名或 using var，不包含左括号即将非 using(...)块）
-                        if (trimmed.StartsWith("using ") && trimmed.EndsWith(";") && !trimmed.Contains("=") && !trimmed.Contains("("))
-                        {
-                            continue;
-                        }
-                        cleanedCode.AppendLine(line);
-                    }
 
                     // 将用户代码包裹在 { } 块中，解决 Roslyn 脚本模式下
                     // using var 被误判为命名空间导入指令的歧义问题
