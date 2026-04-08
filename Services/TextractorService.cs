@@ -17,7 +17,6 @@ namespace TaskFlow.Services
 
         private const string TextractorUrl = "https://github.com/Artikash/Textractor/releases/download/v5.2.0/Textractor-5.2.0-Zip-Version-English-Only.zip";
         private readonly string _textractorDir;
-        private readonly string _cliDir;
         private Process? _textractorProcess;
         private bool _isInitialized;
 
@@ -28,14 +27,13 @@ namespace TaskFlow.Services
         {
             var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             _textractorDir = Path.Combine(localAppData, "TaskFlow", "Textractor");
-            _cliDir = Path.Combine(_textractorDir, "Textractor", "x86");
         }
 
         public async Task EnsureTextractorAsync(Action<string>? progressCallback = null)
         {
             if (_isInitialized) return;
 
-            var cliPath = Path.Combine(_cliDir, "TextractorCLI.exe");
+            var cliPath = Path.Combine(_textractorDir, "Textractor", "x86", "TextractorCLI.exe");
             if (!File.Exists(cliPath))
             {
                 progressCallback?.Invoke("Downloading Textractor from GitHub (v5.2.0)...");
@@ -75,6 +73,27 @@ namespace TaskFlow.Services
             _isInitialized = true;
         }
 
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CallingConvention = System.Runtime.InteropServices.CallingConvention.Winapi)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool IsWow64Process(
+            [System.Runtime.InteropServices.In] IntPtr process,
+            [System.Runtime.InteropServices.Out] out bool wow64Process);
+
+        private static bool Is64Bit(Process process)
+        {
+            if (!Environment.Is64BitOperatingSystem) return false;
+            try
+            {
+                if (!IsWow64Process(process.Handle, out bool isWow64))
+                    return false;
+                return !isWow64; 
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public async Task StartAsync(int processId)
         {
             if (!_isInitialized)
@@ -84,7 +103,11 @@ namespace TaskFlow.Services
 
             Stop();
 
-            var cliPath = Path.Combine(_cliDir, "TextractorCLI.exe");
+            var targetProcess = Process.GetProcessById(processId);
+            bool is64 = Is64Bit(targetProcess);
+            string archDir = is64 ? "x64" : "x86";
+
+            var cliPath = Path.Combine(_textractorDir, "Textractor", archDir, "TextractorCLI.exe");
 
             var startInfo = new ProcessStartInfo
             {
@@ -121,7 +144,7 @@ namespace TaskFlow.Services
             _textractorProcess.BeginErrorReadLine();
 
             // Send attach command
-            await _textractorProcess.StandardInput.WriteLineAsync($"attach -P{processId}");
+            await _textractorProcess.StandardInput.WriteAsync($"attach -P{processId}\n");
             await _textractorProcess.StandardInput.FlushAsync();
         }
 
