@@ -172,7 +172,8 @@ namespace TaskFlow.Views.Panels
                     }
                 };
 
-                // 监听 JS 控制台输出（用于调试）
+                // 关闭原生的浏览器右键菜单，使其更具原生应用感
+                ChatWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
                 ChatWebView.CoreWebView2.Settings.AreDevToolsEnabled = true;
 
                 // 监听 JS 回调

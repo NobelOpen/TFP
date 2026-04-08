@@ -499,8 +499,8 @@ namespace TaskFlow.ViewModels
                 else
                 {
                     AiFlowLogger.Info("正在分析需求，确定涉及的卡片类别...");
-                    var (cats, tokens1In, tokens1Out) = await _service.DetermineCategoriesAsync(
-                        userInput, SelectedModelId, _mainViewModel.Settings.RouterModelId, _cts.Token);
+                    var (cats, tokens1In, tokens1Out) = await Task.Run(async () => await _service.DetermineCategoriesAsync(
+                        userInput, SelectedModelId, _mainViewModel.Settings.RouterModelId, _cts.Token));
                     categories = cats;
                     AiFlowLogger.Info($"已确定涉及类别：{string.Join("、", categories)}（Token: {tokens1In}+{tokens1Out}）");
                 }
@@ -594,7 +594,7 @@ namespace TaskFlow.ViewModels
                     StreamingThinking?.Invoke(thinking);
                 };
 
-                var (plan, tokens2In, tokens2Out, isTruncated) = await _service.GeneratePlanAsync(
+                var (plan, tokens2In, tokens2Out, isTruncated) = await Task.Run(async () => await _service.GeneratePlanAsync(
                     userInput, categories, SelectedModelId, _cts.Token, currentFlowContext, history,
                     imageBase64List: imageBase64List.Count > 0 ? imageBase64List : null,
                     onDelta: onDelta, onThinking: onThinking,
@@ -604,7 +604,7 @@ namespace TaskFlow.ViewModels
                         string.IsNullOrWhiteSpace(target) ? "windows" : target),
                     captureBrowserScreenshot: async (port, fullPage, annotate) => await CaptureBrowserPageForAiAsync(port, fullPage, annotate),
                     captureCardImage: async order => await GetCardOutputImageForAiAsync(order),
-                    prefillAssistantMessage: prefill);
+                    prefillAssistantMessage: prefill));
 
                 // 判断方案是否有效内容（卡片、变量、流程或删除操作）
                 if (!plan.HasAnyAction)

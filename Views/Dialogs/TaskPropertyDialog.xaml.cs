@@ -4013,8 +4013,18 @@ namespace TaskFlow.Views.Dialogs
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = false;
-            Close();
+            try
+            {
+                DialogResult = false;
+            }
+            catch (InvalidOperationException)
+            {
+                // Prevent crash if Window wasn't opened via ShowDialog or is already closing
+            }
+            finally
+            {
+                try { Close(); } catch { }
+            }
         }
 
         #endregion

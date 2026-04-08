@@ -161,11 +161,25 @@ namespace TaskFlow.Services
                     using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
                     using var graphics = Graphics.FromImage(bitmap);
 
+                    // 填充特殊背景色，用于检测 PrintWindow 实际渲染的有效区域
+                    // 尤其是为了处理 Win10/11 下 DPI 缩放带来的 PrintWindow 不拉伸问题
+                    graphics.Clear(System.Drawing.Color.FromArgb(255, 1, 2, 3));
+
                     var hdc = graphics.GetHdc();
                     bool success = PrintWindow(hWnd, hdc, PW_RENDERFULLCONTENT);
                     graphics.ReleaseHdc(hdc);
 
-                    if (!success)
+                    bool needsFallback = !success;
+                    if (success)
+                    {
+                        var topLeftColor = bitmap.GetPixel(0, 0);
+                        if (topLeftColor.A == 255 && topLeftColor.R == 1 && topLeftColor.G == 2 && topLeftColor.B == 3)
+                        {
+                            needsFallback = true;
+                        }
+                    }
+
+                    if (needsFallback)
                     {
                         // 回退到传统截图方式
                         graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new System.Drawing.Size(width, height));
@@ -191,6 +205,61 @@ namespace TaskFlow.Services
                     if (mat.Empty())
                     {
                         return (false, null, 0, 0, "图像转换失败");
+                    }
+
+                    if (!needsFallback)
+                    {
+                        // 计算 PrintWindow 实际渲染的有效尺寸，剔除未覆盖的深色背景部分
+                        int actualHeight = 0;
+                        for (int y = height - 1; y >= 0; y--)
+                        {
+                            var p1 = mat.At<Vec3b>(y, width / 4);
+                            var p2 = mat.At<Vec3b>(y, width / 2);
+                            var p3 = mat.At<Vec3b>(y, width * 3 / 4);
+
+                            if ((p1.Item0 != 3 || p1.Item1 != 2 || p1.Item2 != 1) ||
+                                (p2.Item0 != 3 || p2.Item1 != 2 || p2.Item2 != 1) ||
+                                (p3.Item0 != 3 || p3.Item1 != 2 || p3.Item2 != 1))
+                            {
+                                actualHeight = y + 1;
+                                break;
+                            }
+                        }
+
+                        int actualWidth = 0;
+                        if (actualHeight > 0)
+                        {
+                            for (int x = width - 1; x >= 0; x--)
+                            {
+                                var p1 = mat.At<Vec3b>(actualHeight / 4, x);
+                                var p2 = mat.At<Vec3b>(actualHeight / 2, x);
+                                var p3 = mat.At<Vec3b>(actualHeight * 3 / 4, x);
+
+                                if ((p1.Item0 != 3 || p1.Item1 != 2 || p1.Item2 != 1) ||
+                                    (p2.Item0 != 3 || p2.Item1 != 2 || p2.Item2 != 1) ||
+                                    (p3.Item0 != 3 || p3.Item1 != 2 || p3.Item2 != 1))
+                                {
+                                    actualWidth = x + 1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 如果发现有效的实际渲染区域小于窗口总尺寸（说明存在 DPI 缩放导致只画在左上角）
+                        if (actualWidth > 0 && actualHeight > 0 && (actualWidth < width || actualHeight < height))
+                        {
+                            var roi = new Rect(0, 0, actualWidth, actualHeight);
+                            Mat cropped = new Mat(mat, roi).Clone();
+
+                            // 强行把未拉伸的局部画面，还原回物理尺寸
+                            // 这不仅修复了半边黑底，还保证后续特征点匹配时的坐标偏移逻辑完全准确
+                            Mat scaled = new Mat();
+                            Cv2.Resize(cropped, scaled, new OpenCvSharp.Size(width, height), 0, 0, InterpolationFlags.Linear);
+
+                            mat.Dispose();
+                            cropped.Dispose();
+                            mat = scaled;
+                        }
                     }
 
                     // 如果不包含标题栏，裁剪出客户区域
