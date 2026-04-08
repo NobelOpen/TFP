@@ -1646,6 +1646,226 @@ namespace TaskFlow.Services
         }
 
         #endregion
+
+        #region ClipboardWatch
+        private async Task<bool> ExecuteClipboardWatchAsync(ClipboardWatchTaskCard task, CancellationToken ct)
+        {
+            try
+            {
+                int timeoutMs = task.TimeoutMs;
+                var tcs = new TaskCompletionSource<string>();
+
+                // 在 UI 线程创建隐藏的窗口来接收剪贴板消息
+                System.Windows.Interop.HwndSource hwndSource = null;
+                string baseline = task.LastOutputText;
+
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    var parameters = new System.Windows.Interop.HwndSourceParameters("ClipboardWatchWindow")
+                    {
+                        Width = 0, Height = 0, WindowStyle = 0
+                    };
+                    hwndSource = new System.Windows.Interop.HwndSource(parameters);
+                    hwndSource.AddHook((IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
+                    {
+                        const int WM_CLIPBOARDUPDATE = 0x031D;
+                        if (msg == WM_CLIPBOARDUPDATE)
+                        {
+                            try
+                            {
+                                if (!System.Windows.Clipboard.ContainsText())
+                                    return IntPtr.Zero;
+
+                                string currentText = System.Windows.Clipboard.GetText();
+                                if (string.IsNullOrEmpty(currentText))
+                                    return IntPtr.Zero;
+
+                                // 去重检查
+                                string compareBaseline = task.EnableDedup ? task.LastOutputText : baseline;
+                                if (task.TrimWhitespace)
+                                    compareBaseline = compareBaseline.Trim();
+
+                                if (currentText != compareBaseline)
+                                {
+                                    tcs.TrySetResult(currentText);
+                                }
+                            }
+                            catch { /* 剪贴板访问异常，忽略 */ }
+                        }
+                        return IntPtr.Zero;
+                    });
+
+                    // 注册剪贴板变化监听
+                    AddClipboardFormatListener(hwndSource.Handle);
+                });
+
+                try
+                {
+                    // 等待变化或超时
+                    if (timeoutMs > 0)
+                    {
+                        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                        timeoutCts.CancelAfter(timeoutMs);
+
+                        try
+                        {
+                            var registrations = new List<CancellationTokenRegistration>();
+                            registrations.Add(timeoutCts.Token.Register(() => tcs.TrySetCanceled()));
+                            string newText = await tcs.Task;
+
+                            foreach (var reg in registrations) reg.Dispose();
+
+                            // 成功检测到变化
+                            task.OutputText = newText;
+                            task.OutputResult = true;
+                            task.LastOutputText = newText;
+                            Log($"[{DateTime.Now:HH:mm:ss}] 剪贴板监听: 检测到新文本({newText.Length}字)");
+                            return true;
+                        }
+                        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                        {
+                            // 超时
+                            task.OutputText = null;
+                            task.OutputResult = false;
+                            Log($"[{DateTime.Now:HH:mm:ss}] 剪贴板监听: 等待超时 ({timeoutMs}ms)");
+                            return true; // 超时不算失败，OutputResult=false 即可
+                        }
+                    }
+                    else
+                    {
+                        // 无限等待
+                        using var reg = ct.Register(() => tcs.TrySetCanceled());
+                        string newText = await tcs.Task;
+
+                        task.OutputText = newText;
+                        task.OutputResult = true;
+                        task.LastOutputText = newText;
+                        Log($"[{DateTime.Now:HH:mm:ss}] 剪贴板监听: 检测到新文本({newText.Length}字)");
+                        return true;
+                    }
+                }
+                finally
+                {
+                    // 清理：在 UI 线程移除监听并销毁消息窗口
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        if (hwndSource != null)
+                        {
+                            RemoveClipboardFormatListener(hwndSource.Handle);
+                            hwndSource.Dispose();
+                        }
+                    });
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw; // 交给上层处理取消
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = $"剪贴板监听失败: {ex.Message}";
+                return false;
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool AddClipboardFormatListener(IntPtr hwnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool RemoveClipboardFormatListener(IntPtr hwnd);
+
+        #endregion
+
+        #region TextExtractor
+        private async Task<bool> ExecuteTextExtractorAsync(TextExtractorTaskCard task, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var processNameStr = task.ProcessName;
+                if (string.IsNullOrWhiteSpace(processNameStr))
+                {
+                    task.ErrorMessage = "进程名称不能为空";
+                    return false;
+                }
+                
+                var processName = processNameStr.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) 
+                    ? processNameStr.Substring(0, processNameStr.Length - 4) 
+                    : processNameStr;
+
+                var processes = System.Diagnostics.Process.GetProcessesByName(processName);
+                if (processes.Length == 0)
+                {
+                    task.ErrorMessage = $"找不到运行中的 '{processName}' 进程";
+                    return false;
+                }
+
+                var targetProcess = processes[0];
+
+                Log("初始化并注入 Textractor...");
+
+                var textractorService = TextractorService.Instance;
+                await textractorService.EnsureTextractorAsync(msg => Log(msg));
+                await textractorService.StartAsync(targetProcess.Id);
+
+                Log("等待提取文本...");
+
+                var tcs = new TaskCompletionSource<string>();
+                
+                Action<string> onText = (text) => 
+                {
+                    if (task.TrimWhitespace)
+                        text = text.Trim();
+
+                    if (string.IsNullOrWhiteSpace(text)) return;
+
+                    if (task.EnableDedup && text == task.LastOutputText) return;
+
+                    tcs.TrySetResult(text);
+                };
+
+                textractorService.OnTextReceived += onText;
+
+                try
+                {
+                    if (task.TimeoutMs > 0)
+                    {
+                        var timeoutTask = Task.Delay(task.TimeoutMs, cancellationToken);
+                        var completedTask = await Task.WhenAny(tcs.Task, timeoutTask);
+                        if (completedTask == timeoutTask)
+                        {
+                            task.ErrorMessage = "等待提取文本超时";
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        using var reg = cancellationToken.Register(() => tcs.TrySetCanceled());
+                        await tcs.Task;
+                    }
+
+                    var extractedText = await tcs.Task;
+                    task.OutputText = extractedText;
+                    task.LastOutputText = extractedText;
+                    task.OutputResult = true;
+                    return true;
+                }
+                finally
+                {
+                    textractorService.OnTextReceived -= onText;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = $"文本提取出错: {ex.Message}";
+                return false;
+            }
+        }
+        #endregion
     }
 }
-

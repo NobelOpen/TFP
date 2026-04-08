@@ -350,7 +350,7 @@ namespace TaskFlow.Services
         /// <summary>
         /// 构建 Tool Use 工具定义（统一模式：所有工具始终可用，安全由 TaskRiskClassifier 运行时把关）
         /// </summary>
-        private static JArray BuildToolDefinitions()
+        public static JArray BuildToolDefinitions()
         {
             var tools = new JArray();
 
@@ -396,7 +396,7 @@ namespace TaskFlow.Services
             // 工具2: submit_plan —— 提交操作方案
             var planProps = new JObject
             {
-                ["plan"] = new JObject { ["type"] = "array", ["description"] = "新建任务卡片列表。每个元素: {step, taskType, name, description, properties, sourceStep?, templateSourceStep?, ifBody?, elseBody?, loopBody?}", ["items"] = new JObject { ["type"] = "object" } },
+                ["plan"] = new JObject { ["type"] = "array", ["description"] = "新建任务卡片列表。每个元素: {step, taskType, name, description, properties(注意: 若 taskType 为 CustomScript，其 scriptCode 必须使用原生 C# 代码编写，严禁使用 Python 等其他语言), sourceStep?, templateSourceStep?, ifBody?, elseBody?, loopBody?}", ["items"] = new JObject { ["type"] = "object" } },
                 ["variables"] = new JObject { ["type"] = "array", ["description"] = "需要声明的变量。每个元素: {name, type(Int/String/Bool/Double), value, description}", ["items"] = new JObject { ["type"] = "object" } },
                 ["deleteVariables"] = new JObject { ["type"] = "array", ["description"] = "要删除的变量名列表（不带@前缀）", ["items"] = new JObject { ["type"] = "string" } },
                 ["modifyVariables"] = new JObject { ["type"] = "array", ["description"] = "要修改的变量", ["items"] = new JObject { ["type"] = "object" } },

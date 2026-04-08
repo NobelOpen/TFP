@@ -992,4 +992,104 @@ namespace TaskFlow.Models.TaskCards
             return null;
         }
     }
+
+    /// <summary>
+    /// 剪贴板监听任务卡片 - 使用 Win32 AddClipboardFormatListener 事件驱动，
+    /// 等待剪贴板文本变化后立即返回新文本。
+    /// 典型场景：配合 Textractor 的 Copy to Clipboard 扩展，实时获取游戏对话文本。
+    /// </summary>
+    public partial class ClipboardWatchTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.ClipboardWatch;
+
+        /// <summary>
+        /// 最大等待时间（毫秒，0=无限等待直到检测到变化）
+        /// </summary>
+        [ObservableProperty]
+        private int _timeoutMs = 10000;
+
+        /// <summary>
+        /// 是否启用去重（忽略与上次完全相同的文本）
+        /// 启用后，连续收到相同文本不会触发输出。
+        /// </summary>
+        [ObservableProperty]
+        private bool _enableDedup = true;
+
+        /// <summary>
+        /// 是否自动 Trim 前后空白
+        /// </summary>
+        [ObservableProperty]
+        private bool _trimWhitespace = true;
+
+        /// <summary>
+        /// 上一次输出的文本（运行时跨迭代保持，用于去重判断）
+        /// 不序列化：每次打开流程时重新初始化。
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private string _lastOutputText = string.Empty;
+
+        public override bool OutputsText => true;
+        public override bool OutputsBoolResult => true;
+
+        public ClipboardWatchTaskCard()
+        {
+            Name = "剪贴板监听";
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            // 注意：不重置 LastOutputText，以便在循环中保持去重状态
+        }
+    }
+
+    /// <summary>
+    /// TextExtractor 文本提取卡片
+    /// </summary>
+    public partial class TextExtractorTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.TextExtractor;
+
+        /// <summary>
+        /// 目标游戏或程序的进程名称 (不用带.exe)
+        /// </summary>
+        [ObservableProperty]
+        private string _processName = string.Empty;
+
+        /// <summary>
+        /// 去重机制：忽略与上次读取完全一样的文本内容
+        /// </summary>
+        [ObservableProperty]
+        private bool _enableDedup = true;
+
+        /// <summary>
+        /// 是否自动清除首尾空白字符
+        /// </summary>
+        [ObservableProperty]
+        private bool _trimWhitespace = true;
+
+        /// <summary>
+        /// 超时时间(毫秒)，0代表无限等待
+        /// </summary>
+        [ObservableProperty]
+        private int _timeoutMs = 0;
+
+        [JsonIgnore]
+        [ObservableProperty]
+        private string _lastOutputText = string.Empty;
+
+        public override bool OutputsText => true;
+        public override bool OutputsBoolResult => true;
+
+        public TextExtractorTaskCard()
+        {
+            Name = "文本提取 (TextExtractor)";
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+        }
+    }
 }

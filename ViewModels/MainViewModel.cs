@@ -1080,6 +1080,8 @@ namespace TaskFlow.ViewModels
                 TaskType.BrowserCdpCommand => new BrowserCdpCommandTaskCard(),
                 TaskType.BrowserScreenshot => new BrowserScreenshotTaskCard(),
                 TaskType.HttpRequest => new HttpRequestTaskCard(),
+                TaskType.ClipboardWatch => new ClipboardWatchTaskCard(),
+                TaskType.TextExtractor => new TextExtractorTaskCard(),
                 _ => throw new ArgumentException($"Unsupported task type: {taskType}")
             };
         }

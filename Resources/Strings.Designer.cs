@@ -1026,7 +1026,16 @@ namespace TaskFlow.Resources {
         public static string Prop_HttpHeaders => ResourceManager.GetString("Prop_HttpHeaders", resourceCulture) ?? "Custom Headers (Key: Value per line)";
         public static string Prop_HttpBody => ResourceManager.GetString("Prop_HttpBody", resourceCulture) ?? "Request Body (JSON)";
         public static string Prop_HttpTimeout => ResourceManager.GetString("Prop_HttpTimeout", resourceCulture) ?? "Timeout (ms)";
+        // ——— ClipboardWatch 剪贴板监听卡片 ———
         public static string AC_HttpStatusCode => ResourceManager.GetString("AC_HttpStatusCode", resourceCulture) ?? "HTTP Status Code";
 
-}
+        public static string TaskType_ClipboardWatch => ResourceManager.GetString("TaskType_ClipboardWatch", resourceCulture) ?? "Clipboard Watch";
+        public static string Prop_ClipboardTimeout => ResourceManager.GetString("Prop_ClipboardTimeout", resourceCulture) ?? "Timeout (ms, 0=infinite)";
+        public static string Prop_ClipboardDedup => ResourceManager.GetString("Prop_ClipboardDedup", resourceCulture) ?? "Enable deduplication (skip identical text)";
+        public static string Prop_ClipboardTrim => ResourceManager.GetString("Prop_ClipboardTrim", resourceCulture) ?? "Auto trim whitespace";
+
+        // ——— TextExtractor 文本提取卡片 ———
+        public static string TaskType_TextExtractor => ResourceManager.GetString("TaskType_TextExtractor", resourceCulture) ?? "TextExtractor (Game Hook)";
+        public static string Prop_TargetProcess => ResourceManager.GetString("Prop_TargetProcess", resourceCulture) ?? "Target Process Name";
+    }
 }

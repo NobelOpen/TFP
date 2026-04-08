@@ -2727,5 +2727,10 @@ See our troubleshooting guide for more help.</value>
   <data name="Prop_HttpBody" xml:space="preserve"><value>Request Body (JSON)</value></data>
   <data name="Prop_HttpTimeout" xml:space="preserve"><value>Timeout (ms)</value></data>
   <data name="AC_HttpStatusCode" xml:space="preserve"><value>HTTP Status Code</value></data>
+  <data name="TaskType_ClipboardWatch" xml:space="preserve"><value>Clipboard Watch</value></data>
+  <data name="Prop_ClipboardTimeout" xml:space="preserve"><value>Timeout (ms, 0=infinite)</value></data>
+  <data name="Prop_ClipboardDedup" xml:space="preserve"><value>Enable deduplication (skip identical text)</value></data>
+  <data name="Prop_ClipboardTrim" xml:space="preserve"><value>Auto trim whitespace</value></data>
+  <data name="TaskType_TextExtractor" xml:space="preserve"><value>TextExtractor (Game Hook)</value></data>
+  <data name="Prop_TargetProcess" xml:space="preserve"><value>Target Process Name</value></data>
 </root>
-

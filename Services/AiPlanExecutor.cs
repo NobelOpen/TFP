@@ -698,6 +698,13 @@ namespace TaskFlow.Services
         {
             if (!Enum.TryParse<Models.TaskCards.TaskType>(step.TaskType, out var taskType))
             {
+                reports.Add(new AiFlowReportItem
+                {
+                    TaskCardId = Guid.Empty,
+                    CardName = $"#{step.Step} {step.Name}",
+                    PropertyName = "TaskType",
+                    Hint = $"找不到名为 '{step.TaskType}' 的卡片类型！请严格使用已知枚举名称。"
+                });
                 _mainViewModel.AddLog($"[AI] 跳过未知卡片类型: {step.TaskType}");
                 return;
             }
@@ -764,6 +771,13 @@ namespace TaskFlow.Services
         {
             if (!Enum.TryParse<Models.TaskCards.TaskType>(step.TaskType, out var taskType))
             {
+                reports.Add(new AiFlowReportItem
+                {
+                    TaskCardId = Guid.Empty,
+                    CardName = $"#{step.Step} {step.Name}",
+                    PropertyName = "TaskType",
+                    Hint = $"找不到名为 '{step.TaskType}' 的卡片类型！请严格使用已知枚举名称。"
+                });
                 AiFlowLogger.Warn($"跳过未知卡片类型: {step.TaskType}");
                 return null;
             }

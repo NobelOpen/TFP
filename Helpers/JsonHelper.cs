@@ -318,6 +318,12 @@ namespace TaskFlow.Helpers
                 TaskType.BrowserSimulatedClick => new BrowserSimulatedClickTaskCard(),
                 TaskType.BrowserCdpCommand => new BrowserCdpCommandTaskCard(),
                 TaskType.BrowserScreenshot => new BrowserScreenshotTaskCard(),
+                TaskType.HttpRequest => new HttpRequestTaskCard(),
+                TaskType.EndAllFlows => new EndAllFlowsTaskCard(),
+                TaskType.FileRead => new FileReadTaskCard(),
+                TaskType.ArraySearch => new ArraySearchTaskCard(),
+                TaskType.ClipboardWatch => new ClipboardWatchTaskCard(),
+                TaskType.TextExtractor => new TextExtractorTaskCard(),
                 _ => throw new NotSupportedException($"Unknown task type: {taskType}")
             };
 

@@ -400,6 +400,12 @@ namespace TaskFlow.Views.Dialogs
                 case HttpRequestTaskCard httpRequestCard:
                     AddHttpRequestProperties(httpRequestCard);
                     break;
+                case ClipboardWatchTaskCard clipboardWatchCard:
+                    AddClipboardWatchProperties(clipboardWatchCard);
+                    break;
+                case TextExtractorTaskCard textExtractorCard:
+                    AddTextExtractorProperties(textExtractorCard);
+                    break;
             }
         }
 
@@ -2289,6 +2295,12 @@ namespace TaskFlow.Views.Dialogs
 
                     case BrowserGetTextTaskCard browserGetCard:
                         SaveBrowserGetTextProperties(browserGetCard);
+                        break;
+                    case ClipboardWatchTaskCard clipboardWatchCard:
+                        SaveClipboardWatchProperties(clipboardWatchCard);
+                        break;
+                    case TextExtractorTaskCard textExtractorCard:
+                        SaveTextExtractorProperties(textExtractorCard);
                         break;
 
                     case BrowserExecuteJsTaskCard browserJsCard:
@@ -4822,6 +4834,52 @@ namespace TaskFlow.Views.Dialogs
             if (GetStringValue("CustomHeaders", out string headers)) card.CustomHeaders = headers;
             if (GetStringValue("RequestBody", out string body)) card.RequestBody = body;
             if (GetIntValue("TimeoutMs", out int timeout)) card.TimeoutMs = timeout;
+        }
+
+        #endregion
+
+        #region ClipboardWatch Properties
+
+        private void AddClipboardWatchProperties(ClipboardWatchTaskCard card)
+        {
+            AddIntProperty("TimeoutMs", Strings.Prop_ClipboardTimeout, card.TimeoutMs);
+            AddCheckboxProperty("EnableDedup", Strings.Prop_ClipboardDedup, card.EnableDedup);
+            AddCheckboxProperty("TrimWhitespace", Strings.Prop_ClipboardTrim, card.TrimWhitespace);
+        }
+
+        private void SaveClipboardWatchProperties(ClipboardWatchTaskCard card)
+        {
+            if (GetIntValue("TimeoutMs", out int timeout)) card.TimeoutMs = timeout;
+
+            if (_propertyControls.TryGetValue("EnableDedup", out var dedupCtrl) && dedupCtrl is CheckBox dedupCb)
+                card.EnableDedup = dedupCb.IsChecked == true;
+
+            if (_propertyControls.TryGetValue("TrimWhitespace", out var trimCtrl) && trimCtrl is CheckBox trimCb)
+                card.TrimWhitespace = trimCb.IsChecked == true;
+        }
+
+        #endregion
+
+        #region TextExtractor Properties
+
+        private void AddTextExtractorProperties(TextExtractorTaskCard card)
+        {
+            AddTextProperty("ProcessName", Strings.Prop_TargetProcess, card.ProcessName);
+            AddIntProperty("TimeoutMs", Strings.Prop_ClipboardTimeout, card.TimeoutMs);
+            AddCheckboxProperty("EnableDedup", Strings.Prop_ClipboardDedup, card.EnableDedup);
+            AddCheckboxProperty("TrimWhitespace", Strings.Prop_ClipboardTrim, card.TrimWhitespace);
+        }
+
+        private void SaveTextExtractorProperties(TextExtractorTaskCard card)
+        {
+            if (GetStringValue("ProcessName", out string processName)) card.ProcessName = processName;
+            if (GetIntValue("TimeoutMs", out int timeout)) card.TimeoutMs = timeout;
+
+            if (_propertyControls.TryGetValue("EnableDedup", out var dedupCtrl) && dedupCtrl is CheckBox dedupCb)
+                card.EnableDedup = dedupCb.IsChecked == true;
+
+            if (_propertyControls.TryGetValue("TrimWhitespace", out var trimCtrl) && trimCtrl is CheckBox trimCb)
+                card.TrimWhitespace = trimCb.IsChecked == true;
         }
 
         #endregion

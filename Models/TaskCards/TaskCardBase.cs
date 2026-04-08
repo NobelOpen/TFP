@@ -50,6 +50,8 @@ namespace TaskFlow.Models.TaskCards
         WinSimulateInput,
         WinSubtitle,
         WinFindFile,
+        ClipboardWatch,
+        TextExtractor,
 
         // ADB操作
         AdbConnect,
@@ -381,6 +383,8 @@ namespace TaskFlow.Models.TaskCards
             TaskType.BrowserCdpCommand => TaskFlow.Resources.Strings.TaskType_BrowserCdpCommand,
             TaskType.BrowserScreenshot => TaskFlow.Resources.Strings.TaskType_BrowserScreenshot,
             TaskType.HttpRequest => TaskFlow.Resources.Strings.TaskType_HttpRequest,
+            TaskType.ClipboardWatch => TaskFlow.Resources.Strings.TaskType_ClipboardWatch,
+            TaskType.TextExtractor => TaskFlow.Resources.Strings.TaskType_TextExtractor,
             _ => type.ToString()
         };
 

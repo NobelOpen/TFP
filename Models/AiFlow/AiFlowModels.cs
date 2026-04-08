@@ -267,6 +267,9 @@ namespace TaskFlow.Models.AiFlow
     {
         /// <summary>流程名称</summary>
         public string Name { get; set; } = "";
+
+        /// <summary>是否为主流程</summary>
+        public bool IsMainFlow { get; set; }
     }
 
     /// <summary>
@@ -288,7 +291,10 @@ namespace TaskFlow.Models.AiFlow
                 var name = token["name"]?.Value<string>()
                         ?? token["Name"]?.Value<string>()
                         ?? "";
-                return new AiFlowNewTab { Name = name };
+                var isMainFlow = token["isMainFlow"]?.Value<bool>()
+                              ?? token["IsMainFlow"]?.Value<bool>()
+                              ?? false;
+                return new AiFlowNewTab { Name = name, IsMainFlow = isMainFlow };
             }
             return new AiFlowNewTab();
         }
@@ -298,6 +304,11 @@ namespace TaskFlow.Models.AiFlow
             writer.WriteStartObject();
             writer.WritePropertyName("name");
             writer.WriteValue(value?.Name ?? "");
+            if (value != null && value.IsMainFlow)
+            {
+                writer.WritePropertyName("isMainFlow");
+                writer.WriteValue(value.IsMainFlow);
+            }
             writer.WriteEndObject();
         }
     }

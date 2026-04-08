@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="TaskFlow.csproj" />
+  <Project Path="TaskFlow.Mcp\TaskFlow.Mcp.csproj" />
 </Solution>

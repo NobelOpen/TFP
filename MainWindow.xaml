@@ -663,6 +663,7 @@
                                             <MenuItem Header="{x:Static res:Strings.TaskType_WinTextInput}" Click="AddTask_Click" Tag="WinTextInput"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_InputCombo}" Click="AddTask_Click" Tag="InputCombo"/>
                                             <MenuItem Header="{x:Static res:Strings.TaskType_EventListener}" Click="AddTask_Click" Tag="EventListener"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_ClipboardWatch}" Click="AddTask_Click" Tag="ClipboardWatch"/>
                                         </MenuItem>
                                         <!-- ADB -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_AdbOps}">

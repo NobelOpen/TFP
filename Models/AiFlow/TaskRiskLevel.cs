@@ -63,6 +63,8 @@ namespace TaskFlow.Models.AiFlow
             TaskType.AdbClick => TaskRiskLevel.Medium,
             TaskType.AdbCloseApp => TaskRiskLevel.Medium,
             TaskType.AdbDisconnect => TaskRiskLevel.Medium,
+            TaskType.ClipboardWatch => TaskRiskLevel.Low,
+            TaskType.TextExtractor => TaskRiskLevel.Medium,
             TaskType.EventListener => TaskRiskLevel.Medium,
             TaskType.InputCombo => TaskRiskLevel.Medium,
             TaskType.WinTextInput => TaskRiskLevel.Medium,

@@ -62,6 +62,9 @@ namespace TaskFlow
 
         protected override void OnExit(ExitEventArgs e)
         {
+            // 清理 MCP 服务
+            TaskFlow.Services.McpServerService.Instance.Stop();
+
             // 清理 Toast 通知注册（避免通知残留在系统通知中心）
             try { ToastNotificationManagerCompat.Uninstall(); } catch { }
             base.OnExit(e);

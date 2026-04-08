@@ -856,7 +856,8 @@ namespace TaskFlow
                 (TaskType.WinUiAutomation, "WinUiAutomation"), (TaskType.WinSimulateInput, "WinSimulateInput"),
                 (TaskType.WinSubtitle, "WinSubtitle"), (TaskType.WinFindFile, "WinFindFile"),
                 (TaskType.WinTextInput, "WinTextInput"),
-                (TaskType.InputCombo, "InputCombo"), (TaskType.EventListener, "EventListener") })
+                (TaskType.InputCombo, "InputCombo"), (TaskType.EventListener, "EventListener"),
+                (TaskType.ClipboardWatch, "ClipboardWatch"), (TaskType.TextExtractor, "TextExtractor") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;

@@ -560,6 +560,12 @@ namespace TaskFlow.Services
                     // 网络请求（静默后台）
                     TaskType.HttpRequest => await ExecuteHttpRequestAsync((HttpRequestTaskCard)task, allTasks, cancellationToken),
 
+                    // 剪贴板监听（事件驱动）
+                    TaskType.ClipboardWatch => await ExecuteClipboardWatchAsync((ClipboardWatchTaskCard)task, cancellationToken),
+
+                    // 内置Textractor引擎
+                    TaskType.TextExtractor => await ExecuteTextExtractorAsync((TextExtractorTaskCard)task, cancellationToken),
+
                     _ => false
                 };
 

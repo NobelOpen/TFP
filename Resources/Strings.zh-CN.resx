@@ -978,5 +978,10 @@
   <data name="Prop_HttpBody" xml:space="preserve"><value>请求体 (JSON)</value></data>
   <data name="Prop_HttpTimeout" xml:space="preserve"><value>超时 (毫秒)</value></data>
   <data name="AC_HttpStatusCode" xml:space="preserve"><value>HTTP 状态码</value></data>
+  <data name="TaskType_ClipboardWatch" xml:space="preserve"><value>剪贴板监听</value></data>
+  <data name="Prop_ClipboardTimeout" xml:space="preserve"><value>超时时间 (毫秒, 0=无限等待)</value></data>
+  <data name="Prop_ClipboardDedup" xml:space="preserve"><value>启用去重 (跳过重复文本)</value></data>
+  <data name="Prop_ClipboardTrim" xml:space="preserve"><value>自动去除首尾空白</value></data>
+  <data name="TaskType_TextExtractor" xml:space="preserve"><value>文本提取 (游戏钩子)</value></data>
+  <data name="Prop_TargetProcess" xml:space="preserve"><value>目标进程名</value></data>
 </root>
-
