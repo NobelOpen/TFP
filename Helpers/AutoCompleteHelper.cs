@@ -346,6 +346,12 @@ namespace TaskFlow.Helpers
                 outputs.Add(new TaskOutput(Strings.AC_HttpStatusCode, "状态码"));
             }
 
+            // 多路线追踪大脑输出：是否穷尽
+            if (task.TaskType == TaskType.AutoRouteTracker)
+            {
+                outputs.Add(new TaskOutput(Strings.Output_IsExhausted ?? "是否穷尽", nameof(AutoRouteTrackerTaskCard.OutputIsExhausted)));
+            }
+
             return outputs;
         }
 

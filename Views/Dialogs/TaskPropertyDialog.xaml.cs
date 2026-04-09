@@ -403,9 +403,16 @@ namespace TaskFlow.Views.Dialogs
                 case ClipboardWatchTaskCard clipboardWatchCard:
                     AddClipboardWatchProperties(clipboardWatchCard);
                     break;
-                case TextExtractorTaskCard textExtractorCard:
-                    AddTextExtractorProperties(textExtractorCard);
+                case AutoRouteTrackerTaskCard autoRouteTrackerCard:
+                    AddAutoRouteTrackerProperties(autoRouteTrackerCard);
                     break;
+                case OcrKeywordAnchorTaskCard ocrKeywordAnchorCard:
+                    AddOcrKeywordAnchorProperties(ocrKeywordAnchorCard);
+                    break;
+                case AutoRouteAdvanceTaskCard autoRouteAdvanceCard:
+                    AddAutoRouteAdvanceProperties(autoRouteAdvanceCard);
+                    break;
+
             }
         }
 
@@ -2299,8 +2306,14 @@ namespace TaskFlow.Views.Dialogs
                     case ClipboardWatchTaskCard clipboardWatchCard:
                         SaveClipboardWatchProperties(clipboardWatchCard);
                         break;
-                    case TextExtractorTaskCard textExtractorCard:
-                        SaveTextExtractorProperties(textExtractorCard);
+                    case AutoRouteTrackerTaskCard autoRouteTrackerCard:
+                        SaveAutoRouteTrackerProperties(autoRouteTrackerCard);
+                        break;
+                    case OcrKeywordAnchorTaskCard ocrKeywordAnchorCard:
+                        SaveOcrKeywordAnchorProperties(ocrKeywordAnchorCard);
+                        break;
+                    case AutoRouteAdvanceTaskCard autoRouteAdvanceCard:
+                        SaveAutoRouteAdvanceProperties(autoRouteAdvanceCard);
                         break;
 
                     case BrowserExecuteJsTaskCard browserJsCard:
@@ -4860,28 +4873,78 @@ namespace TaskFlow.Views.Dialogs
 
         #endregion
 
-        #region TextExtractor Properties
+        #region New OCR and Route Properties
 
-        private void AddTextExtractorProperties(TextExtractorTaskCard card)
+        private void AddSourceOcrTaskProperty(Guid? sourceTaskId)
         {
-            AddTextProperty("ProcessName", Strings.Prop_TargetProcess, card.ProcessName);
-            AddIntProperty("TimeoutMs", Strings.Prop_ClipboardTimeout, card.TimeoutMs);
-            AddCheckboxProperty("EnableDedup", Strings.Prop_ClipboardDedup, card.EnableDedup);
-            AddCheckboxProperty("TrimWhitespace", Strings.Prop_ClipboardTrim, card.TrimWhitespace);
+            var label = new TextBlock { Text = Strings.Prop_ImageSourceTask, Style = FindResource("PropertyLabel") as Style };
+            var combo = new ComboBox { Foreground = Brushes.Black, Style = FindResource("PropertyComboBox") as Style };
+            
+            combo.Items.Add(new ComboBoxItem { Content = Strings.Prop_SelectTask, Tag = Guid.Empty });
+            
+            var ocrCards = _viewModel.TaskCards.Where(t => t.Id != _task.Id && t is ImgOcrTaskCard).ToList();
+            foreach (var c in ocrCards)
+            {
+                int index = _viewModel.TaskCards.IndexOf(c) + 1;
+                var item = new ComboBoxItem { Content = $"#{index}. {c.Name}", Tag = c.Id };
+                combo.Items.Add(item);
+                if (sourceTaskId.HasValue && c.Id == sourceTaskId.Value)
+                    combo.SelectedItem = item;
+            }
+            
+            if (combo.SelectedItem == null && combo.Items.Count > 0)
+                combo.SelectedIndex = 0;
+                
+            PropertyPanel.Children.Add(label);
+            PropertyPanel.Children.Add(combo);
+            _propertyControls["SourceOcrTaskId"] = combo;
         }
 
-        private void SaveTextExtractorProperties(TextExtractorTaskCard card)
+        private void SaveSourceOcrTaskProperty(Action<Guid?> setSourceId)
         {
-            if (GetStringValue("ProcessName", out string processName)) card.ProcessName = processName;
-            if (GetIntValue("TimeoutMs", out int timeout)) card.TimeoutMs = timeout;
+            if (_propertyControls.TryGetValue("SourceOcrTaskId", out var ctrl) && 
+                ctrl is ComboBox cb && cb.SelectedItem is ComboBoxItem item && 
+                item.Tag is Guid id)
+            {
+                setSourceId(id == Guid.Empty ? null : id);
+            }
+        }
 
-            if (_propertyControls.TryGetValue("EnableDedup", out var dedupCtrl) && dedupCtrl is CheckBox dedupCb)
-                card.EnableDedup = dedupCb.IsChecked == true;
+        private void AddOcrKeywordAnchorProperties(OcrKeywordAnchorTaskCard card)
+        {
+            AddSourceOcrTaskProperty(card.SourceOcrTaskId);
+            AddTextProperty("TargetKeywords", Strings.Prop_TargetKeywords, card.TargetKeywords);
+        }
+        private void SaveOcrKeywordAnchorProperties(OcrKeywordAnchorTaskCard card)
+        {
+            SaveSourceOcrTaskProperty(id => card.SourceOcrTaskId = id);
+            if (GetStringValue("TargetKeywords", out string keywords)) 
+                card.TargetKeywords = keywords;
+        }
 
-            if (_propertyControls.TryGetValue("TrimWhitespace", out var trimCtrl) && trimCtrl is CheckBox trimCb)
-                card.TrimWhitespace = trimCb.IsChecked == true;
+        private void AddAutoRouteTrackerProperties(AutoRouteTrackerTaskCard card)
+        {
+            AddSourceOcrTaskProperty(card.SourceOcrTaskId);
+            AddFilePathProperty("RouteStateFilePath", Strings.Prop_RouteStateFilePath, card.RouteStateFilePath, "JSON Files (*.json)|*.json|All Files (*.*)|*.*", true);
+        }
+        private void SaveAutoRouteTrackerProperties(AutoRouteTrackerTaskCard card)
+        {
+            SaveSourceOcrTaskProperty(id => card.SourceOcrTaskId = id);
+            if (GetStringValue("RouteStateFilePath", out string jsonPath))
+                card.RouteStateFilePath = jsonPath;
+        }
+
+        private void AddAutoRouteAdvanceProperties(AutoRouteAdvanceTaskCard card)
+        {
+            AddFilePathProperty("RouteStateFilePath", Strings.Prop_RouteStateFilePath, card.RouteStateFilePath, "JSON Files (*.json)|*.json|All Files (*.*)|*.*", true);
+        }
+        private void SaveAutoRouteAdvanceProperties(AutoRouteAdvanceTaskCard card)
+        {
+            if (GetStringValue("RouteStateFilePath", out string jsonPath))
+                card.RouteStateFilePath = jsonPath;
         }
 
         #endregion
+
     }
 }

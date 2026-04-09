@@ -719,6 +719,9 @@
                                         <!-- Control Flow -->
                                         <MenuItem Header="{x:Static res:Strings.Menu_ControlFlow}">
                                             <MenuItem Header="{x:Static res:Strings.TaskType_BreakLoop}" Click="AddTask_Click" Tag="BreakLoop"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_AutoRouteTracker}" Click="AddTask_Click" Tag="AutoRouteTracker"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_OcrKeywordAnchor}" Click="AddTask_Click" Tag="OcrKeywordAnchor"/>
+                                            <MenuItem Header="{x:Static res:Strings.TaskType_AutoRouteAdvance}" Click="AddTask_Click" Tag="AutoRouteAdvance"/>
                                             <MenuItem Header="{x:Static res:Strings.Menu_IfElseBranch}" Click="AddBranch_Click" Tag="IfElse"/>
                                             <MenuItem Header="{x:Static res:Strings.Menu_ForLoop}" Click="AddBranch_Click" Tag="ForLoop"/>
                                             <Separator/>

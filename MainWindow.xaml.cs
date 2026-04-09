@@ -350,6 +350,7 @@ namespace TaskFlow
                     if (ViewModel.SelectedTab != null)
                     {
                         EnsureFlowListBox(ViewModel.SelectedTab);
+                        Dispatcher.BeginInvoke(new Action(InitFlowTabIndicator), System.Windows.Threading.DispatcherPriority.Loaded);
                     }
                 });
             }

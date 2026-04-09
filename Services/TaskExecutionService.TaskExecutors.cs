@@ -330,7 +330,7 @@ namespace TaskFlow.Services
             try
             {
                 // 根据选择的引擎执行 OCR
-                (bool Success, string Text, string? Error) result;
+                (bool Success, string Text, System.Collections.Generic.List<TaskFlow.Models.TaskCards.OcrResultItem>? Items, string? Error) result;
                 if (task.OcrEngine == OcrEngine.WeChatOCR && _weChatOcrService.IsAvailable)
                 {
                     result = await _weChatOcrService.RecognizeAsync(imageToOcr);
@@ -347,6 +347,25 @@ namespace TaskFlow.Services
                 {
                     var cleanedText = CleanOcrText(result.Text);
                     task.OutputText = cleanedText;
+                    
+                    if (result.Items != null)
+                    {
+                        var adjustedItems = new System.Collections.Generic.List<TaskFlow.Models.TaskCards.OcrResultItem>();
+                        foreach (var item in result.Items)
+                        {
+                            item.X += task.RoiX;
+                            item.Y += task.RoiY;
+                            adjustedItems.Add(item);
+                        }
+                        task.OutputOcrResults = adjustedItems;
+                        task.OutputResultCount = adjustedItems.Count;
+                    }
+                    else
+                    {
+                        task.OutputOcrResults = new();
+                        task.OutputResultCount = 0;
+                    }
+                    
                     Log($"[{DateTime.Now:HH:mm:ss}] OCR识别结果: {cleanedText}");
 
                     if (task.CheckContainsText && !string.IsNullOrEmpty(task.TargetText))
@@ -1778,94 +1797,235 @@ namespace TaskFlow.Services
 
         #endregion
 
-        #region TextExtractor
-        private async Task<bool> ExecuteTextExtractorAsync(TextExtractorTaskCard task, CancellationToken cancellationToken)
+        #region Galgame AutoTracker
+        
+        // Define internal states mimicking the JSON
+        private class DfsNode
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("total")]
+            public int TotalChoices { get; set; }
+            [System.Text.Json.Serialization.JsonPropertyName("index")]
+            public int CurrentIndex { get; set; }
+        }
+        
+        private class RouteState
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("nodes")]
+            public List<DfsNode> Nodes { get; set; } = new();
+        }
+
+        private async Task<bool> ExecuteAutoRouteTrackerAsync(AutoRouteTrackerTaskCard task, IList<TaskCardBase> allTasks, CancellationToken cancellationToken)
         {
             try
             {
-                var processNameStr = task.ProcessName;
-                if (string.IsNullOrWhiteSpace(processNameStr))
+                // 1. Get OCR results
+                ImgOcrTaskCard? sourceCard = null;
+                if (task.SourceOcrTaskId.HasValue)
                 {
-                    task.ErrorMessage = "进程名称不能为空";
+                    sourceCard = allTasks.FirstOrDefault(t => t.Id == task.SourceOcrTaskId.Value) as ImgOcrTaskCard;
+                }
+                
+                if (sourceCard == null)
+                {
+                    task.ErrorMessage = "未绑定图像OCR资源或未找到该卡片";
                     return false;
                 }
                 
-                var processName = processNameStr.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) 
-                    ? processNameStr.Substring(0, processNameStr.Length - 4) 
-                    : processNameStr;
-
-                var processes = System.Diagnostics.Process.GetProcessesByName(processName);
-                if (processes.Length == 0)
+                if (sourceCard.OutputResultCount == 0 || sourceCard.OutputOcrResults.Count == 0)
                 {
-                    task.ErrorMessage = $"找不到运行中的 '{processName}' 进程";
+                    task.ErrorMessage = "OCR 未输出任何选项数据";
                     return false;
                 }
 
-                var targetProcess = processes[0];
+                // Filtering: Filter out empty strings or strings that look like noise if neccessary.
+                // Assuming all elements in OutputOcrResults are valid choices.
+                int numChoices = sourceCard.OutputResultCount;
 
-                Log("初始化并注入 Textractor...");
-
-                var textractorService = TextractorService.Instance;
-                await textractorService.EnsureTextractorAsync(msg => Log(msg));
-                await textractorService.StartAsync(targetProcess.Id);
-
-                Log("等待提取文本...");
-
-                var tcs = new TaskCompletionSource<string>();
+                // 2. Load Route State JSON
+                string jsonPath = task.RouteStateFilePath;
+                // If relative path, place it relative to the executable
+                if (!Path.IsPathRooted(jsonPath))
+                {
+                    jsonPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".agents", jsonPath);
+                }
                 
-                Action<string> onText = (text) => 
+                Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
+
+                RouteState state = new RouteState();
+                if (File.Exists(jsonPath))
                 {
-                    if (task.TrimWhitespace)
-                        text = text.Trim();
-
-                    if (string.IsNullOrWhiteSpace(text)) return;
-
-                    if (task.EnableDedup && text == task.LastOutputText) return;
-
-                    tcs.TrySetResult(text);
-                };
-
-                textractorService.OnTextReceived += onText;
-
-                try
-                {
-                    if (task.TimeoutMs > 0)
+                    try
                     {
-                        var timeoutTask = Task.Delay(task.TimeoutMs, cancellationToken);
-                        var completedTask = await Task.WhenAny(tcs.Task, timeoutTask);
-                        if (completedTask == timeoutTask)
-                        {
-                            task.ErrorMessage = "等待提取文本超时";
-                            return false;
-                        }
+                        string jsonText = await File.ReadAllTextAsync(jsonPath, cancellationToken);
+                        state = System.Text.Json.JsonSerializer.Deserialize<RouteState>(jsonText) ?? new RouteState();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"[{DateTime.Now:HH:mm:ss}] 路线判定: 读取JSON失败 {ex.Message}，将作为新档开始。");
+                    }
+                }
+
+                // 3. Evaluate state
+                int d = task.CurrentDepth;
+                int targetIndex = 0;
+
+                if (state.Nodes == null) state.Nodes = new();
+
+                if (d >= state.Nodes.Count)
+                {
+                    // Newly discovered depth node!
+                    state.Nodes.Add(new DfsNode { TotalChoices = numChoices, CurrentIndex = 0 });
+                    targetIndex = 0;
+                    Log($"[{DateTime.Now:HH:mm:ss}] 路线判定: 发现新分歧(深度={d}, 选项数={numChoices})，选择第一个路线。");
+                }
+                else
+                {
+                    // Existing node, fetch the index
+                    var node = state.Nodes[d];
+                    // Correct potential mismatches in OCR choice counting
+                    if (numChoices != node.TotalChoices)
+                    {
+                        Log($"[{DateTime.Now:HH:mm:ss}] 路线判定: 警告！历史记录的选项数({node.TotalChoices})与图面的选项数({numChoices})不符！可能由于遮挡或识别误差。");
+                        // Automatically cap
+                        if (node.CurrentIndex >= numChoices) 
+                            node.CurrentIndex = Math.Max(0, numChoices - 1); 
+                    }
+                    targetIndex = node.CurrentIndex;
+                    Log($"[{DateTime.Now:HH:mm:ss}] 路线判定: 已知分歧(深度={d})，提取历史决定路线 {targetIndex+1}/{node.TotalChoices}。");
+                }
+
+                // Save immediately
+                string newJson = System.Text.Json.JsonSerializer.Serialize(state, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(jsonPath, newJson, cancellationToken);
+
+                // 4. Extract Coordinates
+                var targetItem = sourceCard.OutputOcrResults[Math.Max(0, targetIndex)];
+                task.OutputX = targetItem.X;
+                task.OutputY = targetItem.Y;
+                
+                // Track depth traversal for any subsequent chained choice in the same run/flow
+                task.CurrentDepth++;
+                task.OutputResult = true;
+
+                return true;
+            }
+            catch(Exception ex)
+            {
+                task.ErrorMessage = "追踪发生异常：" + ex.Message;
+                return false;
+            }
+        }
+
+        private bool ExecuteAutoRouteAdvance(AutoRouteAdvanceTaskCard task)
+        {
+             try
+             {
+                string jsonPath = task.RouteStateFilePath;
+                if (!Path.IsPathRooted(jsonPath))
+                    jsonPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".agents", jsonPath);
+                    
+                if (!File.Exists(jsonPath))
+                {
+                    Log($"[{DateTime.Now:HH:mm:ss}] DFS推进：没有找到存档文件 '{jsonPath}'，忽略推进。");
+                    return true;
+                }
+                string jsonText = File.ReadAllText(jsonPath);
+                var state = System.Text.Json.JsonSerializer.Deserialize<RouteState>(jsonText);
+                if (state == null || state.Nodes == null || state.Nodes.Count == 0) 
+                    return true;
+                    
+                // Backtrack! Increment deepest node, if exhaustive, remove it and increment its parent
+                int idx = state.Nodes.Count - 1;
+                while(idx >= 0)
+                {
+                    var node = state.Nodes[idx];
+                    if (node.CurrentIndex + 1 < node.TotalChoices)
+                    {
+                        // Increment and finish backtrack
+                        node.CurrentIndex++;
+                        Log($"[{DateTime.Now:HH:mm:ss}] DFS推进: 分歧深度 {idx} 切换为路线 {node.CurrentIndex+1}/{node.TotalChoices}");
+                        break;
                     }
                     else
                     {
-                        using var reg = cancellationToken.Register(() => tcs.TrySetCanceled());
-                        await tcs.Task;
+                        // Exhausted, pop!
+                        Log($"[{DateTime.Now:HH:mm:ss}] DFS推进: 分歧深度 {idx} 已穷尽，向上回溯。");
+                        state.Nodes.RemoveAt(idx);
+                        idx--;
                     }
-
-                    var extractedText = await tcs.Task;
-                    task.OutputText = extractedText;
-                    task.LastOutputText = extractedText;
-                    task.OutputResult = true;
-                    return true;
                 }
-                finally
+                
+                if (idx < 0)
                 {
-                    textractorService.OnTextReceived -= onText;
+                    Log($"[{DateTime.Now:HH:mm:ss}] DFS推进: 全部游戏分歧路线穷尽！完结撒花。");
                 }
-            }
-            catch (OperationCanceledException)
+
+                string newJson = System.Text.Json.JsonSerializer.Serialize(state, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(jsonPath, newJson);
+                task.OutputResult = true;
+                return true;
+             }
+             catch (Exception ex)
+             {
+                 task.ErrorMessage = "推进异常: " + ex.Message;
+                 return false;
+             }
+        }
+
+        private bool ExecuteOcrKeywordAnchor(OcrKeywordAnchorTaskCard task, IList<TaskCardBase> allTasks)
+        {
+            try
             {
-                throw;
+                ImgOcrTaskCard? sourceCard = null;
+                if (task.SourceOcrTaskId.HasValue)
+                    sourceCard = allTasks.FirstOrDefault(t => t.Id == task.SourceOcrTaskId.Value) as ImgOcrTaskCard;
+
+                if (sourceCard == null)
+                {
+                    task.ErrorMessage = "未绑定图像OCR资源或未找到该卡片";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(task.TargetKeywords))
+                {
+                    task.ErrorMessage = "锚点目标关键字为空";
+                    return false;
+                }
+
+                string[] keywords = task.TargetKeywords.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                           .Select(s => s.Trim().ToLowerInvariant())
+                                           .ToArray();
+
+                if (sourceCard.OutputOcrResults != null)
+                {
+                    foreach(var item in sourceCard.OutputOcrResults)
+                    {
+                        string lowerItem = item.Text.ToLowerInvariant();
+                        foreach(var kw in keywords)
+                        {
+                            if (lowerItem.Contains(kw))
+                            {
+                                task.OutputX = item.X;
+                                task.OutputY = item.Y;
+                                task.OutputResult = true;
+                                Log($"[{DateTime.Now:HH:mm:ss}] 关键词定锚: 成功匹配 '{item.Text}' 命中 '{kw}'，输出坐标 {item.X},{item.Y}");
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                task.ErrorMessage = "未能在 OCR 结果中找到指定关键词。";
+                task.OutputResult = false;
+                return true; // Return true to indicate task completed successfully, allowing condition checks.
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                task.ErrorMessage = $"文本提取出错: {ex.Message}";
+                task.ErrorMessage = ex.Message;
                 return false;
             }
         }
         #endregion
+
     }
 }

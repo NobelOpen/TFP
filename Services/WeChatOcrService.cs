@@ -64,15 +64,15 @@ namespace TaskFlow.Services
         /// <summary>
         /// 执行 OCR 识别
         /// </summary>
-        public async Task<(bool Success, string Text, string? Error)> RecognizeAsync(Mat image)
+        public async Task<(bool Success, string Text, System.Collections.Generic.List<TaskFlow.Models.TaskCards.OcrResultItem>? Items, string? Error)> RecognizeAsync(Mat image)
         {
             return await Task.Run(() =>
             {
                 if (!IsAvailable)
-                    return (false, string.Empty, "微信 OCR 未配置或未通过验证，请先在设置中配置");
+                    return (false, string.Empty, null, "微信 OCR 未配置或未通过验证，请先在设置中配置");
 
                 if (image == null || image.Empty())
-                    return (false, string.Empty, "输入图像为空");
+                    return (false, string.Empty, null, "输入图像为空");
 
                 // 创建临时 PNG 文件
                 string tempPath = Path.Combine(Path.GetTempPath(), $"taskflow_ocr_{Guid.NewGuid():N}.png");
@@ -98,19 +98,19 @@ namespace TaskFlow.Services
                     }
 
                     if (!success)
-                        return (false, string.Empty, "微信 OCR 调用失败");
+                        return (false, string.Empty, null, "微信 OCR 调用失败");
 
                     // 解析结果文本
-                    string text = ParseOcrResult(ocrResult);
-                    return (true, text, (string?)null);
+                    var parseResult = ParseOcrResult(ocrResult);
+                    return (true, parseResult.Text, parseResult.Items, (string?)null);
                 }
                 catch (DllNotFoundException)
                 {
-                    return (false, string.Empty, "未找到 wcocr.dll，请确保该文件在应用程序目录下");
+                    return (false, string.Empty, null, "未找到 wcocr.dll，请确保该文件在应用程序目录下");
                 }
                 catch (Exception ex)
                 {
-                    return (false, string.Empty, $"微信 OCR 出错: {ex.Message}");
+                    return (false, string.Empty, null, $"微信 OCR 出错: {ex.Message}");
                 }
                 finally
                 {
@@ -153,8 +153,8 @@ namespace TaskFlow.Services
 
                     if (success && !string.IsNullOrEmpty(ocrResult))
                     {
-                        string text = ParseOcrResult(ocrResult);
-                        return (true, $"测试成功！识别结果: {text}");
+                        var parseResult = ParseOcrResult(ocrResult);
+                        return (true, $"测试成功！识别结果: {parseResult.Text}");
                     }
 
                     return (false, "测试失败：微信 OCR 未返回结果");
@@ -262,12 +262,13 @@ namespace TaskFlow.Services
         }
 
         /// <summary>
-        /// 解析微信 OCR 返回的 JSON 结果，提取纯文本
+        /// 解析微信 OCR 返回的 JSON 结果，提取纯文本和坐标数据
         /// </summary>
-        private static string ParseOcrResult(string jsonResult)
+        private static (string Text, System.Collections.Generic.List<TaskFlow.Models.TaskCards.OcrResultItem> Items) ParseOcrResult(string jsonResult)
         {
+            var itemsList = new System.Collections.Generic.List<TaskFlow.Models.TaskCards.OcrResultItem>();
             if (string.IsNullOrEmpty(jsonResult))
-                return string.Empty;
+                return (string.Empty, itemsList);
 
             try
             {
@@ -284,20 +285,43 @@ namespace TaskFlow.Services
                         if (item.TryGetProperty("text", out var textProp))
                         {
                             if (sb.Length > 0) sb.Append('\n');
-                            sb.Append(textProp.GetString());
+                            var lineText = textProp.GetString() ?? string.Empty;
+                            sb.Append(lineText);
+                            
+                            int left = 0, top = 0, right = 0, bottom = 0;
+                            double rate = 1.0;
+                            
+                            if (item.TryGetProperty("left", out var l)) left = l.ValueKind == System.Text.Json.JsonValueKind.Number ? l.GetInt32() : (int)l.GetDouble();
+                            if (item.TryGetProperty("top", out var t)) top = t.ValueKind == System.Text.Json.JsonValueKind.Number ? t.GetInt32() : (int)t.GetDouble();
+                            if (item.TryGetProperty("right", out var r)) right = r.ValueKind == System.Text.Json.JsonValueKind.Number ? r.GetInt32() : (int)r.GetDouble();
+                            if (item.TryGetProperty("bottom", out var b)) bottom = b.ValueKind == System.Text.Json.JsonValueKind.Number ? b.GetInt32() : (int)b.GetDouble();
+                            if (item.TryGetProperty("rate", out var rt)) rate = rt.ValueKind == System.Text.Json.JsonValueKind.Number ? rt.GetDouble() : 1.0;
+                            
+                            int w = Math.Abs(right - left);
+                            int h = Math.Abs(bottom - top);
+                            
+                            itemsList.Add(new TaskFlow.Models.TaskCards.OcrResultItem 
+                            {
+                                Text = lineText,
+                                X = left + w / 2,
+                                Y = top + h / 2,
+                                Width = w,
+                                Height = h,
+                                Confidence = rate
+                            });
                         }
                     }
-                    // ocr_response 已成功解析，返回拼接文本（可能为空）
-                    return sb.ToString();
+                    // ocr_response 已成功解析，返回拼接文本和结构体
+                    return (sb.ToString(), itemsList);
                 }
 
                 // JSON 格式不符合预期，返回原始内容
-                return jsonResult;
+                return (jsonResult, itemsList);
             }
             catch
             {
                 // 如果 JSON 解析失败，直接返回原始文本
-                return jsonResult;
+                return (jsonResult, itemsList);
             }
         }
 

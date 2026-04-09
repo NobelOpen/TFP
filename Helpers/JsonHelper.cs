@@ -323,7 +323,7 @@ namespace TaskFlow.Helpers
                 TaskType.FileRead => new FileReadTaskCard(),
                 TaskType.ArraySearch => new ArraySearchTaskCard(),
                 TaskType.ClipboardWatch => new ClipboardWatchTaskCard(),
-                TaskType.TextExtractor => new TextExtractorTaskCard(),
+
                 _ => throw new NotSupportedException($"Unknown task type: {taskType}")
             };
 

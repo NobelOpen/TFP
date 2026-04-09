@@ -1530,6 +1530,55 @@
   </div>
 </div>
 
+<div class="card-doc" id="AutoRouteTracker">
+  <h3>Auto Route Track <span class="badge badge-flow">Control Flow</span></h3>
+  <div class="tip-box" style="background:#f0f9ff;border-left:4px solid #0ea5e9;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
+    <strong>💡 Exploration Synergy:</strong> These three cards are typically used together to build an automated Depth-First Search (DFS) framework.<br/>
+    <b>Auto Route Track</b> serves as the starting point to decide the next unexplored coordinate. You then execute UI interactions (such as using <b>OCR Options Anchor</b> to recognize and click options). Once a dead end or completion state is reached, call <b>Finish Route Branch</b> to record the result and trigger a backtrack, starting the next exploration round.
+  </div>
+  <p>Leverages a DFS (Depth-First Search) memory algorithm to automate traversal and exploration. By reading the results from a bound source OCR card, it automatically matches all route branches or unexplored options and outputs the next-hop candidate coordinates until the routes are exhausted.</p>
+  <dl class="props">
+    <dt>Bound Source OCR Card ID</dt>
+    <dd>The Task ID of the OCR recognition card that provides the text for the tracker to make decisions.</dd>
+    <dt>Route Archive JSON Path</dt>
+    <dd>Specifies the JSON file for persistently storing the exploration tree's state.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item"><code>#N.outputIsExhausted</code> — Whether all routes are exhausted</div>
+    <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Next-hop candidate coordinates</div>
+  </div>
+</div>
+
+<div class="card-doc" id="OcrKeywordAnchor">
+  <h3>OCR Options Anchor <span class="badge badge-flow">Control Flow</span></h3>
+  <p>Rapidly searches for a specific set of target keywords within the OCR results of a bound card, returning its matched anchor coordinates.</p>
+  <dl class="props">
+    <dt>Bound Source OCR Card ID</dt>
+    <dd>The source OCR Task ID that provides the text recognition results.</dd>
+    <dt>Keywords to Match</dt>
+    <dd>Supports multiple keywords separated by commas for fallback searching.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — Target element center coordinates</div>
+    <div class="output-item"><code>#N.result</code> — Whether the target was successfully found and anchored</div>
+  </div>
+</div>
+
+<div class="card-doc" id="AutoRouteAdvance">
+  <h3>Finish Route Branch <span class="badge badge-flow">Control Flow</span></h3>
+  <p>Called when the DFS branch reaches a dead end, fails, or succeeds. It signals the tracking tree that the current branch exploration has ended, triggering backtracking to automatically navigate to the next unexplored path.</p>
+  <dl class="props">
+    <dt>Route Archive JSON Path</dt>
+    <dd>Should map to the same archive file as the corresponding AutoRouteTracker.</dd>
+  </dl>
+  <div class="output-section">
+    <div class="output-title"> Output</div>
+    <div class="output-item">No specific outputs.</div>
+  </div>
+</div>
+
 <div class="card-doc" id="CustomScript">
   <h3>Custom Script <span class="badge badge-flow">Control Flow</span></h3>
   <p>Allows users to write native C# code for the highest degree of customized logic. This is ideal for executing complex math operations, custom loops, file operations, or data manipulation that other cards cannot achieve directly. The engine utilizes Roslyn for dynamic compilation with MD5 caching optimization, providing near-native execution performance.</p>

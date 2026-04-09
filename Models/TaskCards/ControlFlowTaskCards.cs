@@ -1043,53 +1043,105 @@ namespace TaskFlow.Models.TaskCards
             // 注意：不重置 LastOutputText，以便在循环中保持去重状态
         }
     }
-
     /// <summary>
-    /// TextExtractor 文本提取卡片
+    /// 全自动多路线追踪器 (DFS 算法)。自动阅读存档、判断选择并输出需点击坐标。
     /// </summary>
-    public partial class TextExtractorTaskCard : TaskCardBase
+    public partial class AutoRouteTrackerTaskCard : TaskCardBase
     {
-        public override TaskType TaskType => TaskType.TextExtractor;
+        public override TaskType TaskType => TaskType.AutoRouteTracker;
 
         /// <summary>
-        /// 目标游戏或程序的进程名称 (不用带.exe)
+        /// 绑定的源 OCR 卡片（必须包含 OutputOcrResults）
         /// </summary>
         [ObservableProperty]
-        private string _processName = string.Empty;
+        private Guid? _sourceOcrTaskId;
 
         /// <summary>
-        /// 去重机制：忽略与上次读取完全一样的文本内容
+        /// 路线存档JSON文件路径
         /// </summary>
         [ObservableProperty]
-        private bool _enableDedup = true;
+        private string _routeStateFilePath = "route_state.json";
 
         /// <summary>
-        /// 是否自动清除首尾空白字符
+        /// 输出的选项坐标
         /// </summary>
-        [ObservableProperty]
-        private bool _trimWhitespace = true;
+        public override bool OutputsCoordinates => true;
 
         /// <summary>
-        /// 超时时间(毫秒)，0代表无限等待
+        /// 是否全部路线已经穷尽
         /// </summary>
-        [ObservableProperty]
-        private int _timeoutMs = 0;
-
         [JsonIgnore]
         [ObservableProperty]
-        private string _lastOutputText = string.Empty;
+        private bool _outputIsExhausted;
 
-        public override bool OutputsText => true;
-        public override bool OutputsBoolResult => true;
+        /// <summary>
+        /// 当前运行到的深度（重置时清零）
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _currentDepth;
 
-        public TextExtractorTaskCard()
+        public AutoRouteTrackerTaskCard()
         {
-            Name = "文本提取 (TextExtractor)";
+            Name = "多路线追踪大脑";
         }
+        
+        public override bool OutputsBoolResult => true; // 反馈是否成功生成了下一跳的坐标
 
         public override void Reset()
         {
             base.Reset();
+            OutputIsExhausted = false;
+            CurrentDepth = 0;
         }
+    }
+
+    /// <summary>
+    /// OCR 关键词锚点点击器。根据关键词动态输出目标坐标。
+    /// </summary>
+    public partial class OcrKeywordAnchorTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.OcrKeywordAnchor;
+
+        /// <summary>
+        /// 绑定的源 OCR 卡片
+        /// </summary>
+        [ObservableProperty]
+        private Guid? _sourceOcrTaskId;
+
+        /// <summary>
+        /// 需要匹配的关键字（支持英文逗号分隔）
+        /// </summary>
+        [ObservableProperty]
+        private string _targetKeywords = "Start,开始,继续,Load,New Game";
+
+        public override bool OutputsCoordinates => true;
+        public override bool OutputsBoolResult => true;
+
+        public OcrKeywordAnchorTaskCard()
+        {
+            Name = "OCR关键词定锚";
+        }
+    }
+
+    /// <summary>
+    /// 标记结局并推进 DFS 路线树。放置在流程走向结局或超时的分支中。
+    /// </summary>
+    public partial class AutoRouteAdvanceTaskCard : TaskCardBase
+    {
+        public override TaskType TaskType => TaskType.AutoRouteAdvance;
+
+        /// <summary>
+        /// 路线存档JSON文件路径
+        /// </summary>
+        [ObservableProperty]
+        private string _routeStateFilePath = "route_state.json";
+
+        public AutoRouteAdvanceTaskCard()
+        {
+            Name = "多路线节点推演";
+        }
+
+        public override bool OutputsBoolResult => true;
     }
 }

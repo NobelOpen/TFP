@@ -278,6 +278,120 @@ namespace TaskFlow.ViewModels
                     AiFlowLogger.Warn($"[预热] 后台初始化失败（不影响功能）: {ex.Message}");
                 }
             });
+
+            // 挂载 MCP 外部服务器 Tool 接口回调，然后启动管道监听
+            TaskFlow.Services.McpServerService.Instance.OnToolCall = HandleMcpToolCallAsync;
+            TaskFlow.Services.McpServerService.Instance.Start();
+        }
+
+        private async Task<string> HandleMcpToolCallAsync(string toolName, Newtonsoft.Json.Linq.JObject args)
+        {
+            if (toolName == "submit_plan")
+            {
+                try
+                {
+                    var plan = args.ToObject<AiFlowPlanResponse>();
+                    if (plan == null) return "Error: Failed to parse plan JSON.";
+
+                    // 必须在 UI 线程执行，因为 TaskCards 是 ObservableCollection
+                    string result = "";
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            AiFlowLogger.Info($"[MCP] 收到 submit_plan: {plan.Plan.Count} 个步骤, summary={plan.Summary}");
+
+                            // 处理 MCP 扩展字段：重命名流程（submit_plan 标准模型中无此字段，从原始 JSON 中提取）
+                            var renameFlows = args["renameFlows"] as Newtonsoft.Json.Linq.JArray;
+                            if (renameFlows != null)
+                            {
+                                foreach (var item in renameFlows)
+                                {
+                                    var oldName = item["oldName"]?.ToString();
+                                    var newName = item["newName"]?.ToString();
+                                    if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName)) continue;
+
+                                    var tab = _mainViewModel.Tabs.FirstOrDefault(t => t.Name == oldName)
+                                           ?? _mainViewModel.Tabs.FirstOrDefault(t => t.Name == "SUB_" + oldName);
+                                    if (tab != null)
+                                    {
+                                        var finalOldName = tab.Name;
+                                        tab.Name = newName;
+                                        AiFlowLogger.Info($"[MCP] 重命名流程: {finalOldName} → {newName}");
+                                    }
+                                    else
+                                    {
+                                        AiFlowLogger.Warn($"[MCP] 重命名失败: 流程 '{oldName}' 不存在");
+                                    }
+                                }
+                            }
+
+                            var (createdCount, reports) = _planExecutor.CreateTaskCardsFromPlan(plan, CurrentMode, SelectedModelId);
+                            _mainViewModel.RecalculateIndentLevels();
+                            AiFlowLogger.Info($"[MCP] 成功创建 {createdCount} 张卡片");
+                            result = $"Success: Created {createdCount} task cards in flow '{plan.TargetFlow ?? "current"}'.";
+                        }
+                        catch (Exception ex)
+                        {
+                            AiFlowLogger.Warn($"[MCP] submit_plan 执行失败: {ex.Message}");
+                            result = $"Error: {ex.Message}";
+                        }
+                    });
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    return $"Error processing submit_plan: {ex.Message}";
+                }
+            }
+            else if (toolName == "analyze_flow")
+            {
+                try
+                {
+                    var flowName = args["flow_name"]?.ToString() ?? "";
+                    var startOrder = args["start_order"]?.ToObject<int>() ?? 0;
+                    var count = args["count"]?.ToObject<int>() ?? 2000;
+
+                    string result = "";
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            // 如果流程名为空，返回所有流程概览
+                            if (string.IsNullOrWhiteSpace(flowName))
+                            {
+                                var sb = new System.Text.StringBuilder();
+                                sb.AppendLine("=== 当前所有流程 ===");
+                                foreach (var tab in _mainViewModel.Tabs)
+                                {
+                                    var cards = tab == _mainViewModel.SelectedTab
+                                        ? _mainViewModel.TaskCards
+                                        : tab.TaskCards;
+                                    sb.AppendLine($"  - {tab.Name} (类型={tab.Type}, 卡片数={cards.Count}, 选中={tab == _mainViewModel.SelectedTab})");
+                                }
+                                result = sb.ToString();
+                            }
+                            else
+                            {
+                                result = _serializer.SerializeFlowDetail(flowName, startOrder, count);
+                                if (string.IsNullOrEmpty(result))
+                                    result = $"Error: 流程 '{flowName}' 不存在或为空";
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            result = $"Error: {ex.Message}";
+                        }
+                    });
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    return $"Error processing analyze_flow: {ex.Message}";
+                }
+            }
+
+            return $"Error: Tool '{toolName}' is not handled in the current context.";
         }
 
         /// <summary>
@@ -461,14 +575,29 @@ namespace TaskFlow.ViewModels
                 return;
             }
 
+            var displayInput = userInput;
+            if (!string.IsNullOrEmpty(AttachedFilePath) || (_lastImageBase64List != null && _lastImageBase64List.Count > 0 && userInput == _lastUserInput))
+            {
+                string attachName = string.IsNullOrEmpty(AttachedFilePath) ? "已缓存图片.png" : System.IO.Path.GetFileName(AttachedFilePath);
+                var ext = System.IO.Path.GetExtension(attachName).ToLower();
+                if (ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp" || string.IsNullOrEmpty(AttachedFilePath))
+                {
+                    displayInput += $"\n\n📎 [{attachName}]";
+                }
+                else
+                {
+                    displayInput += $"\n\n📄 [{attachName}]";
+                }
+            }
+
             // 仅当最后一条消息不同于当前用户输入时才添加（防止重试产生气泡堆叠）
             var lastMsg = Messages.LastOrDefault();
-            if (lastMsg == null || lastMsg.Role != AiChatRole.User || lastMsg.Content != userInput)
+            if (lastMsg == null || lastMsg.Role != AiChatRole.User || lastMsg.Content != displayInput)
             {
-                AddMessage(AiChatRole.User, userInput);
+                AddMessage(AiChatRole.User, displayInput);
             }
             
-            _lastUserInput = userInput;
+            _lastUserInput = userInput; // 保留纯文本作为回退
             InputText = "";
             IsGenerating = true;
             PendingPlan = null;

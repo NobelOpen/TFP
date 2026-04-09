@@ -51,7 +51,7 @@ namespace TaskFlow.Models.TaskCards
         WinSubtitle,
         WinFindFile,
         ClipboardWatch,
-        TextExtractor,
+
 
         // ADB操作
         AdbConnect,
@@ -123,7 +123,12 @@ namespace TaskFlow.Models.TaskCards
         BrowserScreenshot,
 
         // 网络请求
-        HttpRequest
+        HttpRequest,
+
+        // 自动化流程决策
+        AutoRouteTracker,
+        AutoRouteAdvance,
+        OcrKeywordAnchor
     }
 
     /// <summary>
@@ -384,7 +389,9 @@ namespace TaskFlow.Models.TaskCards
             TaskType.BrowserScreenshot => TaskFlow.Resources.Strings.TaskType_BrowserScreenshot,
             TaskType.HttpRequest => TaskFlow.Resources.Strings.TaskType_HttpRequest,
             TaskType.ClipboardWatch => TaskFlow.Resources.Strings.TaskType_ClipboardWatch,
-            TaskType.TextExtractor => TaskFlow.Resources.Strings.TaskType_TextExtractor,
+            TaskType.AutoRouteTracker => TaskFlow.Resources.Strings.TaskType_AutoRouteTracker,
+            TaskType.OcrKeywordAnchor => TaskFlow.Resources.Strings.TaskType_OcrKeywordAnchor,
+            TaskType.AutoRouteAdvance => TaskFlow.Resources.Strings.TaskType_AutoRouteAdvance,
             _ => type.ToString()
         };
 

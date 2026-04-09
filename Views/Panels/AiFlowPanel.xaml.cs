@@ -513,15 +513,20 @@ namespace TaskFlow.Views.Panels
                 if (_vm.MainVm.IsRunning)
                     return;
 
+                // 先隐藏附件UI，给用户即时的交互反馈
+                if (_vm.AttachedFilePath != null)
+                {
+                    AttachmentPreview.Visibility = Visibility.Collapsed;
+                    AttachmentFileName.Text = "";
+                }
+
                 // 正常发送消息
                 await _vm.SendMessageCommand.ExecuteAsync(null);
 
-                // 发送后清除附件
+                // 发送完毕后清除 ViewModel 中的附件状态
                 if (_vm.AttachedFilePath != null)
                 {
                     _vm.AttachedFilePath = null;
-                    AttachmentPreview.Visibility = Visibility.Collapsed;
-                    AttachmentFileName.Text = "";
                 }
             }
         }
@@ -558,14 +563,19 @@ namespace TaskFlow.Views.Panels
                 if (_vm.MainVm.IsRunning)
                     return;
 
+                // 提前清除界面上的附件占用，给用户迅速的响应反馈
+                if (_vm.AttachedFilePath != null)
+                {
+                    AttachmentPreview.Visibility = Visibility.Collapsed;
+                    AttachmentFileName.Text = "";
+                }
+
                 await _vm.SendMessageCommand.ExecuteAsync(null);
 
-                // 发送后清除附件
+                // 发送后清除 ViewModel 中的附件
                 if (_vm?.AttachedFilePath != null)
                 {
                     _vm.AttachedFilePath = null;
-                    AttachmentPreview.Visibility = Visibility.Collapsed;
-                    AttachmentFileName.Text = "";
                 }
             }
         }

@@ -857,7 +857,7 @@ namespace TaskFlow
                 (TaskType.WinSubtitle, "WinSubtitle"), (TaskType.WinFindFile, "WinFindFile"),
                 (TaskType.WinTextInput, "WinTextInput"),
                 (TaskType.InputCombo, "InputCombo"), (TaskType.EventListener, "EventListener"),
-                (TaskType.ClipboardWatch, "ClipboardWatch"), (TaskType.TextExtractor, "TextExtractor") })
+                (TaskType.ClipboardWatch, "ClipboardWatch") })
             {
                 var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
                 mi.Click += AddTaskBelow_Click;
@@ -944,12 +944,32 @@ namespace TaskFlow
             var breakLoop = new MenuItem { Header = TaskFlow.Resources.Strings.TaskType_BreakLoop, Tag = "BreakLoop" };
             breakLoop.Click += AddTaskBelow_Click;
             controlFlow.Items.Add(breakLoop);
+            
+            foreach (var (type, tag) in new[] {
+                (TaskType.AutoRouteTracker, "AutoRouteTracker"),
+                (TaskType.OcrKeywordAnchor, "OcrKeywordAnchor"),
+                (TaskType.AutoRouteAdvance, "AutoRouteAdvance") })
+            {
+                var mi = new MenuItem { Header = TaskCardBase.GetTaskTypeName(type), Tag = tag };
+                mi.Click += AddTaskBelow_Click;
+                controlFlow.Items.Add(mi);
+            }
             var ifElse = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_IfElseBranch, Tag = "IfElse" };
             ifElse.Click += AddBranchBelow_Click;
             controlFlow.Items.Add(ifElse);
             var forLoop = new MenuItem { Header = TaskFlow.Resources.Strings.Menu_ForLoop, Tag = "ForLoop" };
             forLoop.Click += AddBranchBelow_Click;
             controlFlow.Items.Add(forLoop);
+            
+            controlFlow.Items.Add(new Separator());
+            var callSubFlow = new MenuItem { Header = TaskCardBase.GetTaskTypeName(TaskType.CallSubFlow), Tag = "CallSubFlow" };
+            callSubFlow.Click += AddTaskBelow_Click;
+            controlFlow.Items.Add(callSubFlow);
+            
+            var subFlowOutput = new MenuItem { Header = TaskCardBase.GetTaskTypeName(TaskType.SubFlowOutput), Tag = "SubFlowOutput" };
+            subFlowOutput.Click += AddTaskBelow_Click;
+            controlFlow.Items.Add(subFlowOutput);
+            
             addBelow.Items.Add(controlFlow);
 
             menu.Items.Add(addBelow);

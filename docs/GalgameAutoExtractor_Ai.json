@@ -1,0 +1,157 @@
+{
+  "summary": "Galgame自动路由与文本提取流程",
+  "createFlows": [
+    { "name": "Galgame自动推图引擎", "isMainFlow": false }
+  ],
+  "targetFlow": "Galgame自动推图引擎",
+  "plan": [
+    {
+      "step": 1,
+      "taskType": "ForLoopStart",
+      "name": "无限推图轴",
+      "description": "这是主体循环层，负责持续向前并尝试获取文本",
+      "properties": {
+        "loopCount": "99999"
+      }
+    },
+    {
+      "step": 2,
+      "taskType": "WinSimulateInput",
+      "name": "发送推进指令",
+      "description": "向游戏发送回车，推进下一句对话。",
+      "properties": {
+        "actionType": "KeyPress",
+        "keyName": "Enter"
+      }
+    },
+    {
+      "step": 3,
+      "taskType": "ClipboardWatch",
+      "name": "捕获新对话",
+      "description": "挂载剪贴板钩子，等待文本更新，3秒超时。开启去重屏蔽无效连点。",
+      "properties": {
+        "timeoutMs": "3000",
+        "enableDedup": "True"
+      }
+    },
+    {
+      "step": 4,
+      "taskType": "ArrayBuilder",
+      "name": "写入自动文本档",
+      "description": "使用数组生成器功能自动缓存文本并落盘保存。",
+      "properties": {
+        "inputExpression": "#3 捕获新对话.输出文本",
+        "autoExportPath": "C:\\GalText\\Game_Auto_Route.txt"
+      }
+    },
+    {
+      "step": 5,
+      "taskType": "IfStart",
+      "name": "分支判定卡点",
+      "description": "如果剪贴板发生超时（输出结果为False），则判定可能遇到了选项或是游戏处于卡死结算画面。",
+      "properties": {
+        "conditionExpression": "#3 捕获新对话.输出结果 == false"
+      }
+    },
+    {
+      "step": 6,
+      "taskType": "WinScreenshot",
+      "name": "游戏捕获",
+      "description": "截取全屏画面或窗口画面，捕捉游戏内选择题。",
+      "properties": {
+        "processName": ""
+      }
+    },
+    {
+      "step": 7,
+      "taskType": "ImgOcr",
+      "name": "解析屏幕画面",
+      "description": "提取图层内所有文本，获取各选项位置横纵坐标。",
+      "properties": { }
+    },
+    {
+      "step": 8,
+      "taskType": "AutoRouteTracker",
+      "name": "路由追随系统",
+      "description": "自动比对本地路由记忆 JSON，返回要点击的非重复路线坐标。",
+      "properties": {
+        "routeStateFilePath": "route_state_galgame.json"
+      },
+      "sourceStep": 7
+    },
+    {
+      "step": 9,
+      "taskType": "IfStart",
+      "name": "真结局判定",
+      "description": "如果无可用分支/路线穷尽，代表死胡同或抵达最终。",
+      "properties": {
+        "conditionExpression": "#8 路由追随系统.输出结果 == false"
+      }
+    },
+    {
+      "step": 10,
+      "taskType": "AutoRouteAdvance",
+      "name": "标记此条线死亡",
+      "description": "向追踪树 JSON 宣告此路径已终结返回上一级。",
+      "properties": {
+        "routeStateFilePath": "route_state_galgame.json"
+      }
+    },
+    {
+      "step": 11,
+      "taskType": "OcrKeywordAnchor",
+      "name": "搜索热键",
+      "description": "寻找读档槽，或者寻找回到标题界面的点击坐标",
+      "properties": {
+        "targetKeywords": "Load,读取,加载"
+      },
+      "sourceStep": 7
+    },
+    {
+      "step": 12,
+      "taskType": "WinClick",
+      "name": "回到过去",
+      "description": "点击读取档案界面的坐标以恢复原点（你可能需要补充一系列自定义点击）。",
+      "properties": {},
+      "sourceStep": 11
+    },
+    {
+      "step": 13,
+      "taskType": "ElseStart",
+      "name": "拥有可选项",
+      "description": "检测到Tracker下达了非结局坐标，转为执行点击。",
+      "properties": {}
+    },
+    {
+      "step": 14,
+      "taskType": "WinClick",
+      "name": "确认并步入下一层",
+      "description": "执行不可逆选项。",
+      "properties": {
+        "clickType": "Single"
+      },
+      "sourceStep": 8
+    },
+    {
+      "step": 15,
+      "taskType": "ElseEnd",
+      "name": "结束分支",
+      "description": "完成所有的选项选择判定。",
+      "properties": {}
+    },
+    {
+      "step": 16,
+      "taskType": "IfEnd",
+      "name": "跳出循环检查",
+      "description": "离开判断体，继续进入下一句对话。",
+      "properties": {}
+    },
+    {
+      "step": 17,
+      "taskType": "ForLoopEnd",
+      "name": "回退推图循环体",
+      "description": "由于是无限循环，永远运转直到人为退出。",
+      "properties": {}
+    }
+  ]
+}

@@ -725,7 +725,7 @@
     <div class="category-title">通用任务</div>
 
     <div class="card-doc" id="PauseTask">
-      <h3>暂停全部任务 <span class="badge badge-general">通用</span></h3>
+      <h3>挂起所有流程 <span class="badge badge-general">通用</span></h3>
       <p>暂停流程执行指定的毫秒数。常用于等待页面加载、动画完成等场景。</p>
       <dl class="props">
         <dt>延迟时间 (ms)</dt>
@@ -738,7 +738,7 @@
     </div>
 
     <div class="card-doc" id="GetTimestamp">
-      <h3>获取当前时间 <span class="badge badge-general">通用</span></h3>
+      <h3>获取时间 <span class="badge badge-general">通用</span></h3>
       <p>获取当前系统时间，输出格式化字符串。</p>
       <dl class="props">
         <dt>格式化字符串</dt>
@@ -751,7 +751,7 @@
     </div>
 
     <div class="card-doc" id="EndTask">
-      <h3>结束当前流程 <span class="badge badge-general">通用</span></h3>
+      <h3>中止当前流程 <span class="badge badge-general">通用</span></h3>
       <p>立即终止当前流程的执行，不影响其他流程。</p>
       <div class="output-section">
         <div class="output-title"> 输出</div>
@@ -760,7 +760,7 @@
     </div>
 
     <div class="card-doc" id="EndAllFlows">
-      <h3>结束全部流程 <span class="badge badge-general">通用</span></h3>
+      <h3>中止所有流程 <span class="badge badge-general">通用</span></h3>
       <p>立即终止所有流程的执行。</p>
       <div class="output-section">
         <div class="output-title"> 输出</div>
@@ -769,7 +769,7 @@
     </div>
 
     <div class="card-doc" id="RestartFlow">
-      <h3>重开当前流程 <span class="badge badge-general">通用</span></h3>
+      <h3>重启当前流程 <span class="badge badge-general">通用</span></h3>
       <p>立即结束并从头开始重新执行当前流程。</p>
       <div class="output-section">
         <div class="output-title"> 输出</div>
@@ -802,7 +802,7 @@
     </div>
 
     <div class="card-doc" id="WinScreenshot">
-      <h3>Win截屏工具 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win区域截图 <span class="badge badge-win">Windows</span></h3>
       <p>截取指定进程窗口的屏幕图像。支持截取后自动转为灰度图。</p>
       <dl class="props">
         <dt>进程名称</dt>
@@ -848,7 +848,7 @@
     </div>
 
     <div class="card-doc" id="WinCloseApp">
-      <h3>Win关闭应用 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win终止进程 <span class="badge badge-win">Windows</span></h3>
       <p>关闭指定进程名的应用程序窗口。</p>
       <dl class="props">
         <dt>进程名称</dt>
@@ -861,7 +861,7 @@
     </div>
 
     <div class="card-doc" id="WinUiAutomation">
-      <h3>WinUI自动化 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win控件探测 <span class="badge badge-win">Windows</span></h3>
       <p>使用 Windows UI Automation 框架操作 UI 元素。可以按名称或 AutomationId 查找控件并执行点击、输入等操作。（内置交互式右键拾取控件功能）</p>
       <dl class="props">
         <dt>进程名称</dt>
@@ -888,7 +888,7 @@
     </div>
 
     <div class="card-doc" id="WinSimulateInput">
-      <h3>Win模拟输入 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win原生键入 <span class="badge badge-win">Windows</span></h3>
       <p>模拟键盘按键或鼠标滚轮操作，支持修饰键组合。可用于自动化快捷键操作、页面滚动等场景。</p>
       <dl class="props">
         <dt>修饰键</dt>
@@ -920,7 +920,7 @@
     </div>
 
     <div class="card-doc" id="WinSubtitle">
-      <h3>Win字幕提示 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win悬浮字幕 <span class="badge badge-win">Windows</span></h3>
       <p>在指定进程窗口上叠加显示字幕，可用于翻译结果展示。支持自定义字体、颜色和背景样式。</p>
       <dl class="props">
         <dt>显示文本表达式</dt>
@@ -961,7 +961,7 @@
     </div>
 
     <div class="card-doc" id="WinFindFile">
-      <h3>Win路径查找 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win文件检索 <span class="badge badge-win">Windows</span></h3>
       <p>在指定的目录内（或整个电脑磁盘）搜索目标文件，并返回找到的第一个文件的完整路径。</p>
       <dl class="props">
         <dt>查找的文件名</dt>
@@ -987,7 +987,7 @@
     </div>
 
     <div class="card-doc" id="WinTextInput">
-      <h3>Win文本输入 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win流式键入 <span class="badge badge-win">Windows</span></h3>
       <p>一次性输入一段完整文本。支持逐字符模拟和剪贴板粘贴两种模式。</p>
       <dl class="props">
         <dt>输入文本</dt>
@@ -1004,7 +1004,7 @@
     </div>
 
     <div class="card-doc" id="InputCombo">
-      <h3>Win输入组合 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win组合按键 <span class="badge badge-win">Windows</span></h3>
       <p>支持多按键编排（长按/单击混合）的复杂输入系统，非阻塞后台执行。常用于游戏或复杂应用宏的编写。</p>
       <dl class="props">
         <dt>按键列表</dt>
@@ -1023,7 +1023,7 @@
     </div>
 
     <div class="card-doc" id="EventListener">
-      <h3>Win 事件监听 <span class="badge badge-win">Windows</span></h3>
+      <h3>Win系统监听 <span class="badge badge-win">Windows</span></h3>
       <p>持续监听指定的键盘或鼠标事件，例如按下某个快捷键时执行后续任务。</p>
       <dl class="props">
         <dt>监听的事件</dt>
@@ -1039,7 +1039,7 @@
     <div class="category-title">ADB 操作</div>
 
     <div class="card-doc" id="AdbConnect">
-      <h3>ADB连接设备 <span class="badge badge-adb">ADB</span></h3>
+      <h3>ADB连入设备 <span class="badge badge-adb">ADB</span></h3>
       <p>通过 ADB 连接 Android 设备。可使用 USB 连接或网络连接（IP:端口）。</p>
       <dl class="props">
         <dt>IP 地址</dt>
@@ -1071,7 +1071,7 @@
     </div>
 
     <div class="card-doc" id="AdbScreenshot">
-      <h3>ADB截屏工具 <span class="badge badge-adb">ADB</span></h3>
+      <h3>ADB设备截图 <span class="badge badge-adb">ADB</span></h3>
       <p>通过 ADB 截取 Android 设备屏幕图像。</p>
       <dl class="props">
         <dt>设备序列号</dt>
@@ -1129,7 +1129,7 @@
     <div class="category-title">图像处理</div>
 
     <div class="card-doc" id="ImgCrop">
-      <h3>图像裁剪 <span class="badge badge-img">图像</span></h3>
+      <h3>指定裁剪 <span class="badge badge-img">图像</span></h3>
       <p>从源图像中裁剪出指定区域。</p>
       <dl class="props">
         <dt>源图像</dt>
@@ -1176,7 +1176,7 @@
     </div>
 
     <div class="card-doc" id="ImgOnnxDetect">
-      <h3>ONNX定位 <span class="badge badge-img">图像</span></h3>
+      <h3>模型定位 <span class="badge badge-img">图像</span></h3>
       <p>使用存放在本地的 ONNX 视觉模型（如 YOLO）对图像进行实时的目标检测和定位追踪。</p>
       <dl class="props">
         <dt>源图像</dt>
@@ -1204,7 +1204,7 @@
     </div>
 
     <div class="card-doc" id="ImgCaliperMeasure">
-      <h3>卡尺测量 <span class="badge badge-img">图像</span></h3>
+      <h3>边界卡尺 <span class="badge badge-img">图像</span></h3>
       <p>在源图像中，按指定方向和边缘极性搜索边缘，并计算两边缘之间的像素距离。</p>
       <dl class="props">
         <dt>源图像</dt>
@@ -1298,7 +1298,7 @@
     </div>
 
     <div class="card-doc" id="ImgPreprocess">
-      <h3>图像预处理 <span class="badge badge-img">图像</span></h3>
+      <h3>颜色降噪 <span class="badge badge-img">图像</span></h3>
       <p>对图像进行灰度化、二值化、膨胀、腐蚀等预处理操作，提升后续 OCR 或模板匹配的准确性。</p>
       <dl class="props">
         <dt>源图像</dt>
@@ -1325,7 +1325,7 @@
     </div>
 
     <div class="card-doc" id="ImgBlobAnalysis">
-      <h3>Blob分析 <span class="badge badge-img">图像</span></h3>
+      <h3>斑块分析 <span class="badge badge-img">图像</span></h3>
       <p>对二值图像进行连通域分析，找出所有独立的色块（Blob）。</p>
       <dl class="props">
         <dt>源图像</dt>
@@ -1360,7 +1360,7 @@
     </div>
 
     <div class="card-doc" id="ImgResize">
-      <h3>图像缩放 <span class="badge badge-img">图像</span></h3>
+      <h3>尺寸缩放 <span class="badge badge-img">图像</span></h3>
       <p>按指定目标尺寸缩放图像。</p>
       <dl class="props">
         <dt>目标宽度 / 高度</dt>
@@ -1377,7 +1377,7 @@
     <div class="category-title">数据处理</div>
 
     <div class="card-doc" id="ExpressionEval">
-      <h3>表达式赋值 <span class="badge badge-data">数据</span></h3>
+      <h3>公式求值 <span class="badge badge-data">数据</span></h3>
       <p>计算数学或逻辑表达式。</p>
       <dl class="props">
         <dt>表达式</dt>
@@ -1400,7 +1400,7 @@
     </div>
 
     <div class="card-doc" id="StringSubstring">
-      <h3>字符串截取 <span class="badge badge-data">数据</span></h3>
+      <h3>文本切片 <span class="badge badge-data">数据</span></h3>
       <p>从字符串中截取子串。</p>
       <dl class="props">
         <dt>文本来源</dt>
@@ -1423,7 +1423,7 @@
     </div>
 
     <div class="card-doc" id="TypeConvert">
-      <h3>类型转换 <span class="badge badge-data">数据</span></h3>
+      <h3>数据强转 <span class="badge badge-data">数据</span></h3>
       <p>将字符串转换为整数。支持引用其他任务的文本输出或变量。</p>
       <dl class="props">
         <dt>文本来源</dt>
@@ -1439,7 +1439,7 @@
     </div>
 
     <div class="card-doc" id="ArrayParse">
-      <h3>数组解析 <span class="badge badge-data">数据</span></h3>
+      <h3>数组拆包 <span class="badge badge-data">数据</span></h3>
       <p>从数组格式的字符串中按索引提取元素。支持坐标数组、字符串数组等。</p>
       <dl class="props">
         <dt>数组类型</dt>
@@ -1461,7 +1461,7 @@
 
     <!-- ==================== AI 操作 ==================== -->
     <div class="card-doc" id="ArrayBuilder">
-      <h3>数组生成 <span class="badge badge-data">数据</span></h3>
+      <h3>数组构建 <span class="badge badge-data">数据</span></h3>
       <p>动态构建和管理一个字符串数组，支持向数组中追加数据并可选导出到文件。</p>
       <dl class="props">
         <dt>追加数据</dt>
@@ -1499,7 +1499,7 @@
     </div>
 
     <div class="card-doc" id="ArraySearch">
-      <h3>匹配查找 <span class="badge badge-data">数据</span></h3>
+      <h3>数组检索 <span class="badge badge-data">数据</span></h3>
       <p>在数组中搜索指定的文本，支持多种匹配模式。</p>
       <dl class="props">
         <dt>数组来源任务</dt>
@@ -1544,7 +1544,7 @@
     </div>
 
     <div class="card-doc" id="LlmVision">
-      <h3>多模态识图 <span class="badge badge-ai">AI</span></h3>
+      <h3>LLM视觉分析 <span class="badge badge-ai">AI</span></h3>
       <p>使用支持视觉的大语言模型分析图像内容。可用于图像描述、内容理解等。</p>
       <dl class="props">
         <dt>模型</dt>
@@ -1639,7 +1639,7 @@
     </div>
 
     <div class="card-doc" id="BreakLoop">
-      <h3>中止循环 <span class="badge badge-flow">控制流</span></h3>
+      <h3>主动跳出循环 <span class="badge badge-flow">控制流</span></h3>
       <p>立即跳出最近的 For 循环，继续执行循环后面的任务。通常与 If 条件配合使用。</p>
       <div class="output-section">
         <div class="output-title"> 输出</div>
@@ -1648,7 +1648,7 @@
     </div>
 
     <div class="card-doc" id="CallSubFlow">
-      <h3>调用子流程 <span class="badge badge-flow">控制流</span></h3>
+      <h3>调起子级流程 <span class="badge badge-flow">控制流</span></h3>
       <p>在主流程执行期间，暂时挂起当前流程，切换到另一个作为函数模块的独立子流程中去执行。这能让复杂的重复性操作高度模块化和复用。</p>
       <dl class="props">
         <dt>目标子流程选项</dt>
@@ -1681,6 +1681,55 @@
       <div class="output-section">
         <div class="output-title"> 输出</div>
         <div class="output-item">无任何直接输出属性（只是负责跳转和抛发数据）。</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="AutoRouteTracker">
+      <h3>自动路线追踪 <span class="badge badge-flow">控制流</span></h3>
+      <div class="tip-box" style="background:#f0f9ff;border-left:4px solid #0ea5e9;border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;">
+        <strong>💡 探索循环与协同：</strong>这三张卡往往配套使用，构筑自动化深度优先(DFS)遍历框架。<br/>
+        由 <b>自动路线追踪</b> 作为起始点，决定下一个要点击的未探索坐标。接下来执行各类前台交互（如利用 <b>OCR选项定锚</b> 去识别并点击）。一旦判定进入死胡同或结算页，即调用 <b>完结当前支线</b> 卡片记录结果并引发路线记忆回溯，开启下一次探索。
+      </div>
+      <p>依托具有记忆的深度优先搜索(DFS)算法进行自动化遍历探索。它通过阅读绑定的源 OCR 卡片的结果，自动匹配所有的路线分支或者未探明的选项，并在路线穷尽前不断导航输出需要点击的下一跳坐标。</p>
+      <dl class="props">
+        <dt>绑定的源 OCR 卡片ID</dt>
+        <dd>用来给追踪器提供当前界面文字以做判定的 OCR 识别卡片任务 ID。</dd>
+        <dt>路线存档JSON文件路径</dt>
+        <dd>指定用于持久化存储探索树状态的 JSON 文件。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.outputIsExhausted</code> — 是否全部路线已经穷尽</div>
+        <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — 需要点击的下一跳候选坐标</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="OcrKeywordAnchor">
+      <h3>OCR选项定锚 <span class="badge badge-flow">控制流</span></h3>
+      <p>在绑定的 OCR 识别出来的所有结果序列中，快速寻找特定的目标关键字集合并返回其定位坐标。</p>
+      <dl class="props">
+        <dt>绑定的源 OCR 卡片ID</dt>
+        <dd>需要提取文字结果的源 OCR 任务ID。</dd>
+        <dt>需要匹配的关键字</dt>
+        <dd>支持使用逗号分隔多个关键字进行轮询匹配查找。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item"><code>#N.x</code> / <code>#N.y</code> — 成功找到的目标点击中心坐标</div>
+        <div class="output-item"><code>#N.result</code> — 是否成功找到目标并成功定锚</div>
+      </div>
+    </div>
+
+    <div class="card-doc" id="AutoRouteAdvance">
+      <h3>完结当前支线 <span class="badge badge-flow">控制流</span></h3>
+      <p>当判定 DFS 分支到达死胡同、失败或者已经成功结局的情况下调用。通过通知追踪树当前分支探索结束，触发回溯动作，自动走向下一条未探明的路径。</p>
+      <dl class="props">
+        <dt>路线存档JSON文件路径</dt>
+        <dd>应当与对应的 AutoRouteTracker 使用同一个记录文件。</dd>
+      </dl>
+      <div class="output-section">
+        <div class="output-title"> 输出</div>
+        <div class="output-item">无特定输出</div>
       </div>
     </div>
 
@@ -1878,7 +1927,7 @@
     </div>
 
     <div class="card-doc" id="BrowserCdpCommand">
-      <h3>CDP 指令执行 <span class="badge badge-win">Web</span></h3>
+      <h3>Web底层指令 <span class="badge badge-win">Web</span></h3>
       <p>直接通过底层开放的 Chrome DevTools Protocol 向目标发送底层的原生方法指令。面向高阶开发人群或者需特殊配置的环境。</p>
       <dl class="props">
         <dt>方法名 (Method Name)</dt>
@@ -1908,7 +1957,7 @@
     </div>
 
     <div class="card-doc" id="HttpRequest">
-      <h3>HTTP静默请求 <span class="badge badge-win">Web</span></h3>
+      <h3>Web网络请求 <span class="badge badge-win">Web</span></h3>
       <p>在后台静默发送 HTTP 请求并获取响应内容。无需启动浏览器，适用于 API 调用、网页数据抓取、接口健康检查等场景。相比浏览器操作卡片，资源消耗极低且速度更快，但不支持 JavaScript 渲染。</p>
       <dl class="props">
         <dt>请求 URL</dt>

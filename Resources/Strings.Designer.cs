@@ -71,27 +71,27 @@ namespace TaskFlow.Resources {
         public static string Common_No => ResourceManager.GetString("Common_No", resourceCulture) ?? "No";
 
         // ========== TaskType Names ==========
-        public static string TaskType_IfStart => ResourceManager.GetString("TaskType_IfStart", resourceCulture) ?? "IF Start";
-        public static string TaskType_IfEnd => ResourceManager.GetString("TaskType_IfEnd", resourceCulture) ?? "IF End";
-        public static string TaskType_ElifStart => ResourceManager.GetString("TaskType_ElifStart", resourceCulture) ?? "ELIF Start";
-        public static string TaskType_ElseStart => ResourceManager.GetString("TaskType_ElseStart", resourceCulture) ?? "ELSE Start";
-        public static string TaskType_ElseEnd => ResourceManager.GetString("TaskType_ElseEnd", resourceCulture) ?? "Branch End";
-        public static string TaskType_ForLoopStart => ResourceManager.GetString("TaskType_ForLoopStart", resourceCulture) ?? "Loop Start";
-        public static string TaskType_ForLoopEnd => ResourceManager.GetString("TaskType_ForLoopEnd", resourceCulture) ?? "Loop End";
-        public static string TaskType_EndTask => ResourceManager.GetString("TaskType_EndTask", resourceCulture) ?? "End Current Flow";
-        public static string TaskType_EndAllFlows => ResourceManager.GetString("TaskType_EndAllFlows", resourceCulture) ?? "End All Flows";
-        public static string TaskType_PauseTask => ResourceManager.GetString("TaskType_PauseTask", resourceCulture) ?? "Pause All Tasks";
+        public static string TaskType_IfStart => ResourceManager.GetString("TaskType_IfStart", resourceCulture) ?? "IF Condition";
+        public static string TaskType_IfEnd => ResourceManager.GetString("TaskType_IfEnd", resourceCulture) ?? "IF Close";
+        public static string TaskType_ElifStart => ResourceManager.GetString("TaskType_ElifStart", resourceCulture) ?? "ELIF Condition";
+        public static string TaskType_ElseStart => ResourceManager.GetString("TaskType_ElseStart", resourceCulture) ?? "ELSE Condition";
+        public static string TaskType_ElseEnd => ResourceManager.GetString("TaskType_ElseEnd", resourceCulture) ?? "Branch Close";
+        public static string TaskType_ForLoopStart => ResourceManager.GetString("TaskType_ForLoopStart", resourceCulture) ?? "FOR Loop";
+        public static string TaskType_ForLoopEnd => ResourceManager.GetString("TaskType_ForLoopEnd", resourceCulture) ?? "FOR Close";
+        public static string TaskType_EndTask => ResourceManager.GetString("TaskType_EndTask", resourceCulture) ?? "Abort Task";
+        public static string TaskType_EndAllFlows => ResourceManager.GetString("TaskType_EndAllFlows", resourceCulture) ?? "Abort All";
+        public static string TaskType_PauseTask => ResourceManager.GetString("TaskType_PauseTask", resourceCulture) ?? "Suspend All";
         public static string TaskType_BreakLoop => ResourceManager.GetString("TaskType_BreakLoop", resourceCulture) ?? "Break Loop";
         public static string TaskType_WinLaunchApp => ResourceManager.GetString("TaskType_WinLaunchApp", resourceCulture) ?? "Win Launch App";
-        public static string TaskType_WinScreenshot => ResourceManager.GetString("TaskType_WinScreenshot", resourceCulture) ?? "Win Screenshot Tool";
+        public static string TaskType_WinScreenshot => ResourceManager.GetString("TaskType_WinScreenshot", resourceCulture) ?? "Win Screenshot";
         public static string TaskType_WinClick => ResourceManager.GetString("TaskType_WinClick", resourceCulture) ?? "Win Simulate Click";
-        public static string TaskType_WinCloseApp => ResourceManager.GetString("TaskType_WinCloseApp", resourceCulture) ?? "Win Close App";
-        public static string TaskType_WinUiAutomation => ResourceManager.GetString("TaskType_WinUiAutomation", resourceCulture) ?? "WinUI Automation";
-        public static string TaskType_WinSimulateInput => ResourceManager.GetString("TaskType_WinSimulateInput", resourceCulture) ?? "Win Simulate Input";
-        public static string TaskType_WinSubtitle => ResourceManager.GetString("TaskType_WinSubtitle", resourceCulture) ?? "Win Subtitle Prompt";
-        public static string TaskType_AdbConnect => ResourceManager.GetString("TaskType_AdbConnect", resourceCulture) ?? "ADB Connect Device";
+        public static string TaskType_WinCloseApp => ResourceManager.GetString("TaskType_WinCloseApp", resourceCulture) ?? "Win Kill App";
+        public static string TaskType_WinUiAutomation => ResourceManager.GetString("TaskType_WinUiAutomation", resourceCulture) ?? "Win UI Detect";
+        public static string TaskType_WinSimulateInput => ResourceManager.GetString("TaskType_WinSimulateInput", resourceCulture) ?? "Win Sim Input";
+        public static string TaskType_WinSubtitle => ResourceManager.GetString("TaskType_WinSubtitle", resourceCulture) ?? "Win Float Sub";
+        public static string TaskType_AdbConnect => ResourceManager.GetString("TaskType_AdbConnect", resourceCulture) ?? "ADB Connect";
         public static string TaskType_AdbLaunchApp => ResourceManager.GetString("TaskType_AdbLaunchApp", resourceCulture) ?? "ADB Launch App";
-        public static string TaskType_AdbScreenshot => ResourceManager.GetString("TaskType_AdbScreenshot", resourceCulture) ?? "ADB Screenshot Tool";
+        public static string TaskType_AdbScreenshot => ResourceManager.GetString("TaskType_AdbScreenshot", resourceCulture) ?? "ADB Screenshot";
         public static string TaskType_AdbClick => ResourceManager.GetString("TaskType_AdbClick", resourceCulture) ?? "ADB Simulate Click";
         public static string TaskType_AdbCloseApp => ResourceManager.GetString("TaskType_AdbCloseApp", resourceCulture) ?? "ADB Close App";
         public static string TaskType_AdbDisconnect => ResourceManager.GetString("TaskType_AdbDisconnect", resourceCulture) ?? "ADB Disconnect";
@@ -100,20 +100,20 @@ namespace TaskFlow.Resources {
         public static string TaskType_ImgOcr => ResourceManager.GetString("TaskType_ImgOcr", resourceCulture) ?? "OCR Recognition";
         public static string TaskType_ImgColorDetect => ResourceManager.GetString("TaskType_ImgColorDetect", resourceCulture) ?? "Color Detection";
         public static string TaskType_ImgColorSegment => ResourceManager.GetString("TaskType_ImgColorSegment", resourceCulture) ?? "Color Segmentation";
-        public static string TaskType_ImgPreprocess => ResourceManager.GetString("TaskType_ImgPreprocess", resourceCulture) ?? "Image Preprocess";
+        public static string TaskType_ImgPreprocess => ResourceManager.GetString("TaskType_ImgPreprocess", resourceCulture) ?? "Image Denoise";
         public static string TaskType_ImgBlobAnalysis => ResourceManager.GetString("TaskType_ImgBlobAnalysis", resourceCulture) ?? "Blob Analysis";
         public static string TaskType_ImgResize => ResourceManager.GetString("TaskType_ImgResize", resourceCulture) ?? "Image Resize";
-        public static string TaskType_ExpressionEval => ResourceManager.GetString("TaskType_ExpressionEval", resourceCulture) ?? "Expression Eval";
-        public static string TaskType_StringSubstring => ResourceManager.GetString("TaskType_StringSubstring", resourceCulture) ?? "String Substring";
-        public static string TaskType_TypeConvert => ResourceManager.GetString("TaskType_TypeConvert", resourceCulture) ?? "Type Convert";
-        public static string TaskType_ArrayParse => ResourceManager.GetString("TaskType_ArrayParse", resourceCulture) ?? "Array Parse";
-        public static string TaskType_GetTimestamp => ResourceManager.GetString("TaskType_GetTimestamp", resourceCulture) ?? "Get Current Time";
+        public static string TaskType_ExpressionEval => ResourceManager.GetString("TaskType_ExpressionEval", resourceCulture) ?? "Eval Formula";
+        public static string TaskType_StringSubstring => ResourceManager.GetString("TaskType_StringSubstring", resourceCulture) ?? "Slice Text";
+        public static string TaskType_TypeConvert => ResourceManager.GetString("TaskType_TypeConvert", resourceCulture) ?? "Cast Type";
+        public static string TaskType_ArrayParse => ResourceManager.GetString("TaskType_ArrayParse", resourceCulture) ?? "Parse Array";
+        public static string TaskType_GetTimestamp => ResourceManager.GetString("TaskType_GetTimestamp", resourceCulture) ?? "Get Time";
         public static string TaskType_LlmTranslate => ResourceManager.GetString("TaskType_LlmTranslate", resourceCulture) ?? "LLM Translate";
-        public static string TaskType_LlmVision => ResourceManager.GetString("TaskType_LlmVision", resourceCulture) ?? "Multimodal Vision";
-        public static string TaskType_ArrayBuilder => ResourceManager.GetString("TaskType_ArrayBuilder", resourceCulture) ?? "Array Builder";
+        public static string TaskType_LlmVision => ResourceManager.GetString("TaskType_LlmVision", resourceCulture) ?? "LLM Vision";
+        public static string TaskType_ArrayBuilder => ResourceManager.GetString("TaskType_ArrayBuilder", resourceCulture) ?? "Build Array";
         public static string TaskType_LlmFileTranslate => ResourceManager.GetString("TaskType_LlmFileTranslate", resourceCulture) ?? "LLM File Translate";
-        public static string TaskType_ImgOnnxDetect => ResourceManager.GetString("TaskType_ImgOnnxDetect", resourceCulture) ?? "ONNX Detect";
-        public static string TaskType_ImgCaliperMeasure => ResourceManager.GetString("TaskType_ImgCaliperMeasure", resourceCulture) ?? "Caliper Measure";
+        public static string TaskType_ImgOnnxDetect => ResourceManager.GetString("TaskType_ImgOnnxDetect", resourceCulture) ?? "Model Locate";
+        public static string TaskType_ImgCaliperMeasure => ResourceManager.GetString("TaskType_ImgCaliperMeasure", resourceCulture) ?? "Edge Caliper";
 
         // ========== MainWindow ==========
         public static string Main_Title => ResourceManager.GetString("Main_Title", resourceCulture) ?? "TaskFlow";
@@ -713,8 +713,8 @@ namespace TaskFlow.Resources {
         public static string Prop_ArrayBuilderClearExpr => ResourceManager.GetString("Prop_ArrayBuilderClearExpr", resourceCulture) ?? "Clear Array Switch Expression";
         public static string Prop_ArrayBuilderClearBtn => ResourceManager.GetString("Prop_ArrayBuilderClearBtn", resourceCulture) ?? "Clear Array";
         public static string TaskType_FileRead => ResourceManager.GetString("TaskType_FileRead", resourceCulture) ?? "File Read";
-        public static string TaskType_EventListener => ResourceManager.GetString("TaskType_EventListener", resourceCulture) ?? "Win Event Listener";
-        public static string TaskType_ArraySearch => ResourceManager.GetString("TaskType_ArraySearch", resourceCulture) ?? "Array Search";
+        public static string TaskType_EventListener => ResourceManager.GetString("TaskType_EventListener", resourceCulture) ?? "Win Sys Event";
+        public static string TaskType_ArraySearch => ResourceManager.GetString("TaskType_ArraySearch", resourceCulture) ?? "Search Array";
         public static string Prop_FilePathExpr => ResourceManager.GetString("Prop_FilePathExpr", resourceCulture) ?? "File Path Expression";
         public static string Prop_Delimiter => ResourceManager.GetString("Prop_Delimiter", resourceCulture) ?? "Delimiter";
         public static string Prop_EventType => ResourceManager.GetString("Prop_EventType", resourceCulture) ?? "Event Type";
@@ -722,7 +722,7 @@ namespace TaskFlow.Resources {
         public static string AC_FileReadArrayCount => ResourceManager.GetString("AC_FileReadArrayCount", resourceCulture) ?? "Array Count";
         public static string AC_MatchIndex => ResourceManager.GetString("AC_MatchIndex", resourceCulture) ?? "Match Index";
         public static string AC_MatchValue => ResourceManager.GetString("AC_MatchValue", resourceCulture) ?? "Match Value";
-        public static string TaskType_WinFindFile => ResourceManager.GetString("TaskType_WinFindFile", resourceCulture) ?? "Win Path Find";
+        public static string TaskType_WinFindFile => ResourceManager.GetString("TaskType_WinFindFile", resourceCulture) ?? "Win Find File";
         public static string Prop_WinFindFileName => ResourceManager.GetString("Prop_WinFindFileName", resourceCulture) ?? "File Name (supports expressions)";
         public static string Prop_WinFindFileRoot => ResourceManager.GetString("Prop_WinFindFileRoot", resourceCulture) ?? "Search Root (empty=all drives)";
         public static string Prop_WinFindFileDepth => ResourceManager.GetString("Prop_WinFindFileDepth", resourceCulture) ?? "Max Search Depth (0=unlimited)";
@@ -950,10 +950,10 @@ namespace TaskFlow.Resources {
         /// </summary>
         public static string Settings_ViewCalibration => ResourceManager.GetString("Settings_ViewCalibration", resourceCulture) ?? "View Calibration Results";
 
-        public static string TaskType_RestartFlow => ResourceManager.GetString("TaskType_RestartFlow", resourceCulture) ?? "Restart Flow";
+        public static string TaskType_RestartFlow => ResourceManager.GetString("TaskType_RestartFlow", resourceCulture) ?? "Restart Task";
 
         // 鈹€鈹€鈹€ InputCombo 杈撳叆缁勫悎鍗＄墖 鈹€鈹€鈹€
-        public static string TaskType_InputCombo => ResourceManager.GetString("TaskType_InputCombo", resourceCulture) ?? "Win Input Combo";
+        public static string TaskType_InputCombo => ResourceManager.GetString("TaskType_InputCombo", resourceCulture) ?? "Win Key Combo";
         public static string Prop_InputComboActions => ResourceManager.GetString("Prop_InputComboActions", resourceCulture) ?? "Action List";
         public static string Prop_InputComboAddAction => ResourceManager.GetString("Prop_InputComboAddAction", resourceCulture) ?? "+ Add Key";
         public static string Prop_InputComboTap => ResourceManager.GetString("Prop_InputComboTap", resourceCulture) ?? "Tap";
@@ -963,7 +963,7 @@ namespace TaskFlow.Resources {
         public static string Prop_InputComboDuration => ResourceManager.GetString("Prop_InputComboDuration", resourceCulture) ?? "Max Duration (ms, 0=no limit)";
 
         // 鈹€鈹€鈹€ WinTextInput 鏂囨湰杈撳叆鍗＄墖 鈹€鈹€鈹€
-        public static string TaskType_WinTextInput => ResourceManager.GetString("TaskType_WinTextInput", resourceCulture) ?? "Win Text Input";
+        public static string TaskType_WinTextInput => ResourceManager.GetString("TaskType_WinTextInput", resourceCulture) ?? "Win Type Text";
         public static string Prop_WinTextInputText => ResourceManager.GetString("Prop_WinTextInputText", resourceCulture) ?? "Input Text";
         public static string Prop_WinTextInputMode => ResourceManager.GetString("Prop_WinTextInputMode", resourceCulture) ?? "Input Mode";
         public static string Prop_WinTextInputCharByChar => ResourceManager.GetString("Prop_WinTextInputCharByChar", resourceCulture) ?? "Char by Char";
@@ -1016,11 +1016,11 @@ namespace TaskFlow.Resources {
         public static string TaskType_BrowserNativeClick => ResourceManager.GetString("TaskType_BrowserNativeClick", resourceCulture) ?? "Web Native Click";
         public static string TaskType_BrowserNativeInput => ResourceManager.GetString("TaskType_BrowserNativeInput", resourceCulture) ?? "Web Native Input";
         public static string TaskType_BrowserSimulatedClick => ResourceManager.GetString("TaskType_BrowserSimulatedClick", resourceCulture) ?? "Web Simulated Click";
-        public static string TaskType_BrowserCdpCommand => ResourceManager.GetString("TaskType_BrowserCdpCommand", resourceCulture) ?? "CDP Command Execution";
+        public static string TaskType_BrowserCdpCommand => ResourceManager.GetString("TaskType_BrowserCdpCommand", resourceCulture) ?? "Web CDP Cmd";
         public static string TaskType_BrowserScreenshot => ResourceManager.GetString("TaskType_BrowserScreenshot", resourceCulture) ?? "Web Page Screenshot";
 
         // ——— HttpRequest 静默请求卡片 ———
-        public static string TaskType_HttpRequest => ResourceManager.GetString("TaskType_HttpRequest", resourceCulture) ?? "HTTP Request (Silent)";
+        public static string TaskType_HttpRequest => ResourceManager.GetString("TaskType_HttpRequest", resourceCulture) ?? "Web HTTP Req";
         public static string Prop_HttpUrl => ResourceManager.GetString("Prop_HttpUrl", resourceCulture) ?? "Request URL";
         public static string Prop_HttpMethod => ResourceManager.GetString("Prop_HttpMethod", resourceCulture) ?? "HTTP Method";
         public static string Prop_HttpHeaders => ResourceManager.GetString("Prop_HttpHeaders", resourceCulture) ?? "Custom Headers (Key: Value per line)";
@@ -1029,13 +1029,21 @@ namespace TaskFlow.Resources {
         // ——— ClipboardWatch 剪贴板监听卡片 ———
         public static string AC_HttpStatusCode => ResourceManager.GetString("AC_HttpStatusCode", resourceCulture) ?? "HTTP Status Code";
 
-        public static string TaskType_ClipboardWatch => ResourceManager.GetString("TaskType_ClipboardWatch", resourceCulture) ?? "Clipboard Watch";
+        public static string TaskType_ClipboardWatch => ResourceManager.GetString("TaskType_ClipboardWatch", resourceCulture) ?? "Win Clipboard";
         public static string Prop_ClipboardTimeout => ResourceManager.GetString("Prop_ClipboardTimeout", resourceCulture) ?? "Timeout (ms, 0=infinite)";
         public static string Prop_ClipboardDedup => ResourceManager.GetString("Prop_ClipboardDedup", resourceCulture) ?? "Enable deduplication (skip identical text)";
         public static string Prop_ClipboardTrim => ResourceManager.GetString("Prop_ClipboardTrim", resourceCulture) ?? "Auto trim whitespace";
 
         // ——— TextExtractor 文本提取卡片 ———
-        public static string TaskType_TextExtractor => ResourceManager.GetString("TaskType_TextExtractor", resourceCulture) ?? "TextExtractor (Game Hook)";
+        public static string TaskType_TextExtractor => ResourceManager.GetString("TaskType_TextExtractor", resourceCulture) ?? "Win Mem OSD";
         public static string Prop_TargetProcess => ResourceManager.GetString("Prop_TargetProcess", resourceCulture) ?? "Target Process Name";
+        
+        // ——— Auto Route Tracking ———
+        public static string TaskType_AutoRouteTracker => ResourceManager.GetString("TaskType_AutoRouteTracker", resourceCulture) ?? "Auto Route Track";
+        public static string TaskType_OcrKeywordAnchor => ResourceManager.GetString("TaskType_OcrKeywordAnchor", resourceCulture) ?? "OCR Options Anchor";
+        public static string TaskType_AutoRouteAdvance => ResourceManager.GetString("TaskType_AutoRouteAdvance", resourceCulture) ?? "Finish Route Branch";
+        public static string Prop_TargetKeywords => ResourceManager.GetString("Prop_TargetKeywords", resourceCulture) ?? "Target Keywords (comma separated)";
+        public static string Prop_RouteStateFilePath => ResourceManager.GetString("Prop_RouteStateFilePath", resourceCulture) ?? "Route State File Path (JSON)";
+        public static string Output_IsExhausted => ResourceManager.GetString("Output_IsExhausted", resourceCulture) ?? "Is Exhausted";
     }
 }

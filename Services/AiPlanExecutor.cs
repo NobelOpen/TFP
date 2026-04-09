@@ -52,17 +52,30 @@ namespace TaskFlow.Services
             // 原因：AI 可能在同一批次中同时提交 createFlows + targetFlow，
             // 若先解析 targetFlow 再建流程，查找时目标尚不存在，会回退到主流程导致卡片写错位置。
 
-            // 创建新流程（自动加 SUB_ 前缀并标记为子流程类型）
+            // 创建新流程（默认加 SUB_ 前缀标记为子流程，isMainFlow=true 时创建主流程）
             if (plan.CreateFlows != null && plan.CreateFlows.Count > 0)
             {
                 foreach (var newFlow in plan.CreateFlows)
                 {
                     if (string.IsNullOrWhiteSpace(newFlow.Name)) continue;
 
-                    // 强制添加 SUB_ 前缀（AI 可能忽略此规范）
-                    var flowName = newFlow.Name.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase)
-                        ? newFlow.Name
-                        : "SUB_" + newFlow.Name;
+                    string flowName;
+                    FlowType flowType;
+
+                    if (newFlow.IsMainFlow)
+                    {
+                        // 主流程：保持原名，不加 SUB_ 前缀
+                        flowName = newFlow.Name;
+                        flowType = FlowType.Normal;
+                    }
+                    else
+                    {
+                        // 子流程：强制添加 SUB_ 前缀（AI 可能忽略此规范）
+                        flowName = newFlow.Name.StartsWith("SUB_", StringComparison.OrdinalIgnoreCase)
+                            ? newFlow.Name
+                            : "SUB_" + newFlow.Name;
+                        flowType = FlowType.SubFlow;
+                    }
 
                     if (_mainViewModel.Tabs.Any(t => t.Name == flowName))
                     {
@@ -72,13 +85,13 @@ namespace TaskFlow.Services
                     var tab = new WorkflowTab
                     {
                         Name = flowName,
-                        Type = FlowType.SubFlow  // 标记为子流程
+                        Type = flowType
                     };
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         _mainViewModel.Tabs.Add(tab);
                     });
-                    AiFlowLogger.Info($"已创建子流程: {flowName}");
+                    AiFlowLogger.Info($"已创建{(newFlow.IsMainFlow ? "主" : "子")}流程: {flowName}");
                 }
             }
 

@@ -53,49 +53,49 @@
   <data name="Common_No" xml:space="preserve"><value>否</value></data>
 
   <!-- ========== 任务类型名称 ========== -->
-  <data name="TaskType_IfStart" xml:space="preserve"><value>IF开始</value></data>
-  <data name="TaskType_IfEnd" xml:space="preserve"><value>IF结束</value></data>
-  <data name="TaskType_ElifStart" xml:space="preserve"><value>ELIF开始</value></data>
-  <data name="TaskType_ElseStart" xml:space="preserve"><value>ELSE开始</value></data>
-  <data name="TaskType_ElseEnd" xml:space="preserve"><value>分支结束</value></data>
-  <data name="TaskType_ForLoopStart" xml:space="preserve"><value>循环开始</value></data>
-  <data name="TaskType_ForLoopEnd" xml:space="preserve"><value>循环结束</value></data>
-  <data name="TaskType_EndTask" xml:space="preserve"><value>结束当前流程</value></data>
-  <data name="TaskType_EndAllFlows" xml:space="preserve"><value>结束全部流程</value></data>
-  <data name="TaskType_PauseTask" xml:space="preserve"><value>暂停全部任务</value></data>
-  <data name="TaskType_BreakLoop" xml:space="preserve"><value>中止循环</value></data>
+  <data name="TaskType_IfStart" xml:space="preserve"><value>IF 条件判别</value></data>
+  <data name="TaskType_IfEnd" xml:space="preserve"><value>IF 逻辑闭合</value></data>
+  <data name="TaskType_ElifStart" xml:space="preserve"><value>ELIF 次要条件</value></data>
+  <data name="TaskType_ElseStart" xml:space="preserve"><value>ELSE 兜底条件</value></data>
+  <data name="TaskType_ElseEnd" xml:space="preserve"><value>逻辑分支闭合</value></data>
+  <data name="TaskType_ForLoopStart" xml:space="preserve"><value>FOR 循环开启</value></data>
+  <data name="TaskType_ForLoopEnd" xml:space="preserve"><value>FOR 循环闭合</value></data>
+  <data name="TaskType_EndTask" xml:space="preserve"><value>中止当前流程</value></data>
+  <data name="TaskType_EndAllFlows" xml:space="preserve"><value>中止所有流程</value></data>
+  <data name="TaskType_PauseTask" xml:space="preserve"><value>挂起所有流程</value></data>
+  <data name="TaskType_BreakLoop" xml:space="preserve"><value>主动跳出循环</value></data>
   <data name="TaskType_WinLaunchApp" xml:space="preserve"><value>Win启动应用</value></data>
-  <data name="TaskType_WinScreenshot" xml:space="preserve"><value>Win截屏工具</value></data>
+  <data name="TaskType_WinScreenshot" xml:space="preserve"><value>Win区域截图</value></data>
   <data name="TaskType_WinClick" xml:space="preserve"><value>Win模拟点击</value></data>
-  <data name="TaskType_WinCloseApp" xml:space="preserve"><value>Win关闭应用</value></data>
-  <data name="TaskType_WinUiAutomation" xml:space="preserve"><value>WinUI自动化</value></data>
-  <data name="TaskType_WinSimulateInput" xml:space="preserve"><value>Win模拟输入</value></data>
-  <data name="TaskType_WinSubtitle" xml:space="preserve"><value>Win字幕提示</value></data>
-  <data name="TaskType_AdbConnect" xml:space="preserve"><value>ADB连接设备</value></data>
+  <data name="TaskType_WinCloseApp" xml:space="preserve"><value>Win终止进程</value></data>
+  <data name="TaskType_WinUiAutomation" xml:space="preserve"><value>Win控件探测</value></data>
+  <data name="TaskType_WinSimulateInput" xml:space="preserve"><value>Win原生键入</value></data>
+  <data name="TaskType_WinSubtitle" xml:space="preserve"><value>Win悬浮字幕</value></data>
+  <data name="TaskType_AdbConnect" xml:space="preserve"><value>ADB连入设备</value></data>
   <data name="TaskType_AdbLaunchApp" xml:space="preserve"><value>ADB启动应用</value></data>
-  <data name="TaskType_AdbScreenshot" xml:space="preserve"><value>ADB截屏工具</value></data>
+  <data name="TaskType_AdbScreenshot" xml:space="preserve"><value>ADB设备截图</value></data>
   <data name="TaskType_AdbClick" xml:space="preserve"><value>ADB模拟点击</value></data>
   <data name="TaskType_AdbCloseApp" xml:space="preserve"><value>ADB关闭应用</value></data>
   <data name="TaskType_AdbDisconnect" xml:space="preserve"><value>ADB断开设备</value></data>
-  <data name="TaskType_ImgCrop" xml:space="preserve"><value>图像裁剪</value></data>
+  <data name="TaskType_ImgCrop" xml:space="preserve"><value>指定裁剪</value></data>
   <data name="TaskType_ImgTemplateMatch" xml:space="preserve"><value>模板匹配</value></data>
   <data name="TaskType_ImgOcr" xml:space="preserve"><value>OCR识别</value></data>
   <data name="TaskType_ImgColorDetect" xml:space="preserve"><value>颜色识别</value></data>
   <data name="TaskType_ImgColorSegment" xml:space="preserve"><value>颜色分割</value></data>
-  <data name="TaskType_ImgPreprocess" xml:space="preserve"><value>图像预处理</value></data>
-  <data name="TaskType_ImgBlobAnalysis" xml:space="preserve"><value>Blob分析</value></data>
-  <data name="TaskType_ImgResize" xml:space="preserve"><value>图像缩放</value></data>
-  <data name="TaskType_ImgOnnxDetect" xml:space="preserve"><value>ONNX定位</value></data>
-  <data name="TaskType_ImgCaliperMeasure" xml:space="preserve"><value>卡尺测量</value></data>
+  <data name="TaskType_ImgPreprocess" xml:space="preserve"><value>颜色降噪</value></data>
+  <data name="TaskType_ImgBlobAnalysis" xml:space="preserve"><value>斑块分析</value></data>
+  <data name="TaskType_ImgResize" xml:space="preserve"><value>尺寸缩放</value></data>
+  <data name="TaskType_ImgOnnxDetect" xml:space="preserve"><value>模型定位</value></data>
+  <data name="TaskType_ImgCaliperMeasure" xml:space="preserve"><value>边界卡尺</value></data>
   <data name="Main_VisionModels" xml:space="preserve"><value>视觉</value></data>
-  <data name="TaskType_ExpressionEval" xml:space="preserve"><value>表达式赋值</value></data>
-  <data name="TaskType_StringSubstring" xml:space="preserve"><value>字符串截取</value></data>
-  <data name="TaskType_TypeConvert" xml:space="preserve"><value>类型转换</value></data>
-  <data name="TaskType_ArrayParse" xml:space="preserve"><value>数组解析</value></data>
-  <data name="TaskType_GetTimestamp" xml:space="preserve"><value>获取当前时间</value></data>
+  <data name="TaskType_ExpressionEval" xml:space="preserve"><value>公式求值</value></data>
+  <data name="TaskType_StringSubstring" xml:space="preserve"><value>文本切片</value></data>
+  <data name="TaskType_TypeConvert" xml:space="preserve"><value>数据强转</value></data>
+  <data name="TaskType_ArrayParse" xml:space="preserve"><value>数组拆包</value></data>
+  <data name="TaskType_GetTimestamp" xml:space="preserve"><value>获取时间</value></data>
   <data name="TaskType_LlmTranslate" xml:space="preserve"><value>LLM翻译</value></data>
-  <data name="TaskType_LlmVision" xml:space="preserve"><value>多模态识图</value></data>
-  <data name="TaskType_ArrayBuilder" xml:space="preserve"><value>数组生成</value></data>
+  <data name="TaskType_LlmVision" xml:space="preserve"><value>LLM视觉分析</value></data>
+  <data name="TaskType_ArrayBuilder" xml:space="preserve"><value>数组构建</value></data>
   <data name="TaskType_LlmFileTranslate" xml:space="preserve"><value>LLM文件翻译</value></data>
 
   <!-- ========== 主窗口 ========== -->
@@ -308,7 +308,7 @@
   <data name="Output_ParseResultDouble" xml:space="preserve"><value>解析结果 (Double)</value></data>
   <data name="Output_CurrentTime" xml:space="preserve"><value>当前时间</value></data>
   <data name="Output_ErrorMessage" xml:space="preserve"><value>错误信息</value></data>
-
+  <data name="Output_IsExhausted" xml:space="preserve"><value>是否探索穷尽</value></data>
   <data name="Filter_PngImage" xml:space="preserve"><value>PNG图像|*.png</value></data>
   <data name="Filter_JpegImage" xml:space="preserve"><value>JPEG图像|*.jpg</value></data>
   <data name="Filter_BmpImage" xml:space="preserve"><value>BMP图像|*.bmp</value></data>
@@ -704,8 +704,8 @@
   <data name="Prop_ArrayBuilderClearExpr" xml:space="preserve"><value>清空数组开关表达式</value></data>
   <data name="Prop_ArrayBuilderClearBtn" xml:space="preserve"><value>清空数组</value></data>
   <data name="TaskType_FileRead" xml:space="preserve"><value>读取文件</value></data>
-  <data name="TaskType_EventListener" xml:space="preserve"><value>Win事件监听</value></data>
-  <data name="TaskType_ArraySearch" xml:space="preserve"><value>匹配查找</value></data>
+  <data name="TaskType_EventListener" xml:space="preserve"><value>Win系统监听</value></data>
+  <data name="TaskType_ArraySearch" xml:space="preserve"><value>数组检索</value></data>
   <data name="Prop_FilePathExpr" xml:space="preserve"><value>文件路径表达式</value></data>
   <data name="Prop_Delimiter" xml:space="preserve"><value>分隔符 (\n = 换行)</value></data>
   <data name="Prop_EventType" xml:space="preserve"><value>事件类型</value></data>
@@ -713,7 +713,7 @@
   <data name="AC_FileReadArrayCount" xml:space="preserve"><value>数组元素数量</value></data>
   <data name="AC_MatchIndex" xml:space="preserve"><value>匹配索引</value></data>
   <data name="AC_MatchValue" xml:space="preserve"><value>匹配值</value></data>
-  <data name="TaskType_WinFindFile" xml:space="preserve"><value>Win路径查找</value></data>
+  <data name="TaskType_WinFindFile" xml:space="preserve"><value>Win文件检索</value></data>
   <data name="Prop_WinFindFileName" xml:space="preserve"><value>文件名称 (支持表达式)</value></data>
   <data name="Prop_WinFindFileRoot" xml:space="preserve"><value>搜索根目录 (留空=全盘搜索)</value></data>
   <data name="Prop_WinFindFileDepth" xml:space="preserve"><value>最大搜索深度 (0=无限制)</value></data>
@@ -919,8 +919,8 @@
   <data name="Settings_RouterModel" xml:space="preserve"><value>轻量路由模型 (第一阶段意图分类)</value></data>
   <data name="Settings_RouterModelNone" xml:space="preserve"><value>（未配置，将使用本地模式）</value></data>
   <data name="Settings_ViewCalibration" xml:space="preserve"><value>查看标定结果</value></data>
-  <data name="TaskType_RestartFlow" xml:space="preserve"><value>重开当前流程</value></data>
-  <data name="TaskType_InputCombo" xml:space="preserve"><value>Win输入组合</value></data>
+  <data name="TaskType_RestartFlow" xml:space="preserve"><value>重启当前流程</value></data>
+  <data name="TaskType_InputCombo" xml:space="preserve"><value>Win组合按键</value></data>
   <data name="Prop_InputComboActions" xml:space="preserve"><value>按键动作列表</value></data>
   <data name="Prop_InputComboAddAction" xml:space="preserve"><value>+ 添加按键</value></data>
   <data name="Prop_InputComboTap" xml:space="preserve"><value>单击</value></data>
@@ -928,7 +928,7 @@
   <data name="Prop_InputComboRepeat" xml:space="preserve"><value>重复次数 (0=无限)</value></data>
   <data name="Prop_InputComboStop" xml:space="preserve"><value>终止条件表达式</value></data>
   <data name="Prop_InputComboDuration" xml:space="preserve"><value>最大时长 (ms, 0=不限)</value></data>
-  <data name="TaskType_WinTextInput" xml:space="preserve"><value>Win文本输入</value></data>
+  <data name="TaskType_WinTextInput" xml:space="preserve"><value>Win流式键入</value></data>
   <data name="Prop_WinTextInputText" xml:space="preserve"><value>输入文本</value></data>
   <data name="Prop_WinTextInputMode" xml:space="preserve"><value>输入方式</value></data>
   <data name="Prop_WinTextInputCharByChar" xml:space="preserve"><value>逐字符模拟</value></data>
@@ -949,7 +949,7 @@
   <data name="AiPanel_CopyDebug" xml:space="preserve">
     <value>复制诊断信息</value>
   </data>
-  <data name="TaskType_CallSubFlow" xml:space="preserve"><value>调用子流程</value></data>
+  <data name="TaskType_CallSubFlow" xml:space="preserve"><value>调起子级流程</value></data>
   <data name="TaskType_SubFlowInput" xml:space="preserve"><value>子流程输入</value></data>
   <data name="TaskType_SubFlowOutput" xml:space="preserve"><value>子流程返回</value></data>
   <data name="Prop_TargetSubFlow" xml:space="preserve"><value>目标子流程</value></data>
@@ -969,19 +969,24 @@
   <data name="TaskType_BrowserNativeClick" xml:space="preserve"><value>Web原生点击</value></data>
   <data name="TaskType_BrowserNativeInput" xml:space="preserve"><value>Web原生输入</value></data>
   <data name="TaskType_BrowserSimulatedClick" xml:space="preserve"><value>Web模拟点击</value></data>
-  <data name="TaskType_BrowserCdpCommand" xml:space="preserve"><value>CDP 指令执行</value></data>
+  <data name="TaskType_BrowserCdpCommand" xml:space="preserve"><value>Web底层指令</value></data>
   <data name="TaskType_BrowserScreenshot" xml:space="preserve"><value>Web页面截图</value></data>
-  <data name="TaskType_HttpRequest" xml:space="preserve"><value>HTTP 静默请求</value></data>
+  <data name="TaskType_HttpRequest" xml:space="preserve"><value>Web网络请求</value></data>
   <data name="Prop_HttpUrl" xml:space="preserve"><value>请求 URL</value></data>
   <data name="Prop_HttpMethod" xml:space="preserve"><value>HTTP 方法</value></data>
   <data name="Prop_HttpHeaders" xml:space="preserve"><value>自定义 Headers (每行一个 Key: Value)</value></data>
   <data name="Prop_HttpBody" xml:space="preserve"><value>请求体 (JSON)</value></data>
   <data name="Prop_HttpTimeout" xml:space="preserve"><value>超时 (毫秒)</value></data>
   <data name="AC_HttpStatusCode" xml:space="preserve"><value>HTTP 状态码</value></data>
-  <data name="TaskType_ClipboardWatch" xml:space="preserve"><value>剪贴板监听</value></data>
+  <data name="TaskType_ClipboardWatch" xml:space="preserve"><value>Win剪贴监听</value></data>
   <data name="Prop_ClipboardTimeout" xml:space="preserve"><value>超时时间 (毫秒, 0=无限等待)</value></data>
   <data name="Prop_ClipboardDedup" xml:space="preserve"><value>启用去重 (跳过重复文本)</value></data>
   <data name="Prop_ClipboardTrim" xml:space="preserve"><value>自动去除首尾空白</value></data>
-  <data name="TaskType_TextExtractor" xml:space="preserve"><value>文本提取 (游戏钩子)</value></data>
+  <data name="TaskType_TextExtractor" xml:space="preserve"><value>Win内存提词</value></data>
   <data name="Prop_TargetProcess" xml:space="preserve"><value>目标进程名</value></data>
+  <data name="TaskType_AutoRouteTracker" xml:space="preserve"><value>自动路线追踪</value></data>
+  <data name="TaskType_OcrKeywordAnchor" xml:space="preserve"><value>OCR选项定锚</value></data>
+  <data name="TaskType_AutoRouteAdvance" xml:space="preserve"><value>完结当前支线</value></data>
+  <data name="Prop_TargetKeywords" xml:space="preserve"><value>需要匹配的关键字(逗号分隔)</value></data>
+  <data name="Prop_RouteStateFilePath" xml:space="preserve"><value>路线存档文件路径(JSON)</value></data>
 </root>

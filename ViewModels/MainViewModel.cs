@@ -1081,7 +1081,9 @@ namespace TaskFlow.ViewModels
                 TaskType.BrowserScreenshot => new BrowserScreenshotTaskCard(),
                 TaskType.HttpRequest => new HttpRequestTaskCard(),
                 TaskType.ClipboardWatch => new ClipboardWatchTaskCard(),
-                TaskType.TextExtractor => new TextExtractorTaskCard(),
+                TaskType.AutoRouteTracker => new AutoRouteTrackerTaskCard(),
+                TaskType.OcrKeywordAnchor => new OcrKeywordAnchorTaskCard(),
+                TaskType.AutoRouteAdvance => new AutoRouteAdvanceTaskCard(),
                 _ => throw new ArgumentException($"Unsupported task type: {taskType}")
             };
         }

@@ -470,6 +470,9 @@ namespace TaskFlow.Services
                     TaskType.EndTask or TaskType.EndAllFlows or TaskType.BreakLoop or TaskType.RestartFlow => true,
                     TaskType.PauseTask => await ExecutePauseAsync((PauseTaskCard)task, allTasks, cancellationToken),
                     TaskType.GetTimestamp => ExecuteGetTimestamp((GetTimestampTaskCard)task),
+                    TaskType.AutoRouteTracker => await ExecuteAutoRouteTrackerAsync((AutoRouteTrackerTaskCard)task, allTasks, cancellationToken),
+                    TaskType.AutoRouteAdvance => ExecuteAutoRouteAdvance((AutoRouteAdvanceTaskCard)task),
+                    TaskType.OcrKeywordAnchor => ExecuteOcrKeywordAnchor((OcrKeywordAnchorTaskCard)task, allTasks),
 
                     // 子流程支持
                     TaskType.CallSubFlow => await ExecuteCallSubFlowAsync((CallSubFlowTaskCard)task, allTasks, cancellationToken),
@@ -563,8 +566,7 @@ namespace TaskFlow.Services
                     // 剪贴板监听（事件驱动）
                     TaskType.ClipboardWatch => await ExecuteClipboardWatchAsync((ClipboardWatchTaskCard)task, cancellationToken),
 
-                    // 内置Textractor引擎
-                    TaskType.TextExtractor => await ExecuteTextExtractorAsync((TextExtractorTaskCard)task, cancellationToken),
+
 
                     _ => false
                 };

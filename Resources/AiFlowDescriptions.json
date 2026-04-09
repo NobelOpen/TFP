@@ -736,5 +736,43 @@
       "outputText: 响应返回的纯文本内容（自动移除了 HTML 标签，仅保留文本）",
       "outputStatusCode: HTTP 响应状态码（如 200, 404，也可通过引用 #N.状态码 读取）"
     ]
+  },
+  {
+    "TaskType": "AutoRouteTracker",
+    "Category": "控制流",
+    "Description": "全自动多路线追踪器 (DFS 算法)。自动阅读存档、判断选择并输出需点击坐标",
+    "Usage": "用于遍历游戏中带有多个对话分支的场景",
+    "KeyProperties": [
+      "sourceOcrTaskId: 绑定的源 OCR 卡片ID",
+      "routeStateFilePath: 路线存档JSON文件路径"
+    ],
+    "Outputs": [
+      "outputIsExhausted: 是否全部路线已经穷尽",
+      "outputX/outputY: 需要点击的下一跳坐标"
+    ]
+  },
+  {
+    "TaskType": "OcrKeywordAnchor",
+    "Category": "控制流",
+    "Description": "OCR关键词定锚器。在OCR识别结果中寻找关键字并返回其坐标。",
+    "Usage": "用于在界面中动态寻找包含特定文字的按钮",
+    "KeyProperties": [
+      "sourceOcrTaskId: 绑定的源 OCR 卡片ID",
+      "targetKeywords: 需要匹配的关键字（支持逗号分隔）"
+    ],
+    "Outputs": [
+      "outputX/outputY: 识别到目标的点击坐标",
+      "outputResult: 是否成功找到目标并定锚"
+    ]
+  },
+  {
+    "TaskType": "AutoRouteAdvance",
+    "Category": "控制流",
+    "Description": "标记结局并推进 DFS 路线树。放置在流程走向结局或超时的分支中。",
+    "Usage": "用于通知追踪系统当前路线已经终结",
+    "KeyProperties": [
+      "routeStateFilePath: 路线存档JSON文件路径"
+    ],
+    "Outputs": []
   }
 ]

@@ -155,7 +155,8 @@ namespace TaskFlow
                 nameof(WinScreenshotTaskCard.OutputWidth) or
                 nameof(WinScreenshotTaskCard.OutputHeight) or
                 nameof(CustomScriptTaskCard.OutputLog) or
-                nameof(HttpRequestTaskCard.OutputStatusCode))
+                nameof(HttpRequestTaskCard.OutputStatusCode) or
+                nameof(AutoRouteTrackerTaskCard.OutputIsExhausted))
             {
                 Dispatcher.BeginInvoke(() => ScheduleOutputPanelUpdate());
             }
@@ -427,6 +428,11 @@ namespace TaskFlow
             // BrowserGetText / BrowserExecuteJs：取文本结果已通过通用 OutputText 行显示，无需额外行
             // BrowserWaitForElement：等待结果已通过通用 OutputResult 行显示，无需额外行
 
+            if (task is AutoRouteTrackerTaskCard trackerCard)
+            {
+                AddOutputRow(Strings.Output_IsExhausted ?? "是否探索穷尽", trackerCard.OutputIsExhausted ? "True" : "False");
+            }
+
             // ErrorMessage
             if (!string.IsNullOrEmpty(task.ErrorMessage))
             {
@@ -444,7 +450,8 @@ namespace TaskFlow
                             task is FileReadTaskCard || task is ArraySearchTaskCard ||
                             task is WinScreenshotTaskCard || task is ImgResizeTaskCard ||
                             task is CustomScriptTaskCard ||
-                            task is HttpRequestTaskCard;
+                            task is HttpRequestTaskCard ||
+                            task is AutoRouteTrackerTaskCard;
 
             if (!hasOutput)
             {

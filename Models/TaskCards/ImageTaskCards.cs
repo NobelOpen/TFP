@@ -238,6 +238,19 @@ namespace TaskFlow.Models.TaskCards
     }
 
     /// <summary>
+    /// OCR识别文本块详细结果
+    /// </summary>
+    public class OcrResultItem
+    {
+        public string Text { get; set; } = string.Empty;
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public double Confidence { get; set; }
+    }
+
+    /// <summary>
     /// OCR识别任务卡片
     /// </summary>
     public partial class ImgOcrTaskCard : TaskCardBase
@@ -283,6 +296,15 @@ namespace TaskFlow.Models.TaskCards
         [ObservableProperty]
         private int _roiHeight;
 
+        // 输出的识别文本块数组
+        [JsonIgnore]
+        [ObservableProperty]
+        private int _outputResultCount;
+
+        [JsonIgnore]
+        [ObservableProperty]
+        private List<OcrResultItem> _outputOcrResults = new();
+
         public ImgOcrTaskCard()
         {
             Name = "OCR识别";
@@ -290,6 +312,14 @@ namespace TaskFlow.Models.TaskCards
 
         public override bool OutputsText => true;
         public override bool OutputsBoolResult => true;
+        public override bool OutputsArray => true;
+        
+        public override void Reset()
+        {
+            base.Reset();
+            OutputResultCount = 0;
+            OutputOcrResults = new();
+        }
 
         public override void BindImageSource(TaskCardBase sourceCard)
         {

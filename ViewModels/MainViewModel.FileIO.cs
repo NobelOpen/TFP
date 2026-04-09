@@ -40,6 +40,8 @@ namespace TaskFlow.ViewModels
                 var firstTab = new WorkflowTab { Name = string.Format(Strings.VM_FlowDefault, NextTabIndex++), IsSelected = true };
                 Tabs.Add(firstTab);
                 SelectedTab = firstTab;
+                TaskCards = firstTab.TaskCards;
+                NextTaskNumber = 1;
             }
             finally
             {

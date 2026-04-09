@@ -9,7 +9,7 @@ namespace TaskFlow.Services
 {
     public interface IOcrService
     {
-        Task<(bool Success, string Text, string? Error)> RecognizeAsync(Mat image);
+        Task<(bool Success, string Text, System.Collections.Generic.List<TaskFlow.Models.TaskCards.OcrResultItem>? Items, string? Error)> RecognizeAsync(Mat image);
         void Initialize();
         void Dispose();
     }
@@ -44,7 +44,7 @@ namespace TaskFlow.Services
             }
         }
 
-        public async Task<(bool Success, string Text, string? Error)> RecognizeAsync(Mat image)
+        public async Task<(bool Success, string Text, System.Collections.Generic.List<TaskFlow.Models.TaskCards.OcrResultItem>? Items, string? Error)> RecognizeAsync(Mat image)
         {
             return await Task.Run(() =>
             {
@@ -57,12 +57,12 @@ namespace TaskFlow.Services
 
                     if (_ocrEngine == null)
                     {
-                        return (false, string.Empty, "OCR引擎未初始化");
+                        return (false, string.Empty, null, "OCR引擎未初始化");
                     }
 
                     if (image == null || image.Empty())
                     {
-                        return (false, string.Empty, "输入图像为空");
+                        return (false, string.Empty, null, "输入图像为空");
                     }
 
                     // 重试机制，应对PaddlePredictor偶发性失败
@@ -76,9 +76,27 @@ namespace TaskFlow.Services
                             lock (_lock)
                             {
                                 if (_ocrEngine == null)
-                                    return (false, string.Empty, "OCR引擎未初始化");
+                                    return (false, string.Empty, null, "OCR引擎未初始化");
                                 var result = _ocrEngine.Run(image);
-                                return (true, result.Text, (string?)null);
+                                
+                                var items = new System.Collections.Generic.List<TaskFlow.Models.TaskCards.OcrResultItem>();
+                                if (result.Regions != null)
+                                {
+                                    foreach (var region in result.Regions)
+                                    {
+                                        items.Add(new TaskFlow.Models.TaskCards.OcrResultItem
+                                        {
+                                            Text = region.Text ?? string.Empty,
+                                            X = (int)Math.Round(region.Rect.Center.X),
+                                            Y = (int)Math.Round(region.Rect.Center.Y),
+                                            Width = (int)Math.Round(region.Rect.Size.Width),
+                                            Height = (int)Math.Round(region.Rect.Size.Height),
+                                            Confidence = region.Score
+                                        });
+                                    }
+                                }
+
+                                return (true, result.Text, items, (string?)null);
                             }
                         }
                         catch (Exception ex) when (attempt < maxRetries)
@@ -101,11 +119,11 @@ namespace TaskFlow.Services
                         }
                     }
 
-                    return (false, string.Empty, lastException?.Message ?? "OCR识别失败");
+                    return (false, string.Empty, null, lastException?.Message ?? "OCR识别失败");
                 }
                 catch (Exception ex)
                 {
-                    return (false, string.Empty, ex.Message);
+                    return (false, string.Empty, null, ex.Message);
                 }
             });
         }

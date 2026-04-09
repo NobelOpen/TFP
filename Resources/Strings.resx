@@ -94,34 +94,34 @@
   </data>
   <!-- ========== TaskType Names ========== -->
   <data name="TaskType_IfStart" xml:space="preserve">
-    <value>IF Start</value>
+    <value>IF Condition</value>
   </data>
   <data name="TaskType_IfEnd" xml:space="preserve">
-    <value>IF End</value>
+    <value>IF Close</value>
   </data>
   <data name="TaskType_ElifStart" xml:space="preserve">
-    <value>ELIF Start</value>
+    <value>ELIF Condition</value>
   </data>
   <data name="TaskType_ElseStart" xml:space="preserve">
-    <value>ELSE Start</value>
+    <value>ELSE Condition</value>
   </data>
   <data name="TaskType_ElseEnd" xml:space="preserve">
-    <value>Branch End</value>
+    <value>Branch Close</value>
   </data>
   <data name="TaskType_ForLoopStart" xml:space="preserve">
-    <value>Loop Start</value>
+    <value>FOR Loop</value>
   </data>
   <data name="TaskType_ForLoopEnd" xml:space="preserve">
-    <value>Loop End</value>
+    <value>FOR Close</value>
   </data>
   <data name="TaskType_EndTask" xml:space="preserve">
-    <value>End Current Flow</value>
+    <value>Abort Task</value>
   </data>
   <data name="TaskType_EndAllFlows" xml:space="preserve">
-    <value>End All Flows</value>
+    <value>Abort All</value>
   </data>
   <data name="TaskType_PauseTask" xml:space="preserve">
-    <value>Pause All Tasks</value>
+    <value>Suspend All</value>
   </data>
   <data name="TaskType_BreakLoop" xml:space="preserve">
     <value>Break Loop</value>
@@ -130,31 +130,31 @@
     <value>Win Launch App</value>
   </data>
   <data name="TaskType_WinScreenshot" xml:space="preserve">
-    <value>Win Screenshot Tool</value>
+    <value>Win Screenshot</value>
   </data>
   <data name="TaskType_WinClick" xml:space="preserve">
     <value>Win Simulate Click</value>
   </data>
   <data name="TaskType_WinCloseApp" xml:space="preserve">
-    <value>Win Close App</value>
+    <value>Win Kill App</value>
   </data>
   <data name="TaskType_WinUiAutomation" xml:space="preserve">
-    <value>WinUI Automation</value>
+    <value>Win UI Detect</value>
   </data>
   <data name="TaskType_WinSimulateInput" xml:space="preserve">
-    <value>Win Simulate Input</value>
+    <value>Win Sim Input</value>
   </data>
   <data name="TaskType_WinSubtitle" xml:space="preserve">
-    <value>Win Subtitle Prompt</value>
+    <value>Win Float Sub</value>
   </data>
   <data name="TaskType_AdbConnect" xml:space="preserve">
-    <value>ADB Connect Device</value>
+    <value>ADB Connect</value>
   </data>
   <data name="TaskType_AdbLaunchApp" xml:space="preserve">
     <value>ADB Launch App</value>
   </data>
   <data name="TaskType_AdbScreenshot" xml:space="preserve">
-    <value>ADB Screenshot Tool</value>
+    <value>ADB Screenshot</value>
   </data>
   <data name="TaskType_AdbClick" xml:space="preserve">
     <value>ADB Simulate Click</value>
@@ -181,7 +181,7 @@
     <value>Color Segmentation</value>
   </data>
   <data name="TaskType_ImgPreprocess" xml:space="preserve">
-    <value>Image Preprocess</value>
+    <value>Image Denoise</value>
   </data>
   <data name="TaskType_ImgBlobAnalysis" xml:space="preserve">
     <value>Blob Analysis</value>
@@ -190,37 +190,37 @@
     <value>Image Resize</value>
   </data>
   <data name="TaskType_ImgOnnxDetect" xml:space="preserve">
-    <value>ONNX Detect</value>
+    <value>Model Locate</value>
   </data>
   <data name="TaskType_ImgCaliperMeasure" xml:space="preserve">
-    <value>Caliper Measure</value>
+    <value>Edge Caliper</value>
   </data>
   <data name="Main_VisionModels" xml:space="preserve">
     <value>Vision Models</value>
   </data>
   <data name="TaskType_ExpressionEval" xml:space="preserve">
-    <value>Expression Eval</value>
+    <value>Eval Formula</value>
   </data>
   <data name="TaskType_StringSubstring" xml:space="preserve">
-    <value>String Substring</value>
+    <value>Slice Text</value>
   </data>
   <data name="TaskType_TypeConvert" xml:space="preserve">
-    <value>Type Convert</value>
+    <value>Cast Type</value>
   </data>
   <data name="TaskType_ArrayParse" xml:space="preserve">
-    <value>Array Parse</value>
+    <value>Parse Array</value>
   </data>
   <data name="TaskType_GetTimestamp" xml:space="preserve">
-    <value>Get Current Time</value>
+    <value>Get Time</value>
   </data>
   <data name="TaskType_LlmTranslate" xml:space="preserve">
     <value>LLM Translate</value>
   </data>
   <data name="TaskType_LlmVision" xml:space="preserve">
-    <value>Multimodal Vision</value>
+    <value>LLM Vision</value>
   </data>
   <data name="TaskType_ArrayBuilder" xml:space="preserve">
-    <value>Array Builder</value>
+    <value>Build Array</value>
   </data>
   <data name="TaskType_LlmFileTranslate" xml:space="preserve">
     <value>LLM File Translate</value>
@@ -797,6 +797,9 @@
   </data>
   <data name="Output_ErrorMessage" xml:space="preserve">
     <value>Error Message</value>
+  </data>
+  <data name="Output_IsExhausted" xml:space="preserve">
+    <value>Is Exhausted</value>
   </data>
   <!-- ========== File Dialog Filters ========== -->
   <data name="Filter_PngImage" xml:space="preserve">
@@ -1970,10 +1973,10 @@ Example: @A = 1; @B = @A + 1</value>
     <value>File Read</value>
   </data>
   <data name="TaskType_EventListener" xml:space="preserve">
-    <value>Win Event Listener</value>
+    <value>Win Sys Event</value>
   </data>
   <data name="TaskType_ArraySearch" xml:space="preserve">
-    <value>Array Search</value>
+    <value>Search Array</value>
   </data>
   <data name="Prop_FilePathExpr" xml:space="preserve">
     <value>File Path Expression</value>
@@ -1997,7 +2000,7 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Match Value</value>
   </data>
   <data name="TaskType_WinFindFile" xml:space="preserve">
-    <value>Win Path Find</value>
+    <value>Win Find File</value>
   </data>
   <data name="Prop_WinFindFileName" xml:space="preserve">
     <value>File Name (supports expressions)</value>
@@ -2594,10 +2597,10 @@ Example: @A = 1; @B = @A + 1</value>
     <value>View Calibration Results</value>
   </data>
   <data name="TaskType_RestartFlow" xml:space="preserve">
-    <value>Restart Flow</value>
+    <value>Restart Task</value>
   </data>
   <data name="TaskType_InputCombo" xml:space="preserve">
-    <value>Win Input Combo</value>
+    <value>Win Key Combo</value>
   </data>
   <data name="Prop_InputComboActions" xml:space="preserve">
     <value>Action List</value>
@@ -2621,7 +2624,7 @@ Example: @A = 1; @B = @A + 1</value>
     <value>Max Duration (ms, 0=no limit)</value>
   </data>
   <data name="TaskType_WinTextInput" xml:space="preserve">
-    <value>Win Text Input</value>
+    <value>Win Type Text</value>
   </data>
   <data name="Prop_WinTextInputText" xml:space="preserve">
     <value>Input Text</value>
@@ -2718,19 +2721,24 @@ See our troubleshooting guide for more help.</value>
   <data name="TaskType_BrowserNativeClick" xml:space="preserve"><value>Web Native Click</value></data>
   <data name="TaskType_BrowserNativeInput" xml:space="preserve"><value>Web Native Input</value></data>
   <data name="TaskType_BrowserSimulatedClick" xml:space="preserve"><value>Web Simulated Click</value></data>
-  <data name="TaskType_BrowserCdpCommand" xml:space="preserve"><value>CDP Command Execution</value></data>
+  <data name="TaskType_BrowserCdpCommand" xml:space="preserve"><value>Web CDP Cmd</value></data>
   <data name="TaskType_BrowserScreenshot" xml:space="preserve"><value>Web Page Screenshot</value></data>
-  <data name="TaskType_HttpRequest" xml:space="preserve"><value>HTTP Request (Silent)</value></data>
+  <data name="TaskType_HttpRequest" xml:space="preserve"><value>Web HTTP Req</value></data>
   <data name="Prop_HttpUrl" xml:space="preserve"><value>Request URL</value></data>
   <data name="Prop_HttpMethod" xml:space="preserve"><value>HTTP Method</value></data>
   <data name="Prop_HttpHeaders" xml:space="preserve"><value>Custom Headers (Key: Value per line)</value></data>
   <data name="Prop_HttpBody" xml:space="preserve"><value>Request Body (JSON)</value></data>
   <data name="Prop_HttpTimeout" xml:space="preserve"><value>Timeout (ms)</value></data>
   <data name="AC_HttpStatusCode" xml:space="preserve"><value>HTTP Status Code</value></data>
-  <data name="TaskType_ClipboardWatch" xml:space="preserve"><value>Clipboard Watch</value></data>
+  <data name="TaskType_ClipboardWatch" xml:space="preserve"><value>Win Clipboard</value></data>
   <data name="Prop_ClipboardTimeout" xml:space="preserve"><value>Timeout (ms, 0=infinite)</value></data>
   <data name="Prop_ClipboardDedup" xml:space="preserve"><value>Enable deduplication (skip identical text)</value></data>
   <data name="Prop_ClipboardTrim" xml:space="preserve"><value>Auto trim whitespace</value></data>
-  <data name="TaskType_TextExtractor" xml:space="preserve"><value>TextExtractor (Game Hook)</value></data>
+  <data name="TaskType_TextExtractor" xml:space="preserve"><value>Win Mem OSD</value></data>
   <data name="Prop_TargetProcess" xml:space="preserve"><value>Target Process Name</value></data>
+  <data name="TaskType_AutoRouteTracker" xml:space="preserve"><value>Auto Route Track</value></data>
+  <data name="TaskType_OcrKeywordAnchor" xml:space="preserve"><value>OCR Options Anchor</value></data>
+  <data name="TaskType_AutoRouteAdvance" xml:space="preserve"><value>Finish Route Branch</value></data>
+  <data name="Prop_TargetKeywords" xml:space="preserve"><value>Target Keywords (comma separated)</value></data>
+  <data name="Prop_RouteStateFilePath" xml:space="preserve"><value>Route State File Path (JSON)</value></data>
 </root>

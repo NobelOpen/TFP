@@ -136,6 +136,9 @@ namespace TaskFlow.Helpers
                     "状态码" or "statusCode" => referencedTask is HttpRequestTaskCard httpCard2
                         ? httpCard2.OutputStatusCode.ToString()
                         : "0",
+                    "OutputIsExhausted" or "是否探索穷尽" or "是否穷尽" => referencedTask is AutoRouteTrackerTaskCard trackCard
+                        ? trackCard.OutputIsExhausted.ToString().ToLower()
+                        : "false",
                     _ => throw new InvalidOperationException($"不支持的输出属性: {property}")
                 };
             });
